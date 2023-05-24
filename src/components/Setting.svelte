@@ -22,6 +22,7 @@
   }
 
   h3 {
+    margin-top: 0;
     margin-bottom: 16px;
   }
 
@@ -29,6 +30,7 @@
     display: flex;
     flex-direction: row;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 8px;
   }
 </style>
