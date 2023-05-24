@@ -14,6 +14,7 @@ declare global {
 		interface Timeline {
 			head: TimelineNode | null;
 			curr: TimelineNode | null;
+			runtime: number;
 			toArray(): TimelineNode[];
 		}
 

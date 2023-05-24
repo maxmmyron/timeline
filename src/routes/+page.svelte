@@ -1,9 +1,27 @@
 <script>
   import Setting from "../components/Setting.svelte";
   import VideoMock from "../components/VideoMock.svelte";
+  import "../app.css";
 
   let scale = 50;
-  let isPaused = true;
+  let isPaused = true,
+    canCalculateMouseRuntime = false;
+  let scrubberPos = 0;
+  /**
+   * @type {HTMLDivElement}
+   */
+  let timelineEl;
+
+  $: timelineWidth = timelineEl?.clientWidth || 0;
+  $: duration = timeline.toArray().reduce((acc, curr) => acc + curr.duration, 0);
+  $: ticks = Array.from({ length: timelineWidth / scale }).map((_, i) => {
+    if (i % 5 === 0) {
+      return 10;
+    } else if (i % 10 === 0) {
+      return 20;
+    }
+    return 5;
+  });
 
   /**
    * @type {App.Timeline}
@@ -11,6 +29,7 @@
   const timeline = {
     head: null,
     curr: null,
+    runtime: 0,
     toArray: () => {
       const arr = [];
       let curr = timeline.head;
@@ -25,6 +44,7 @@
   const clearTimeline = () => {
     timeline.head = null;
     timeline.curr = null;
+    timeline.runtime = 0;
   };
 
   let counter = 0;
@@ -70,6 +90,16 @@
     curr.next = null;
     timeline.curr = curr;
   };
+
+  /**
+   * @param e {MouseEvent}
+   */
+  const calculateMouseRuntime = (e) => {
+    if (!canCalculateMouseRuntime) return;
+
+    timeline.runtime = (e.clientX - timelineEl.offsetLeft) / scale;
+    scrubberPos = timeline.runtime * scale;
+  };
 </script>
 
 <div id="settings-container">
@@ -77,31 +107,46 @@
   <div>
     <Setting name="Timeline Scale">
       <input type="range" min="10" max="100" bind:value={scale} />
+      <p>{scale}</p>
     </Setting>
 
     <Setting name="Node Management">
       <input type="button" value="Clear Timeline" on:click={clearTimeline} />
       <input type="button" value="Add Node" on:click={addNode} />
       <input type="button" value="Remove Tail Node" on:click={removeTailNode} />
+      <p>{timeline.toArray().length} nodes</p>
     </Setting>
 
     <Setting name="Player">
       <input type="button" value="⏪" />
       <input type="button" value={isPaused ? "▶️" : "⏸️"} on:click={() => (isPaused = !isPaused)} />
       <input type="button" value="⏩" />
+      <div style="width: 100%; display:flex; gap: 16px;">
+        <p>Current runtime: {timeline.runtime}</p>
+        <p>Total duration: {duration}</p>
+      </div>
     </Setting>
   </div>
 </div>
 
-{#if timeline.head !== null}
-  <div id="timeline-container">
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<div
+  id="timeline-container"
+  bind:this={timelineEl}
+  on:mousemove={calculateMouseRuntime}
+  on:mousedown={() => (canCalculateMouseRuntime = true)}
+  on:mouseup={() => (canCalculateMouseRuntime = false)}
+>
+  {#if timeline.head !== null}
     {#each timeline.toArray() as node}
       <VideoMock {scale} {node} />
     {/each}
-  </div>
-{:else}
-  <div class="timeline-empty">Timeline is empty</div>
-{/if}
+  {/if}
+  <div id="scrubber" style="left: {scrubberPos}px" />
+  {#each ticks as height, idx}
+    <div class="timeline-tick" style="left: {idx * scale}px; height: {height * 3}px" />
+  {/each}
+</div>
 
 <style>
   #settings-container {
@@ -118,9 +163,38 @@
   }
 
   #timeline-container {
+    position: relative;
     display: flex;
     width: 100%;
-    overflow-y: hidden;
+    overflow-x: clip;
     height: calc(128px + 17px);
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+  }
+
+  #scrubber {
+    position: absolute;
+    width: 2px;
+    height: 128px;
+    background-color: rgb(11 113 230 / 1);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+  #scrubber::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: -5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: rgb(11 113 230 / 1);
+  }
+
+  .timeline-tick {
+    position: absolute;
+    top: 0;
+    width: 1px;
+    background-color: rgb(11 113 230 / 0.5);
   }
 </style>
