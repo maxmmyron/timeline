@@ -17,11 +17,6 @@ declare global {
 			runtime: number;
 			toArray(): TimelineNode[];
 		}
-
-		// interface Error {}
-		// interface Locals {}
-		// interface PageData {}
-		// interface Platform {}
 	}
 }
 
