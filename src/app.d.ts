@@ -13,7 +13,7 @@ declare global {
 
 		interface Timeline {
 			head: TimelineNode | null;
-			curr: TimelineNode | null;
+			tail: TimelineNode | null;
 			runtime: number;
 			toArray(): TimelineNode[];
 		}

@@ -9,9 +9,13 @@
    * @type {App.TimelineNode}
    */
   export let node;
+  /**
+   * @type {string}
+   */
+  export let currID;
 </script>
 
-<div class="video-mock" class:mock-active={isRunning} style="width: {node.duration * scale}px">
+<div class="video-mock" class:mock-active={currID === node.id} style="width: {node.duration * scale}px">
   <h2>{node.title}</h2>
   <p>{node.duration}</p>
 </div>
