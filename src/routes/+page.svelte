@@ -26,6 +26,8 @@
 
   $: scrubberPos = timeline.runtime * timelineScale;
 
+  let scrollX = 0;
+
   let lastTimestamp = 0;
 
   /**
@@ -167,7 +169,7 @@
 </div>
 
 <div class="timeline">
-  <Ticks />
+  <Ticks {scrollX} />
   <!-- svelte-ignore a11y-click-events-have-key-events -->
   <div
     id="timeline-container"
@@ -183,6 +185,7 @@
       isPaused = previousPauseState;
       canCalculateMouseRuntime = false;
     }}
+    on:scroll={(e) => (scrollX = e.target.scrollLeft)}
   >
     {#if timeline.head !== null}
       {#each timeline.toArray() as node}
@@ -207,6 +210,7 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+    overflow: clip;
   }
 
   #settings-container {
@@ -226,7 +230,7 @@
     position: relative;
     display: flex;
     width: 100%;
-    overflow-x: clip;
+    overflow-x: scroll;
     height: calc(128px + 17px);
     border-top: 1px solid black;
     border-bottom: 1px solid black;
