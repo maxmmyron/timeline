@@ -144,14 +144,14 @@
   <div>
     <Setting name="Timeline timelineScale">
       <input type="range" min="10" max="100" bind:value={timelineScale} />
-      <p>{timelineScale}</p>
+      <output>{timelineScale}</output>
     </Setting>
 
     <Setting name="Node Management">
       <input type="button" value="Clear Timeline" on:click={clearTimeline} />
       <input type="button" value="Add Node" on:click={addNode} />
       <input type="button" value="Remove Tail Node" on:click={removeTailNode} />
-      <p>{nodeCount} nodes</p>
+      <output>{nodeCount} nodes</output>
     </Setting>
 
     <Setting name="Player">
@@ -159,8 +159,8 @@
       <input type="button" value={isPaused ? "▶️" : "⏸️"} on:click={() => (isPaused = !isPaused)} />
       <input type="button" value="⏩" on:click={() => setPlayerTime(-1)} />
       <div style="width: 100%; display:flex; gap: 16px;">
-        <p>Current runtime: {timeline.runtime.toPrecision(4)}</p>
-        <p>Total duration: {duration.toPrecision(4)}</p>
+        <output>Current runtime: {timeline.runtime.toPrecision(4)}</output>
+        <output>Total duration: {duration.toPrecision(4)}</output>
       </div>
     </Setting>
   </div>
