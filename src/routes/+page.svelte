@@ -3,6 +3,7 @@
   import VideoMock from "../components/VideoMock.svelte";
   import "../app.css";
   import { onMount } from "svelte";
+  import Ticks from "../components/Ticks.svelte";
 
   let timelineScale = 50;
   let isPaused = true,
@@ -22,14 +23,6 @@
 
   $: timelineWidth = timelineEl?.clientWidth || 0;
   $: duration = timeline.toArray().reduce((acc, curr) => acc + curr.duration, 0);
-  $: ticks = Array.from({ length: timelineWidth / timelineScale }).map((_, i) => {
-    if (i % 5 === 0) {
-      return 10;
-    } else if (i % 10 === 0) {
-      return 20;
-    }
-    return 5;
-  });
 
   $: scrubberPos = timeline.runtime * timelineScale;
 
@@ -173,33 +166,31 @@
   </div>
 </div>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-<div
-  id="timeline-container"
-  bind:this={timelineEl}
-  on:mousemove={calculateMouseRuntime}
-  on:mousedown={(e) => {
-    previousPauseState = isPaused;
-    isPaused = true;
-    canCalculateMouseRuntime = true;
-    calculateMouseRuntime(e);
-  }}
-  on:mouseup={() => {
-    isPaused = previousPauseState;
-    canCalculateMouseRuntime = false;
-  }}
->
-  {#if timeline.head !== null}
-    {#each timeline.toArray() as node}
-      <VideoMock scale={timelineScale} {node} currID={curr?.id || ""} />
-    {/each}
-  {/if}
-  <div id="scrubber" style="left: {scrubberPos}px" />
-  {#key timelineScale}
-    {#each ticks as height, idx}
-      <div class="timeline-tick" style="left: {idx * timelineScale}px; height: {height * 3}px" />
-    {/each}
-  {/key}
+<div class="timeline">
+  <Ticks />
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <div
+    id="timeline-container"
+    bind:this={timelineEl}
+    on:mousemove={calculateMouseRuntime}
+    on:mousedown={(e) => {
+      previousPauseState = isPaused;
+      isPaused = true;
+      canCalculateMouseRuntime = true;
+      calculateMouseRuntime(e);
+    }}
+    on:mouseup={() => {
+      isPaused = previousPauseState;
+      canCalculateMouseRuntime = false;
+    }}
+  >
+    {#if timeline.head !== null}
+      {#each timeline.toArray() as node}
+        <VideoMock scale={timelineScale} {node} currID={curr?.id || ""} />
+      {/each}
+    {/if}
+    <div id="scrubber" style="left: {scrubberPos}px" />
+  </div>
 </div>
 
 <div id="video">
@@ -212,6 +203,12 @@
 </div>
 
 <style>
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
   #settings-container {
     margin-bottom: 32px;
     padding: 16px;
@@ -252,13 +249,6 @@
     height: 12px;
     border-radius: 50%;
     background-color: rgb(11 113 230 / 1);
-  }
-
-  .timeline-tick {
-    position: absolute;
-    top: 0;
-    width: 1px;
-    background-color: rgb(11 113 230 / 0.5);
   }
 
   #video {
