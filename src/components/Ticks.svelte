@@ -5,6 +5,7 @@
   let width = 0;
 
   $: offset = Math.floor(scrollX / (width / 6));
+  $: secondScale = Math.floor((scale - 50) / 10);
 
   const tickHeights = [1, 1, 1, 2, 1, 1];
 </script>
@@ -13,7 +14,7 @@
 <div class="tick-container" bind:clientWidth={width} style="transform: translateX(-{scrollX % (width / 6)}px)">
   {#each { length: 6 } as _, i}
     <div class="tick">
-      <div style="absolute">{i + offset}</div>
+      <div style="absolute">{(i + offset) * 2 ** -secondScale}</div>
       {#each tickHeights as h}
         <div class="inner-tick" style="height: {h * 12}px" />
       {/each}
