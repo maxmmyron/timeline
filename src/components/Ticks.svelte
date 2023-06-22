@@ -1,5 +1,6 @@
 <script>
   export let scrollX = 0;
+  export let scale = 0;
 
   let width = 0;
 

@@ -169,7 +169,7 @@
 </div>
 
 <div class="timeline">
-  <Ticks {scrollX} />
+  <Ticks {scrollX} scale={timelineScale} />
   <!-- svelte-ignore a11y-click-events-have-key-events -->
   <div
     id="timeline-container"
