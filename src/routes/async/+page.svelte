@@ -30,7 +30,7 @@
                 x: Math.random() * 100,
                 y: Math.random() * 100,
               });
-          }, 1000)
+          }, Math.random() * 5000)
         ),
       },
     ];
