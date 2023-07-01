@@ -17,6 +17,26 @@ declare global {
 			runtime: number;
 			toArray(): TimelineNode[];
 		}
+
+		type A = {
+			type: "A";
+			foo: string;
+			bar: number;
+		};
+
+		type B = {
+			type: "B";
+			baz: string;
+			qux: number;
+		};
+
+		type C = {
+			type: "C";
+			fizz: string;
+			buzz: number;
+		};
+
+		type Media = A | B | C;
 	}
 }
 
