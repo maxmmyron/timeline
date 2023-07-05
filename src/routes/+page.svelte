@@ -1,14 +1,14 @@
 <script>
+  // @ts-nocheck
+
   import Setting from "../components/Setting.svelte";
   import VideoMock from "../components/VideoMock.svelte";
   import "../app.css";
   import { onMount } from "svelte";
   import Ticks from "../components/Ticks.svelte";
 
-  let timelineScale = 50;
-  let isPaused = true,
-    previousPauseState = true;
-  let canCalculateMouseRuntime = false;
+  let timelineScale = 4;
+  let isPaused = true;
   /**
    * @type {App.TimelineNode | null}
    */
@@ -19,15 +19,12 @@
   let timelineEl;
   let nodeIncrementor = 0;
 
-  $: nodeCount = timeline.toArray().length;
+  let runtime = 0;
 
-  $: timelineWidth = timelineEl?.clientWidth || 0;
   $: duration = timeline.toArray().reduce((acc, curr) => acc + curr.duration, 0);
-
-  $: scrubberPos = timeline.runtime * timelineScale;
+  $: scrubberPos = runtime * 2 ** timelineScale;
 
   let scrollX = 0;
-
   let lastTimestamp = 0;
 
   /**
@@ -36,7 +33,7 @@
   const render = (timestamp) => {
     curr = timeline.head;
     let offset = 0;
-    while (curr && offset + curr.duration < timeline.runtime) {
+    while (curr && offset + curr.duration < runtime) {
       curr.startOffset = offset;
       offset += curr.duration;
       curr.endOffset = offset;
@@ -52,7 +49,7 @@
     const delta = timestamp - lastTimestamp;
     lastTimestamp = timestamp;
 
-    timeline.runtime += delta / 1000;
+    runtime += delta / 1000;
 
     requestAnimationFrame(render);
   };
@@ -62,7 +59,7 @@
    */
   const setPlayerTime = (time) => {
     isPaused = true;
-    timeline.runtime = time === -1 ? duration : time;
+    runtime = time === -1 ? duration : time;
   };
 
   onMount(() => requestAnimationFrame(render));
@@ -73,7 +70,6 @@
   const timeline = {
     head: null,
     tail: null,
-    runtime: 0,
     toArray: () => {
       const arr = [];
       let curr = timeline.head;
@@ -88,7 +84,7 @@
   const clearTimeline = () => {
     timeline.head = null;
     timeline.tail = null;
-    timeline.runtime = 0;
+    runtime = 0;
   };
 
   const addNode = () => {
@@ -130,22 +126,13 @@
       timeline.tail = curr;
     }
   };
-
-  /**
-   * @param e {MouseEvent}
-   */
-  const calculateMouseRuntime = (e) => {
-    if (!canCalculateMouseRuntime) return;
-
-    timeline.runtime = (e.clientX - timelineEl.offsetLeft) / timelineScale;
-  };
 </script>
 
 <div id="settings-container">
   <h1>Settings</h1>
   <div>
     <Setting name="Timeline timelineScale">
-      <input type="range" min="10" max="100" bind:value={timelineScale} />
+      <input type="range" min="1" max="10" bind:value={timelineScale} />
       <output>{timelineScale}</output>
     </Setting>
 
@@ -153,7 +140,7 @@
       <input type="button" value="Clear Timeline" on:click={clearTimeline} />
       <input type="button" value="Add Node" on:click={addNode} />
       <input type="button" value="Remove Tail Node" on:click={removeTailNode} />
-      <output>{nodeCount} nodes</output>
+      <output>{timeline.toArray().length} nodes</output>
     </Setting>
 
     <Setting name="Player">
@@ -161,7 +148,7 @@
       <input type="button" value={isPaused ? "▶️" : "⏸️"} on:click={() => (isPaused = !isPaused)} />
       <input type="button" value="⏩" on:click={() => setPlayerTime(-1)} />
       <div style="width: 100%; display:flex; gap: 16px;">
-        <output>Current runtime: {timeline.runtime.toPrecision(4)}</output>
+        <output>Current runtime: {runtime.toPrecision(4)}</output>
         <output>Total duration: {duration.toPrecision(4)}</output>
       </div>
     </Setting>
@@ -169,24 +156,9 @@
 </div>
 
 <div class="timeline">
-  <Ticks {scrollX} scale={timelineScale} />
+  <Ticks {scrollX} scale={timelineScale} bind:isPaused bind:runtime />
   <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <div
-    id="timeline-container"
-    bind:this={timelineEl}
-    on:mousemove={calculateMouseRuntime}
-    on:mousedown={(e) => {
-      previousPauseState = isPaused;
-      isPaused = true;
-      canCalculateMouseRuntime = true;
-      calculateMouseRuntime(e);
-    }}
-    on:mouseup={() => {
-      isPaused = previousPauseState;
-      canCalculateMouseRuntime = false;
-    }}
-    on:scroll={(e) => (scrollX = e.target.scrollLeft)}
-  >
+  <div id="timeline-container" bind:this={timelineEl} on:scroll={(e) => (scrollX = e.target.scrollLeft)}>
     {#if timeline.head !== null}
       {#each timeline.toArray() as node}
         <VideoMock scale={timelineScale} {node} currID={curr?.id || ""} />
@@ -231,9 +203,10 @@
     display: flex;
     width: 100%;
     overflow-x: scroll;
-    height: calc(128px + 17px);
     border-top: 1px solid black;
     border-bottom: 1px solid black;
+    padding: 32px 0;
+    user-select: none;
   }
 
   #scrubber {

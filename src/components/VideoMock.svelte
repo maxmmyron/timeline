@@ -1,6 +1,4 @@
 <script>
-  let isRunning = false;
-
   /**
    * @type {number}
    */
@@ -15,10 +13,12 @@
   export let currID;
 </script>
 
-<div class="video-mock" class:mock-active={currID === node.id} style="width: {node.duration * scale}px">
-  <h2>{node.title}</h2>
-  <p>{node.duration}</p>
-</div>
+<button class="video-mock" class:mock-active={currID === node.id} style="width: {node.duration * 2 ** scale}px">
+  <div class="video-inner">
+    <h2>{node.title}</h2>
+    <p>{node.duration}</p>
+  </div>
+</button>
 
 <style>
   .video-mock {
@@ -27,8 +27,13 @@
     transition: background-color 0.15s ease-in-out;
     height: 128px;
     border-radius: 8px;
-    padding: 4px;
     flex-shrink: 0;
+  }
+
+  .video-inner {
+    width: 100%;
+    height: 100%;
+    padding: 4px;
   }
 
   .video-mock.mock-active {
