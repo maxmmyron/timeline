@@ -1,32 +1,35 @@
-<script>
+<script lang=ts>
+    import { writable } from "svelte/store";
 
-    let y = {
-        ref: null,
-        pos: {x: 0, y: 0}
-    };
 
-    let x = {
-        ref: null,
-        pos: {x: 0, y: 0}
-    }
+    let objs = writable({
+        x: {
+            ref: null,
+            pos: {x: 0, y: 0}
+        },
+        y: {
+            ref: null,
+            pos: {x: 0, y: 0}
+        }
+    })
 
     // @ts-ignore
-    x.ref = y;
+    $objs.x.ref = $objs.y
     // @ts-ignore
-    y.ref = x;
+    $objs.y.ref = $objs.x;
 
     const handleMove = () => {
-        x.pos.x += 10;
-
-        x.ref.pos = x.pos;
+        $objs.x.pos.x += 10;
+        // @ts-ignore
+        $objs.x.ref.pos.x += 10;
     }
 
 </script>
 
 <button on:click={handleMove}>move</button>
 
-<div style="transform: translate({x.pos.x}px, {x.pos.y}px); background:red;">X</div>
-<div style="transform: translate({y.pos.x}px, {y.pos.y}px); background: blue;">Y</div>
+<div style="transform: translate({$objs.x.pos.x}px, {$objs.x.pos.y}px); background:red;">X</div>
+<div style="transform: translate({$objs.y.pos.x}px, {$objs.y.pos.y}px); background: blue;">Y</div>
 
 <style>
     div {
