@@ -1,4 +1,10 @@
 <script>
+  import { onMount } from "svelte";
+
+  // *************************************
+  // TYPEDEFS
+  // *************************************
+
   /**
    * @typedef { Object } Clip
    * @property { number } duration duration of clip
@@ -8,12 +14,42 @@
    * @property { number } z z offset relative to other clips
    */
 
+  // *************************************
+  // FRAMES
+  // *************************************
+
+  let time = 0;
+  let paused = true;
   /**
-   * @param { number } duration
-   * @param { number } offset
-   * @param { number } start
+   * Distance of 1 second in pixels
    */
-  const createClip = (duration, offset, start) => ({ duration, offset, start, uuid: Math.random().toString(36).substring(7), z: z++ });
+  const TIME_SCALING = 100;
+
+  let lastTimestamp = 0;
+  /**
+   *
+   * @param timestamp {DOMHighResTimeStamp}
+   */
+  const frame = (timestamp) => {
+    if (paused) {
+      lastTimestamp = timestamp;
+      requestAnimationFrame(frame);
+      return;
+    }
+
+    const delta = timestamp - lastTimestamp;
+    lastTimestamp = timestamp;
+
+    time += delta / 1000;
+
+    requestAnimationFrame(frame);
+  };
+
+  onMount(() => requestAnimationFrame(frame));
+
+  // *************************************
+  // TIMELINE
+  // *************************************
 
   /**
    * @type { Clip[][] }
@@ -25,27 +61,48 @@
    */
   let audioClips = [[]];
 
+  /**
+   * @type { HTMLDivElement }
+   */
+  let scrubber;
+
+  $: if (scrubber)
+    scrubber.style.transform = `translateX(${time * TIME_SCALING}px)`;
+
+  // *************************************
+  // CLIP DEBUG
+  // *************************************
+
+  /**
+   * @param track { Clip[] }
+   */
+  const createClip = (track) => ({
+    duration: Math.random() * 4 + 1,
+    offset:
+      track.reduce((acc, curr) => curr.offset - acc + acc + curr.duration, 0) +
+      Math.random() * 2 -
+      1,
+    start: 0,
+    uuid: Math.random().toString(36).substring(7),
+    z: z++,
+  });
+
   let videoRow = 0;
   let audioRow = 0;
-  let currTime = 0;
   let z = 0;
 
-  $: vPos = videoClips[videoRow].reduce((acc, curr) => acc + curr.duration, 0);
-  $: aPos = audioClips[audioRow].reduce((acc, curr) => acc + curr.duration, 0);
-
-  
   $: getCurrentClip = (clips) => {
-    console.log("recalc");
     /**
      * @type { Clip[] }
      */
     let valid = [];
     for (const clip of clips) {
-      if (clip.offset < currTime && clip.offset + clip.duration > currTime) valid.push(clip);
-      if (clip.offset > currTime) break;
+      if (clip.offset < time && clip.offset + clip.duration > time)
+        valid.push(clip);
+      if (clip.offset > time) break;
     }
     return valid.sort((a, b) => b.z - a.z)[0];
-  }
+  };
 </script>
 
 <section>
@@ -55,39 +112,107 @@
 
 <section>
   <label for="video-row">video row</label>
-  <input type="range" min="0" max={videoClips.length - 1} bind:value={videoRow} name="video-row" />
+  <input
+    type="range"
+    min="0"
+    max={videoClips.length - 1}
+    bind:value={videoRow}
+    name="video-row"
+  />
   <output for="video-row">{videoRow}</output>
 
   <label for="audio-row">audio row</label>
-  <input type="range" min="0" max={audioClips.length - 1} bind:value={audioRow} name="audio-row" />
+  <input
+    type="range"
+    min="0"
+    max={audioClips.length - 1}
+    bind:value={audioRow}
+    name="audio-row"
+  />
   <output for="audio-row">{audioRow}</output>
 
-  <button on:click={() => (videoClips[videoRow] = [...videoClips[videoRow], createClip(Math.random() * 200 + 50, vPos + Math.random()*200, 0)])}>+ vclip</button>
-  <button on:click={() => (audioClips[audioRow] = [...audioClips[audioRow], createClip(Math.random() * 200 + 50, aPos + Math.random()*200, 0)])}>+ aclip</button>
+  <button
+    on:click={() =>
+      (videoClips[videoRow] = [
+        ...videoClips[videoRow],
+        createClip(videoClips[videoRow]),
+      ])}>+ vclip</button
+  >
+  <button
+    on:click={() =>
+      (audioClips[audioRow] = [
+        ...audioClips[audioRow],
+        createClip(audioClips[audioRow]),
+      ])}>+ aclip</button
+  >
+  <button
+    on:click={() => {
+      for (let i = 0; i < videoClips.length; i++) {
+        for (let j = 0; j < 10; j++)
+          videoClips[i] = [...videoClips[i], createClip(videoClips[i])];
+      }
+      for (let i = 0; i < audioClips.length; i++) {
+        for (let j = 0; j < 10; j++)
+          audioClips[i] = [...audioClips[i], createClip(audioClips[i])];
+      }
+    }}>+ all</button
+  >
 </section>
 
 <section>
-  <label for="currTime">currTime</label>
-  <input bind:value={currTime} type="range" min="0" max="1200" />
-  <output for="currTime">{currTime}</output>
+  <button
+    on:click={() => {
+      time = 0;
+      paused = true;
+    }}>⏮️</button
+  >
+  <button on:click={() => (paused = !paused)}>
+    {paused ? "play" : "pause"}
+  </button>
+  <button
+    on:click={() => {
+      paused = true;
+      time = 0;
+    }}>⏭️</button
+  >
 </section>
 
 <section>
-  {#each videoClips as clips,i}
+  {time}
+</section>
+
+<br />
+<section>
+  {#each videoClips as clips, i}
     <p>v{i} current: {getCurrentClip(clips)?.uuid}</p>
   {/each}
-  {#each audioClips as clips,i}
+  {#each audioClips as clips, i}
     <p>a{i} current: {getCurrentClip(clips)?.uuid}</p>
   {/each}
 </section>
 
 <div class="timeline">
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <div
+    class="tick-container"
+    on:click={(e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      time = x / TIME_SCALING;
+    }}
+  ></div>
   {#each [videoClips, audioClips] as xClips, i}
     {#each xClips as clips, j}
       <div class="row">
-        <p style="position:absolute">{i===0?"v":"a"}{j}</p>
+        <p style="position:absolute">{i === 0 ? "v" : "a"}{j}</p>
         {#each clips as clip}
-          <button class="clip" style="transform: translateX({clip.offset}px); width: {clip.duration}px; z-index:{clip.z};" on:click={() => clip.z = Math.max(...clips.map(c => c.z)) + 1}>
+          <button
+            class="clip"
+            style="transform: translateX({clip.offset *
+              TIME_SCALING}px); width: {clip.duration *
+              TIME_SCALING}px; z-index:{clip.z};"
+            on:click={() => (clip.z = Math.max(...clips.map((c) => c.z)) + 1)}
+          >
             <p>{clip.uuid}, {clip.z}</p>
           </button>
         {/each}
@@ -95,7 +220,7 @@
     {/each}
     <hr />
   {/each}
-  <div class="scrubber" style="transform: translateX({currTime}px); z-index: 9999999;" />
+  <div bind:this={scrubber} class="scrubber" style="z-index: 9999999;" />
 </div>
 
 <style>
@@ -114,7 +239,13 @@
   .timeline {
     position: relative;
     width: 100vw;
+    overflow: scroll;
     margin-top: 32px;
+  }
+
+  .timeline > .tick-container {
+    height: 1rem;
+    background-color: rgba(200 200 200 / 0.75);
   }
 
   .timeline > .row {
