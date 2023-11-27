@@ -1,18 +1,6 @@
-<script>
+<script lang="ts">
+  import { resolveMedia } from "./loader";
   import { onMount } from "svelte";
-
-  // *************************************
-  // TYPEDEFS
-  // *************************************
-
-  /**
-   * @typedef { Object } Clip
-   * @property { number } duration duration of clip
-   * @property { number } offset offset from start of video
-   * @property { number } start start time relative clip 00:00 time
-   * @property { string } uuid unique identifier
-   * @property { number } z z offset relative to other clips
-   */
 
   // *************************************
   // FRAMES
@@ -26,11 +14,8 @@
   const TIME_SCALING = 100;
 
   let lastTimestamp = 0;
-  /**
-   *
-   * @param timestamp {DOMHighResTimeStamp}
-   */
-  const frame = (timestamp) => {
+
+  const frame = (timestamp: DOMHighResTimeStamp) => {
     if (paused) {
       lastTimestamp = timestamp;
       requestAnimationFrame(frame);
@@ -51,32 +36,38 @@
   // TIMELINE
   // *************************************
 
-  /**
-   * @type { Clip[][] }
-   */
-  let videoClips = [[]];
+  let videoClips: Clip[][] = [[]];
+  let audioClips: Clip[][] = [[]];
 
-  /**
-   * @type { Clip[][] }
-   */
-  let audioClips = [[]];
+  // *************************************
+  // MEDIA
+  // *************************************
 
-  /**
-   * @type { HTMLDivElement }
-   */
-  let scrubber;
+  let files: FileList | null = null;
 
-  $: if (scrubber)
-    scrubber.style.transform = `translateX(${time * TIME_SCALING}px)`;
+  let resolved: { type: MediaType; file: File }[] = [];
+
+  const resolveFiles = () => {
+    if (!files) return;
+    for (const file of files) {
+      // TODO: more robust type assertion
+      const type = <MediaType>file.type.split("/")[0];
+      resolved = [...resolved, { type, file }];
+    }
+
+    files = null;
+  };
 
   // *************************************
   // CLIP DEBUG
   // *************************************
 
-  /**
-   * @param track { Clip[] }
-   */
-  const createClip = (track) => ({
+  const createClip = (
+    track: Clip[],
+    resolvedFile: { type: MediaType; file: File }
+  ): Clip => ({
+    file: resolvedFile.file,
+    type: resolvedFile.type,
     duration: Math.random() * 4 + 1,
     offset:
       track.reduce((acc, curr) => curr.offset - acc + acc + curr.duration, 0) +
@@ -91,11 +82,8 @@
   let audioRow = 0;
   let z = 0;
 
-  $: getCurrentClip = (clips) => {
-    /**
-     * @type { Clip[] }
-     */
-    let valid = [];
+  $: getCurrentClip = (clips: Clip[]) => {
+    let valid: Clip[] = [];
     for (const clip of clips) {
       if (clip.offset < time && clip.offset + clip.duration > time)
         valid.push(clip);
@@ -104,6 +92,8 @@
     return valid.sort((a, b) => b.z - a.z)[0];
   };
 </script>
+
+<svelte:body style="margin: 0;" />
 
 <section>
   <button on:click={() => (videoClips = [...videoClips, []])}>+ vrow</button>
@@ -130,35 +120,9 @@
     name="audio-row"
   />
   <output for="audio-row">{audioRow}</output>
-
-  <button
-    on:click={() =>
-      (videoClips[videoRow] = [
-        ...videoClips[videoRow],
-        createClip(videoClips[videoRow]),
-      ])}>+ vclip</button
-  >
-  <button
-    on:click={() =>
-      (audioClips[audioRow] = [
-        ...audioClips[audioRow],
-        createClip(audioClips[audioRow]),
-      ])}>+ aclip</button
-  >
-  <button
-    on:click={() => {
-      for (let i = 0; i < videoClips.length; i++) {
-        for (let j = 0; j < 10; j++)
-          videoClips[i] = [...videoClips[i], createClip(videoClips[i])];
-      }
-      for (let i = 0; i < audioClips.length; i++) {
-        for (let j = 0; j < 10; j++)
-          audioClips[i] = [...audioClips[i], createClip(audioClips[i])];
-      }
-    }}>+ all</button
-  >
 </section>
 
+<br />
 <section>
   <button
     on:click={() => {
@@ -183,12 +147,36 @@
 
 <br />
 <section>
-  {#each videoClips as clips, i}
-    <p>v{i} current: {getCurrentClip(clips)?.uuid}</p>
-  {/each}
-  {#each audioClips as clips, i}
-    <p>a{i} current: {getCurrentClip(clips)?.uuid}</p>
-  {/each}
+  <input
+    type="file"
+    accept="video/*,audio/*,image/*"
+    bind:files
+    on:change={resolveFiles}
+  />
+  <section>
+    {#each resolved as file}
+      <section>
+        <h2>{file.type}</h2>
+        <!-- <p>{file.duration}</p> -->
+        <p>{file.file.size}</p>
+        <button
+          on:click={() => {
+            if (file.type === "audio") {
+              audioClips[audioRow] = [
+                ...audioClips[audioRow],
+                createClip(audioClips[audioRow], file),
+              ];
+            } else {
+              videoClips[videoRow] = [
+                ...videoClips[videoRow],
+                createClip(videoClips[videoRow], file),
+              ];
+            }
+          }}>+</button
+        >
+      </section>
+    {/each}
+  </section>
 </section>
 
 <div class="timeline">
@@ -200,7 +188,13 @@
       const x = e.clientX - rect.left;
       time = x / TIME_SCALING;
     }}
-  ></div>
+  >
+    {#each { length: Math.ceil(time) } as _, i}
+      <div class="tick" style="width: {TIME_SCALING}px; height: 100%">
+        <p>{i}</p>
+      </div>
+    {/each}
+  </div>
   {#each [videoClips, audioClips] as xClips, i}
     {#each xClips as clips, j}
       <div class="row">
@@ -214,14 +208,27 @@
             on:click={() => (clip.z = Math.max(...clips.map((c) => c.z)) + 1)}
           >
             <p>{clip.uuid}, {clip.z}</p>
+            <p>{clip.file.name}</p>
           </button>
         {/each}
       </div>
     {/each}
     <hr />
   {/each}
-  <div bind:this={scrubber} class="scrubber" style="z-index: 9999999;" />
+  <div
+    class="scrubber"
+    style="transform: translateX({time * TIME_SCALING}px; z-index: 9999999;"
+  />
 </div>
+
+<section>
+  {#each videoClips as clips, i}
+    <p>v{i} current: {getCurrentClip(clips)?.uuid}</p>
+  {/each}
+  {#each audioClips as clips, i}
+    <p>a{i} current: {getCurrentClip(clips)?.uuid}</p>
+  {/each}
+</section>
 
 <style>
   * {
@@ -245,7 +252,21 @@
 
   .timeline > .tick-container {
     height: 1rem;
+    display: flex;
     background-color: rgba(200 200 200 / 0.75);
+  }
+
+  .tick {
+    border-right: 1px solid rgba(100 100 100 / 0.75);
+    position: relative;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .tick > p {
+    position: absolute;
+    left: 2px;
+    margin: 0;
   }
 
   .timeline > .row {
@@ -273,5 +294,9 @@
     height: 100%;
     border-radius: 12px;
     background-color: aquamarine;
+  }
+
+  .clip > p {
+    margin: 0;
   }
 </style>
