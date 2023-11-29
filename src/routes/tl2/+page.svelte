@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { xlink_attr } from "svelte/internal";
   import { resolveMedia } from "./loader";
   import { onMount } from "svelte";
 
@@ -39,20 +40,25 @@
   let videoClips: Clip[][] = [[]];
   let audioClips: Clip[][] = [[]];
 
+  $: currentClips = [
+    ...videoClips.map(getCurrentClip),
+    ...audioClips.map(getCurrentClip),
+  ];
+
   // *************************************
   // MEDIA
   // *************************************
 
   let files: FileList | null = null;
 
-  let resolved: { type: MediaType; file: File }[] = [];
+  let resolved: Media[] = [];
 
-  const resolveFiles = () => {
+  const resolveFiles = async () => {
     if (!files) return;
     for (const file of files) {
       // TODO: more robust type assertion
-      const type = <MediaType>file.type.split("/")[0];
-      resolved = [...resolved, { type, file }];
+      const media = await resolveMedia(file);
+      resolved = [...resolved, media];
     }
 
     files = null;
@@ -62,15 +68,13 @@
   // CLIP DEBUG
   // *************************************
 
-  const createClip = (
-    track: Clip[],
-    resolvedFile: { type: MediaType; file: File }
-  ): Clip => ({
-    file: resolvedFile.file,
-    type: resolvedFile.type,
-    duration: Math.random() * 4 + 1,
+  const createClip = (track: Clip[], resolved: Media): Clip => ({
+    media: resolved,
     offset:
-      track.reduce((acc, curr) => curr.offset - acc + acc + curr.duration, 0) +
+      track.reduce(
+        (acc, curr) => curr.offset - acc + acc + curr.media.duration,
+        0
+      ) +
       Math.random() * 2 -
       1,
     start: 0,
@@ -82,14 +86,14 @@
   let audioRow = 0;
   let z = 0;
 
-  $: getCurrentClip = (clips: Clip[]) => {
+  $: getCurrentClip = (clips: Clip[]): Clip | null => {
     let valid: Clip[] = [];
     for (const clip of clips) {
-      if (clip.offset < time && clip.offset + clip.duration > time)
+      if (clip.offset < time && clip.offset + clip.media.duration > time)
         valid.push(clip);
       if (clip.offset > time) break;
     }
-    return valid.sort((a, b) => b.z - a.z)[0];
+    return valid.sort((a, b) => b.z - a.z)[0] ?? null;
   };
 </script>
 
@@ -157,8 +161,7 @@
     {#each resolved as file}
       <section>
         <h2>{file.type}</h2>
-        <!-- <p>{file.duration}</p> -->
-        <p>{file.file.size}</p>
+        <p>{file.duration}</p>
         <button
           on:click={() => {
             if (file.type === "audio") {
@@ -203,12 +206,12 @@
           <button
             class="clip"
             style="transform: translateX({clip.offset *
-              TIME_SCALING}px); width: {clip.duration *
+              TIME_SCALING}px); width: {clip.media.duration *
               TIME_SCALING}px; z-index:{clip.z};"
             on:click={() => (clip.z = Math.max(...clips.map((c) => c.z)) + 1)}
           >
             <p>{clip.uuid}, {clip.z}</p>
-            <p>{clip.file.name}</p>
+            <p>{clip.media.title}</p>
           </button>
         {/each}
       </div>
@@ -227,6 +230,24 @@
   {/each}
   {#each audioClips as clips, i}
     <p>a{i} current: {getCurrentClip(clips)?.uuid}</p>
+  {/each}
+</section>
+
+<section class="player">
+  {#each currentClips as clip}
+    {#if clip}
+      {#if clip.media.type === "video"}
+        <video src={clip.media.src} class="media" />
+      {:else if clip.media.type === "audio"}
+        <audio src={clip.media.src} />
+      {:else if clip.media.type === "image"}
+        <img src={clip.media.src} class="media" />
+      {:else}
+        <p>unknown</p>
+      {/if}
+    {:else}
+      <p>none</p>
+    {/if}
   {/each}
 </section>
 
@@ -298,5 +319,9 @@
 
   .clip > p {
     margin: 0;
+  }
+
+  .player > .media {
+    width: 200px;
   }
 </style>
