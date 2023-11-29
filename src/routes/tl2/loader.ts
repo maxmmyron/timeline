@@ -18,7 +18,6 @@ export const resolveMedia = async (file: File): Promise<Media> => {
   return { uuid, src, type, duration, title: file.name, audio, thumbnails };
 }
 
-// FIXME: does not properly parse audio type (something like .mp3 poops out as video/...)
 const assertMIME = async (file: File) => {
   let type: MediaType = file.type.includes('video') ? 'video' : file.type.includes('audio') ? 'audio' : 'image';
   let ext = file.type.split('/')[1];
@@ -26,11 +25,10 @@ const assertMIME = async (file: File) => {
   if(type === "video" || type === "audio") {
     const temp = document.createElement('video').canPlayType(file.type)
     if(temp === "maybe" || temp === "probably") {
-      if(ext === "mp4") {
-        return { src: URL.createObjectURL(file), type };
-      } else {
+      if(type === "video" && ext !== "mp4") {
         throw new Error('Non MP4 video files are not supported.');
       }
+      return { src: URL.createObjectURL(file), type };
     }
     else throw new Error('Your browser does not support this video format.');
   } else if(type === "image") {
