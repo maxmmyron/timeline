@@ -18,6 +18,7 @@ export const resolveMedia = async (file: File): Promise<Media> => {
   return { uuid, src, type, duration, title: file.name, audio, thumbnails };
 }
 
+// FIXME: does not properly parse audio type (something like .mp3 poops out as video/...)
 const assertMIME = async (file: File) => {
   let type: MediaType = file.type.includes('video') ? 'video' : file.type.includes('audio') ? 'audio' : 'image';
   let ext = file.type.split('/')[1];
