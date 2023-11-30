@@ -63,7 +63,7 @@ const resolveDuration = async (src: string, type: string) => new Promise<number>
 
     video.addEventListener("loadedmetadata", () => resolve(video.duration));
   }
-  resolve(5);
+  else resolve(5);
 });
 
 const resolveThumbnails = async (src: string, type: string) => {};
