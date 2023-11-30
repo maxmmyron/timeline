@@ -40,10 +40,8 @@
   let videoClips: Clip[][] = [[]];
   let audioClips: Clip[][] = [[]];
 
-  $: currentClips = [
-    ...videoClips.map(getCurrentClip),
-    ...audioClips.map(getCurrentClip),
-  ];
+  $: currentVideo = <Clip[]>videoClips.map(getCurrentClip).filter(Object);
+  $: currentAudio = <Clip[]>audioClips.map(getCurrentClip).filter(Object);
 
   // *************************************
   // MEDIA
@@ -70,13 +68,7 @@
 
   const createClip = (track: Clip[], resolved: Media): Clip => ({
     media: resolved,
-    offset:
-      track.reduce(
-        (acc, curr) => curr.offset - acc + acc + curr.media.duration,
-        0
-      ) +
-      Math.random() * 2 -
-      1,
+    offset: time,
     start: 0,
     uuid: Math.random().toString(36).substring(7),
     z: z++,
@@ -154,13 +146,14 @@
   <input
     type="file"
     accept="video/*,audio/*,image/*"
+    multiple
     bind:files
     on:change={resolveFiles}
   />
   <section>
     {#each resolved as file}
       <section>
-        <h2>{file.type}</h2>
+        <h2>{file.title}</h2>
         <p>{file.duration}</p>
         <button
           on:click={() => {
@@ -224,29 +217,21 @@
   />
 </div>
 
-<section>
-  {#each videoClips as clips, i}
-    <p>v{i} current: {getCurrentClip(clips)?.uuid}</p>
-  {/each}
-  {#each audioClips as clips, i}
-    <p>a{i} current: {getCurrentClip(clips)?.uuid}</p>
-  {/each}
-</section>
-
 <section class="player">
-  {#each currentClips as clip}
+  {#each currentVideo as clip}
     {#if clip}
       {#if clip.media.type === "video"}
-        <video src={clip.media.src} class="media" />
-      {:else if clip.media.type === "audio"}
-        <audio src={clip.media.src} />
+        <video src={clip.media.src} class="media" autoplay>
+          <track kind="captions" />
+        </video>
       {:else if clip.media.type === "image"}
-        <img src={clip.media.src} class="media" />
-      {:else}
-        <p>unknown</p>
+        <img src={clip.media.src} class="media" alt="" />
       {/if}
-    {:else}
-      <p>none</p>
+    {/if}
+  {/each}
+  {#each currentAudio as audio}
+    {#if audio}
+      <audio src={audio.media.src} class="media" autoplay />
     {/if}
   {/each}
 </section>
@@ -311,7 +296,6 @@
     cursor: pointer;
     position: absolute;
     border: 1px solid rgb(71, 178, 142);
-    width: 100px;
     height: 100%;
     border-radius: 12px;
     background-color: aquamarine;
