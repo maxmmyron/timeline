@@ -1,14 +1,15 @@
 <script lang="ts">
-  import { xlink_attr } from "svelte/internal";
   import { resolveMedia } from "./loader";
   import { onMount } from "svelte";
 
   // *************************************
   // FRAMES
   // *************************************
+  let audioContext: AudioContext | null = null;
 
   let time = 0;
   let paused = true;
+  let jumped = false;
   /**
    * Distance of 1 second in pixels
    */
@@ -23,6 +24,12 @@
       return;
     }
 
+    if (!jumped) {
+      buildActiveAudioSources(
+        currentAudio.filter((a) => a && !activeSources.has(a.uuid))
+      );
+    }
+
     const delta = timestamp - lastTimestamp;
     lastTimestamp = timestamp;
 
@@ -31,7 +38,51 @@
     requestAnimationFrame(frame);
   };
 
-  onMount(() => requestAnimationFrame(frame));
+  onMount(() => {
+    audioContext = new AudioContext();
+    requestAnimationFrame(frame);
+  });
+
+  let activeSources = new Map<string, AudioBufferSourceNode>();
+
+  const updatePauseState = () => {
+    paused = !paused;
+    if (paused) clearActiveAudioSources();
+    else buildActiveAudioSources(currentAudio);
+  };
+
+  const clearActiveAudioSources = () => {
+    if (!audioContext) return;
+
+    for (const source of activeSources.values()) {
+      source.stop();
+    }
+
+    activeSources.clear();
+  };
+
+  const buildActiveAudioSources = (clips: Clip[]) => {
+    if (!audioContext) return;
+    for (const clip of clips) {
+      if (activeSources.has(clip.uuid)) continue;
+      if (!clip.media.audio) continue;
+      const buffer = clip.media.audio;
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+
+      activeSources.set(clip.uuid, source);
+
+      const dt = time - clip.offset;
+
+      source.start(0, dt, buffer.duration - dt);
+
+      source.addEventListener("ended", () => {
+        console.log("ended");
+        activeSources.delete(clip.uuid);
+      });
+    }
+  };
 
   // *************************************
   // TIMELINE
@@ -126,7 +177,7 @@
       paused = true;
     }}>⏮️</button
   >
-  <button on:click={() => (paused = !paused)}>
+  <button on:click={updatePauseState}>
     {paused ? "play" : "pause"}
   </button>
   <button
@@ -183,6 +234,11 @@
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;
       time = x / TIME_SCALING;
+
+      jumped = true;
+      clearActiveAudioSources();
+      if (!paused) buildActiveAudioSources(currentAudio);
+      jumped = false;
     }}
   >
     {#each { length: Math.ceil(time) } as _, i}
@@ -227,11 +283,6 @@
       {:else if clip.media.type === "image"}
         <img src={clip.media.src} class="media" alt="" />
       {/if}
-    {/if}
-  {/each}
-  {#each currentAudio as audio}
-    {#if audio}
-      <audio src={audio.media.src} class="media" autoplay />
     {/if}
   {/each}
 </section>
