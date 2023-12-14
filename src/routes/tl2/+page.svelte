@@ -9,14 +9,13 @@
 
   let time = 0;
   let paused = true;
-  let jumped = false;
   /**
    * Distance of 1 second in pixels
    */
   const TIME_SCALING = 100;
 
   let lastTimestamp = 0;
-
+  let unplayed = [];
   const frame = (timestamp: DOMHighResTimeStamp) => {
     if (paused) {
       lastTimestamp = timestamp;
@@ -24,10 +23,10 @@
       return;
     }
 
-    if (!jumped) {
-      buildActiveAudioSources(
-        currentAudio.filter((a) => a && !activeSources.has(a.uuid))
-      );
+    unplayed = currentAudio.filter((a) => a && !activeSources.has(a.uuid));
+
+    if (unplayed.length > 0) {
+      buildActiveAudioSources(unplayed);
     }
 
     const delta = timestamp - lastTimestamp;
@@ -48,7 +47,7 @@
   const updatePauseState = () => {
     paused = !paused;
     if (paused) clearActiveAudioSources();
-    else buildActiveAudioSources(currentAudio);
+    else buildActiveAudioSources(currentAudio.filter(Object));
   };
 
   const clearActiveAudioSources = () => {
@@ -64,7 +63,8 @@
   const buildActiveAudioSources = (clips: Clip[]) => {
     if (!audioContext) return;
     for (const clip of clips) {
-      if (activeSources.has(clip.uuid)) continue;
+      if (!clip) continue;
+      if (activeSources.has(clip.uuid)) throw new Error("already playing");
       if (!clip.media.audio) continue;
       const buffer = clip.media.audio;
       const source = audioContext.createBufferSource();
@@ -88,10 +88,10 @@
   // TIMELINE
   // *************************************
 
-  let videoClips: Clip[][] = [[]];
+  let videoClips: Clip[] = [];
   let audioClips: Clip[][] = [[]];
 
-  $: currentVideo = <Clip[]>videoClips.map(getCurrentClip).filter(Object);
+  $: currentVideo = getCurrentClip(videoClips);
   $: currentAudio = <Clip[]>audioClips.map(getCurrentClip).filter(Object);
 
   // *************************************
@@ -143,7 +143,6 @@
 <svelte:body style="margin: 0;" />
 
 <section>
-  <button on:click={() => (videoClips = [...videoClips, []])}>+ vrow</button>
   <button on:click={() => (audioClips = [...audioClips, []])}>+ arow</button>
 </section>
 
@@ -214,10 +213,7 @@
                 createClip(audioClips[audioRow], file),
               ];
             } else {
-              videoClips[videoRow] = [
-                ...videoClips[videoRow],
-                createClip(videoClips[videoRow], file),
-              ];
+              videoClips = [...videoClips, createClip(videoClips, file)];
             }
           }}>+</button
         >
@@ -235,10 +231,8 @@
       const x = e.clientX - rect.left;
       time = x / TIME_SCALING;
 
-      jumped = true;
+      paused = true;
       clearActiveAudioSources();
-      if (!paused) buildActiveAudioSources(currentAudio);
-      jumped = false;
     }}
   >
     {#each { length: Math.ceil(time) } as _, i}
@@ -247,26 +241,39 @@
       </div>
     {/each}
   </div>
-  {#each [videoClips, audioClips] as xClips, i}
-    {#each xClips as clips, j}
-      <div class="row">
-        <p style="position:absolute">{i === 0 ? "v" : "a"}{j}</p>
-        {#each clips as clip}
-          <button
-            class="clip"
-            style="transform: translateX({clip.offset *
-              TIME_SCALING}px); width: {clip.media.duration *
-              TIME_SCALING}px; z-index:{clip.z};"
-            on:click={() => (clip.z = Math.max(...clips.map((c) => c.z)) + 1)}
-          >
-            <p>{clip.uuid}, {clip.z}</p>
-            <p>{clip.media.title}</p>
-          </button>
-        {/each}
-      </div>
+  <div class="row">
+    <p style="position:absolute">v0</p>
+    {#each videoClips as clip}
+      <button
+        class="clip"
+        style="transform: translateX({clip.offset *
+          TIME_SCALING}px); width: {clip.media.duration *
+          TIME_SCALING}px; z-index:{clip.z};"
+        on:click={() => (clip.z = Math.max(...videoClips.map((c) => c.z)) + 1)}
+      >
+        <p>{clip.uuid}, {clip.z}</p>
+        <p>{clip.media.title}</p>
+      </button>
     {/each}
-    <hr />
+  </div>
+  {#each audioClips as clips, j}
+    <div class="row">
+      <p style="position:absolute">a{j}</p>
+      {#each clips as clip}
+        <button
+          class="clip"
+          style="transform: translateX({clip.offset *
+            TIME_SCALING}px); width: {clip.media.duration *
+            TIME_SCALING}px; z-index:{clip.z};"
+          on:click={() => (clip.z = Math.max(...clips.map((c) => c.z)) + 1)}
+        >
+          <p>{clip.uuid}, {clip.z}</p>
+          <p>{clip.media.title}</p>
+        </button>
+      {/each}
+    </div>
   {/each}
+  <hr />
   <div
     class="scrubber"
     style="transform: translateX({time * TIME_SCALING}px; z-index: 9999999;"
@@ -274,17 +281,15 @@
 </div>
 
 <section class="player">
-  {#each currentVideo as clip}
-    {#if clip}
-      {#if clip.media.type === "video"}
-        <video src={clip.media.src} class="media" autoplay>
-          <track kind="captions" />
-        </video>
-      {:else if clip.media.type === "image"}
-        <img src={clip.media.src} class="media" alt="" />
-      {/if}
+  {#if currentVideo}
+    {#if currentVideo.media.type === "video"}
+      <video src={currentVideo.media.src} class="media" autoplay>
+        <track kind="captions" />
+      </video>
+    {:else if currentVideo.media.type === "image"}
+      <img src={currentVideo.media.src} class="media" alt="" />
     {/if}
-  {/each}
+  {/if}
 </section>
 
 <style>
