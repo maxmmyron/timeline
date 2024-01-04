@@ -222,8 +222,8 @@
       moveScrubber(e.clientX);
     }}
   >
-    {#each { length: Math.ceil($time) } as _, i}
-      <div class="tick" style="width: {TIME_SCALING}px; height: 100%">
+    {#each { length: Math.ceil($time) + 30 } as _, i}
+      <div class="tick" style="width: {TIME_SCALING}px;">
         <p>{i}</p>
       </div>
     {/each}
@@ -284,6 +284,8 @@
   }
 
   .tick {
+    height: 100%;
+    flex-shrink: 0;
     border-right: 1px solid rgba(100 100 100 / 0.75);
     position: relative;
     pointer-events: none;
