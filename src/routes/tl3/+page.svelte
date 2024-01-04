@@ -1,15 +1,15 @@
 <script lang="ts">
-  import ResolvedClip from "./ResolvedClip.svelte";
-  import { resolveMedia } from "./loader";
+  import ResolvedMedia from "./lib/ResolvedMedia.svelte";
+  import TimelineClip from "./lib/TimelineClip.svelte";
+  import { resolveMedia } from "./lib/loader";
   import { onMount, tick } from "svelte";
+  import { TIME_SCALING, time } from "./lib/stores";
 
   let paused = true;
-  let time = 0;
 
   let canMoveScrubber = false;
-  let tickContainer: HTMLDivElement;
-
   let canMoveClip = false;
+
   /**
    * UUID of clip being moved
    */
@@ -19,74 +19,65 @@
    */
   let movedOffset = 0;
 
-  $: console.log(canMoveClip, movedUUID, movedOffset);
+  let z = 0;
 
   /**
-   * Distance of 1 second in pixels
+   * Most recent files uploaded by the user
    */
-  const TIME_SCALING = 100;
-
-  // *************************************
-  // SOURCES
-  // *************************************
-
-  let videoEl: HTMLVideoElement | null = null;
   let files: FileList | null = null;
+  /**
+   * Media that has been uploaded and fully resolved
+   */
   let resolved: Media[] = [];
-
-  // *************************************
-  // TIMELINE
-  // *************************************
-
+  /**
+   * Represents the clips in the timeline
+   */
   let videoClips: Clip[] = [];
-  // we get uuid as string instead of entire object so reassignment doesn't
-  // trigger reactivity
+
+  let tickContainer: HTMLDivElement;
+  let videoEl: HTMLVideoElement | null = null;
+
+  // get the UUID of the current clip (instead of clip itself, to prevent
+  // reactivity issues)
   $: currentUUID = getCurrentClip(videoClips);
   $: current = videoClips.find((c) => c.uuid === currentUUID) ?? null;
-
-  // *************************************
-  // PLAYBACK MANAGEMENT
-  // *************************************
 
   $: if (paused === true && videoEl) videoEl.pause();
   $: if (paused === false && videoEl) videoEl.play();
 
   // when currentVideo changes, update
-  $: current, time, updatePlayer();
+  $: current, $time, updatePlayer();
   // reset video time when video changes
   $: currentUUID, resetVideoTime();
 
   const updatePlayer = async () => {
-    // wait for DOM update
     await tick();
 
+    // if there's no video to play or no current clip, we can return early.
     if (!videoEl || !current) return;
 
-    // if we're paused, we need to update the time
     if (paused) {
-      videoEl.currentTime = time - current.offset;
+      videoEl.currentTime = $time - current.offset;
     }
 
-    // if we're playing, we need to update the time
     if (!paused && videoEl.paused) {
       videoEl.play();
     }
   };
 
   /**
-   * Runs when video changes to reset runtime to match clip offset
+   * Runs when the current UUID to play changes. Used to reset the video's
+   * currentTime property to correctly account for the current offset.
    */
   const resetVideoTime = async () => {
-    // break if we don't have a video element or current clip
+    // if there's no UUID, there's no video playing; we can return
     if (!currentUUID) return;
 
-    // wait for DOM update
     await tick();
 
     if (!videoEl || !current) return;
 
-    // if we're playing, we need to update the time
-    videoEl.currentTime = time - current.offset;
+    videoEl.currentTime = $time - current.offset;
   };
 
   let lastTimestamp = 0;
@@ -100,7 +91,7 @@
     const delta = timestamp - lastTimestamp;
     lastTimestamp = timestamp;
 
-    time += delta / 1000;
+    $time += delta / 1000;
 
     requestAnimationFrame(frame);
   };
@@ -126,7 +117,7 @@
   const moveScrubber = (clientX: number) => {
     const rect = tickContainer.getBoundingClientRect();
     const x = clientX - rect.left;
-    time = x / TIME_SCALING;
+    $time = x / TIME_SCALING;
   };
 
   const moveClip = (clientX: number) => {
@@ -136,34 +127,36 @@
     const clip = videoClips.find((c) => c.uuid === movedUUID);
 
     if (!clip) return;
-    console.log("moving");
     clip.offset = Math.max(0, newPos / TIME_SCALING);
 
     // reassign to trigger reactivity
     videoClips = [...videoClips];
   };
 
-  // *************************************
-  // CLIP DEBUG
-  // *************************************
+  const setupClipMove = (e: MouseEvent, uuid: string) => {
+    canMoveClip = true;
+    movedUUID = uuid;
+    if (!e.currentTarget) return console.error("no current target");
+    let rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+    movedOffset = e.clientX - rect.left;
+  };
 
   const createClip = (resolved: Media): Clip => ({
     media: resolved,
-    offset: time,
+    offset: $time,
     start: 0,
     // TODO: improve UUID gen.
     uuid: Math.random().toString(36).substring(7),
     z: z++,
   });
 
-  let z = 0;
-
+  // TODO: explain why this is reactive? (it is, but i don't exactly know why)
   $: getCurrentClip = (clips: Clip[]): string | null => {
     let valid: Clip[] = [];
     for (const clip of clips) {
-      if (clip.offset < time && clip.offset + clip.media.duration > time)
+      if (clip.offset < $time && clip.offset + clip.media.duration > $time)
         valid.push(clip);
-      if (clip.offset > time) break;
+      if (clip.offset > $time) break;
     }
     return valid.sort((a, b) => b.z - a.z)[0]?.uuid ?? null;
   };
@@ -180,7 +173,7 @@
 <section>
   <button
     on:click={() => {
-      time = 0;
+      $time = 0;
       paused = true;
     }}>⏮️</button
   >
@@ -190,11 +183,11 @@
   <button
     on:click={() => {
       paused = true;
-      time = 0;
+      $time = 0;
     }}>⏭️</button
   >
 
-  {time}
+  {$time}
 </section>
 
 <section>
@@ -207,7 +200,7 @@
   />
   <section>
     {#each resolved as file}
-      <ResolvedClip
+      <ResolvedMedia
         {file}
         on:click={() => (videoClips = [...videoClips, createClip(file)])}
       />
@@ -229,7 +222,7 @@
       moveScrubber(e.clientX);
     }}
   >
-    {#each { length: Math.ceil(time) } as _, i}
+    {#each { length: Math.ceil($time) } as _, i}
       <div class="tick" style="width: {TIME_SCALING}px; height: 100%">
         <p>{i}</p>
       </div>
@@ -237,28 +230,17 @@
   </div>
   <div class="row">
     {#each videoClips as clip}
-      <button
-        class="clip"
-        style="transform: translateX({clip.offset *
-          TIME_SCALING}px); width: {clip.media.duration *
-          TIME_SCALING}px; z-index:{clip.z};"
+      <TimelineClip
+        {clip}
         on:click={() => (clip.z = Math.max(...videoClips.map((c) => c.z)) + 1)}
-        on:mousedown={(e) => {
-          canMoveClip = true;
-          movedUUID = clip.uuid;
-          movedOffset =
-            e.clientX - e.currentTarget.getBoundingClientRect().left;
-        }}
-      >
-        <p>{clip.uuid}, {clip.z}</p>
-        <p>{clip.media.title}</p>
-      </button>
+        on:mousedown={(e) => setupClipMove(e, clip.uuid)}
+      />
     {/each}
   </div>
   <hr />
   <div
     class="scrubber"
-    style="transform: translateX({time * TIME_SCALING}px; z-index: 9999999;"
+    style="transform: translateX({$time * TIME_SCALING}px; z-index: 9999999;"
   />
 </div>
 
@@ -329,20 +311,6 @@
     width: 2px;
     height: 100%;
     background-color: red;
-  }
-
-  .clip {
-    cursor: pointer;
-    position: absolute;
-    /* border: 1px solid rgb(71, 178, 142); */
-    border: none;
-    height: 100%;
-    border-radius: 12px;
-    background-color: aquamarine;
-  }
-
-  .clip > p {
-    margin: 0;
   }
 
   .player > .media {
