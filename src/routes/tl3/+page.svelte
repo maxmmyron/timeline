@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { current_component } from "svelte/internal";
   import { resolveMedia } from "./loader";
   import { onMount, tick } from "svelte";
 
@@ -28,47 +29,49 @@
   $: currentUUID = getCurrentClip(videoClips);
   $: current = videoClips.find((c) => c.uuid === currentUUID) ?? null;
 
-  $: console.log(current);
-
   // *************************************
   // PLAYBACK MANAGEMENT
   // *************************************
 
-  $: if (paused === true) pause();
-  $: if (paused === false) play();
-  // when currentVideo changes, figure out what to do
+  $: if (paused === true && videoEl) videoEl.pause();
+  $: if (paused === false && videoEl) videoEl.play();
+
+  // when currentVideo changes, update
   $: current, time, updatePlayer();
-
-  const play = async () => {
-    // wait for DOM update
-    await tick();
-    if (videoEl) videoEl.play();
-  };
-
-  const pause = async () => {
-    // wait for DOM update
-    await tick();
-    if (videoEl) videoEl.pause();
-  };
+  // reset video time when video changes
+  $: currentUUID, resetVideoTime();
 
   const updatePlayer = async () => {
-    // console.log(`player has updated to ${currentUUID}`);
-
     // wait for DOM update
     await tick();
 
     if (!videoEl || !current) return;
 
-    // if we're paused, we need to update the scrubber position
+    // if we're paused, we need to update the time
     if (paused) {
-      const dt = time - current.offset;
-      videoEl.currentTime = dt;
+      videoEl.currentTime = time - current.offset;
     }
 
     // if we're playing, we need to update the time
     if (!paused && videoEl.paused) {
       videoEl.play();
     }
+  };
+
+  /**
+   * Runs when video changes to reset runtime to match clip offset
+   */
+  const resetVideoTime = async () => {
+    // break if we don't have a video element or current clip
+    if (!currentUUID) return;
+
+    // wait for DOM update
+    await tick();
+
+    if (!videoEl || !current) return;
+
+    // if we're playing, we need to update the time
+    videoEl.currentTime = time - current.offset;
   };
 
   let lastTimestamp = 0;
@@ -87,9 +90,7 @@
     requestAnimationFrame(frame);
   };
 
-  onMount(() => {
-    requestAnimationFrame(frame);
-  });
+  onMount(() => requestAnimationFrame(frame));
 
   const resolveFiles = async () => {
     if (!files) return;
