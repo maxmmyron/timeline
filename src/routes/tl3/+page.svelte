@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { current_component } from "svelte/internal";
+  import ResolvedClip from "./ResolvedClip.svelte";
   import { resolveMedia } from "./loader";
   import { onMount, tick } from "svelte";
 
   let paused = true;
   let time = 0;
+
+  let canMoveScrubber = false;
+  let tickContainer: HTMLDivElement;
 
   /**
    * Distance of 1 second in pixels
@@ -103,6 +106,13 @@
     files = null;
   };
 
+  const handleScrubberMove = (e: MouseEvent) => {
+    if (!canMoveScrubber) return;
+    const rect = tickContainer.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    time = x / TIME_SCALING;
+  };
+
   // *************************************
   // CLIP DEBUG
   // *************************************
@@ -111,6 +121,7 @@
     media: resolved,
     offset: time,
     start: 0,
+    // TODO: improve UUID gen.
     uuid: Math.random().toString(36).substring(7),
     z: z++,
   });
@@ -129,21 +140,11 @@
   };
 </script>
 
-<svelte:body style="margin: 0;" />
+<svelte:window
+  on:mousemove={handleScrubberMove}
+  on:mouseup={() => (canMoveScrubber = false)}
+/>
 
-<section>
-  <label for="video-row">video row</label>
-  <input
-    type="range"
-    min="0"
-    max={videoClips.length - 1}
-    bind:value={videoRow}
-    name="video-row"
-  />
-  <output for="video-row">{videoRow}</output>
-</section>
-
-<br />
 <section>
   <button
     on:click={() => {
@@ -160,13 +161,10 @@
       time = 0;
     }}>⏭️</button
   >
-</section>
 
-<section>
   {time}
 </section>
 
-<br />
 <section>
   <input
     type="file"
@@ -177,15 +175,10 @@
   />
   <section>
     {#each resolved as file}
-      <section>
-        <h2>{file.title}</h2>
-        <p>{file.duration}</p>
-        <button
-          on:click={() => {
-            videoClips = [...videoClips, createClip(file)];
-          }}>+</button
-        >
-      </section>
+      <ResolvedClip
+        {file}
+        on:click={() => (videoClips = [...videoClips, createClip(file)])}
+      />
     {/each}
   </section>
 </section>
@@ -194,13 +187,10 @@
   <!-- svelte-ignore a11y-click-events-have-key-events -->
   <div
     class="tick-container"
-    on:click={(e) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      time = x / TIME_SCALING;
-
-      paused = true;
-      // clearActiveAudioSources();
+    bind:this={tickContainer}
+    on:mousedown={(e) => {
+      canMoveScrubber = true;
+      handleScrubberMove(e);
     }}
   >
     {#each { length: Math.ceil(time) } as _, i}
