@@ -6,12 +6,6 @@
   let time = 0;
 
   /**
-   * Last time we paused at. Used to calculate delta if scrubber moves during
-   * pause.
-   */
-  let lastTime = 0;
-
-  /**
    * Distance of 1 second in pixels
    */
   const TIME_SCALING = 100;
@@ -21,9 +15,6 @@
   // *************************************
 
   let videoEl: HTMLVideoElement | null = null;
-
-  let activeSources = new Map<string, AudioBufferSourceNode>();
-
   let files: FileList | null = null;
   let resolved: Media[] = [];
 
@@ -32,7 +23,12 @@
   // *************************************
 
   let videoClips: Clip[] = [];
-  $: current = getCurrentClip(videoClips);
+  // we get uuid as string instead of entire object so reassignment doesn't
+  // trigger reactivity
+  $: currentUUID = getCurrentClip(videoClips);
+  $: current = videoClips.find((c) => c.uuid === currentUUID) ?? null;
+
+  $: console.log(current);
 
   // *************************************
   // PLAYBACK MANAGEMENT
@@ -40,46 +36,37 @@
 
   $: if (paused === true) pause();
   $: if (paused === false) play();
-  // when time changes, update sources
-  $: time, updateSourcesAtPause();
   // when currentVideo changes, figure out what to do
-  $: current?.uuid, updatePlayer();
+  $: current, time, updatePlayer();
 
-  const play = () => {
-    // buildActiveAudioSources(currentAudio.filter(Object));
-    // if (audioContext) audioContext.resume();
+  const play = async () => {
+    // wait for DOM update
+    await tick();
     if (videoEl) videoEl.play();
   };
 
-  const pause = () => {
-    // track last time to calculate delta if scrubber moves during pause.
-    lastTime = time;
-    // clearActiveAudioSources();
-    // if (audioContext) audioContext.suspend();
+  const pause = async () => {
+    // wait for DOM update
+    await tick();
     if (videoEl) videoEl.pause();
   };
 
-  // runs whenever time updates
-  const updateSourcesAtPause = () => {
-    // if we're not paused, don't do anything
-    if (!paused) return;
-
-    if (current) {
-      if (videoEl) videoEl.currentTime = time - current.offset;
-    }
-  };
-
   const updatePlayer = async () => {
-    if (!videoEl) return;
-    if (!current) return;
+    // console.log(`player has updated to ${currentUUID}`);
 
-    // console.log(`player has updated to ${currentVideo.uuid}`);
-
+    // wait for DOM update
     await tick();
 
-    if (!paused) {
-      let dt = time - current.offset;
+    if (!videoEl || !current) return;
+
+    // if we're paused, we need to update the scrubber position
+    if (paused) {
+      const dt = time - current.offset;
       videoEl.currentTime = dt;
+    }
+
+    // if we're playing, we need to update the time
+    if (!paused && videoEl.paused) {
       videoEl.play();
     }
   };
@@ -119,7 +106,7 @@
   // CLIP DEBUG
   // *************************************
 
-  const createClip = (track: Clip[], resolved: Media): Clip => ({
+  const createClip = (resolved: Media): Clip => ({
     media: resolved,
     offset: time,
     start: 0,
@@ -130,14 +117,14 @@
   let videoRow = 0;
   let z = 0;
 
-  $: getCurrentClip = (clips: Clip[]): Clip | null => {
+  $: getCurrentClip = (clips: Clip[]): string | null => {
     let valid: Clip[] = [];
     for (const clip of clips) {
       if (clip.offset < time && clip.offset + clip.media.duration > time)
         valid.push(clip);
       if (clip.offset > time) break;
     }
-    return valid.sort((a, b) => b.z - a.z)[0] ?? null;
+    return valid.sort((a, b) => b.z - a.z)[0]?.uuid ?? null;
   };
 </script>
 
@@ -194,7 +181,7 @@
         <p>{file.duration}</p>
         <button
           on:click={() => {
-            videoClips = [...videoClips, createClip(videoClips, file)];
+            videoClips = [...videoClips, createClip(file)];
           }}>+</button
         >
       </section>
