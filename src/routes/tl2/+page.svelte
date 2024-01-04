@@ -1,18 +1,96 @@
 <script lang="ts">
   import { resolveMedia } from "./loader";
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
 
-  // *************************************
-  // FRAMES
-  // *************************************
   let audioContext: AudioContext | null = null;
 
-  let time = 0;
   let paused = true;
+  let time = 0;
+
+  /**
+   * Last time we paused at. Used to calculate delta if scrubber moves during
+   * pause.
+   */
+  let lastTime = 0;
+
   /**
    * Distance of 1 second in pixels
    */
   const TIME_SCALING = 100;
+
+  // *************************************
+  // SOURCES
+  // *************************************
+
+  let videoEl: HTMLVideoElement | null = null;
+  let imgEl: HTMLImageElement | null = null;
+
+  let activeSources = new Map<string, AudioBufferSourceNode>();
+
+  let files: FileList | null = null;
+  let resolved: Media[] = [];
+
+  // *************************************
+  // TIMELINE
+  // *************************************
+
+  let videoClips: Clip[] = [];
+  let audioClips: Clip[][] = [[]];
+
+  $: console.log(videoClips);
+
+  $: currentVideo = getCurrentClip(videoClips);
+  $: currentAudio = <Clip[]>audioClips.map(getCurrentClip).filter(Object);
+
+  // *************************************
+  // PLAYBACK MANAGEMENT
+  // *************************************
+
+  $: if (paused === true) pause();
+  $: if (paused === false) play();
+  // when time changes, update sources
+  $: time, updateSourcesAtPause();
+  // when currentVideo changes, figure out what to do
+  $: currentVideo?.uuid, updatePlayer();
+
+  const play = () => {
+    // buildActiveAudioSources(currentAudio.filter(Object));
+    // if (audioContext) audioContext.resume();
+    if (videoEl) videoEl.play();
+  };
+
+  const pause = () => {
+    // track last time to calculate delta if scrubber moves during pause.
+    lastTime = time;
+    // clearActiveAudioSources();
+    // if (audioContext) audioContext.suspend();
+    if (videoEl) videoEl.pause();
+  };
+
+  // runs whenever time updates
+  const updateSourcesAtPause = () => {
+    // if we're not paused, don't do anything
+    if (!paused) return;
+
+    if (currentVideo) {
+      if (videoEl) videoEl.currentTime = time - currentVideo.offset;
+    }
+  };
+
+  const updatePlayer = async () => {
+    if (!videoEl) return;
+    if (!currentVideo) return;
+
+    // console.log(`player has updated to ${currentVideo.uuid}`);
+
+    await tick();
+
+    if (!paused) {
+      let dt = time - currentVideo.offset;
+      videoEl.currentTime = dt;
+      videoEl.play();
+    }
+  };
 
   let lastTimestamp = 0;
   let unplayed = [];
@@ -23,11 +101,11 @@
       return;
     }
 
-    unplayed = currentAudio.filter((a) => a && !activeSources.has(a.uuid));
+    // unplayed = currentAudio.filter((a) => a && !activeSources.has(a.uuid));
 
-    if (unplayed.length > 0) {
-      buildActiveAudioSources(unplayed);
-    }
+    // if (unplayed.length > 0) {
+    //   buildActiveAudioSources(unplayed);
+    // }
 
     const delta = timestamp - lastTimestamp;
     lastTimestamp = timestamp;
@@ -42,65 +120,39 @@
     requestAnimationFrame(frame);
   });
 
-  let activeSources = new Map<string, AudioBufferSourceNode>();
+  // const clearActiveAudioSources = () => {
+  //   if (!audioContext) return;
 
-  const updatePauseState = () => {
-    paused = !paused;
-    if (paused) clearActiveAudioSources();
-    else buildActiveAudioSources(currentAudio.filter(Object));
-  };
+  //   for (const source of activeSources.values()) {
+  //     source.stop();
+  //   }
 
-  const clearActiveAudioSources = () => {
-    if (!audioContext) return;
+  //   activeSources.clear();
+  // };
 
-    for (const source of activeSources.values()) {
-      source.stop();
-    }
+  // const buildActiveAudioSources = (clips: Clip[]) => {
+  //   if (!audioContext) return;
+  //   for (const clip of clips) {
+  //     if (!clip) continue;
+  //     if (activeSources.has(clip.uuid)) throw new Error("already playing");
+  //     if (!clip.media.audio) continue;
+  //     const buffer = clip.media.audio;
+  //     const source = audioContext.createBufferSource();
+  //     source.buffer = buffer;
+  //     source.connect(audioContext.destination);
 
-    activeSources.clear();
-  };
+  //     activeSources.set(clip.uuid, source);
 
-  const buildActiveAudioSources = (clips: Clip[]) => {
-    if (!audioContext) return;
-    for (const clip of clips) {
-      if (!clip) continue;
-      if (activeSources.has(clip.uuid)) throw new Error("already playing");
-      if (!clip.media.audio) continue;
-      const buffer = clip.media.audio;
-      const source = audioContext.createBufferSource();
-      source.buffer = buffer;
-      source.connect(audioContext.destination);
+  //     const dt = time - clip.offset;
 
-      activeSources.set(clip.uuid, source);
+  //     source.start(0, dt, buffer.duration - dt);
 
-      const dt = time - clip.offset;
-
-      source.start(0, dt, buffer.duration - dt);
-
-      source.addEventListener("ended", () => {
-        console.log("ended");
-        activeSources.delete(clip.uuid);
-      });
-    }
-  };
-
-  // *************************************
-  // TIMELINE
-  // *************************************
-
-  let videoClips: Clip[] = [];
-  let audioClips: Clip[][] = [[]];
-
-  $: currentVideo = getCurrentClip(videoClips);
-  $: currentAudio = <Clip[]>audioClips.map(getCurrentClip).filter(Object);
-
-  // *************************************
-  // MEDIA
-  // *************************************
-
-  let files: FileList | null = null;
-
-  let resolved: Media[] = [];
+  //     source.addEventListener("ended", () => {
+  //       console.log("ended");
+  //       activeSources.delete(clip.uuid);
+  //     });
+  //   }
+  // };
 
   const resolveFiles = async () => {
     if (!files) return;
@@ -130,6 +182,7 @@
   let z = 0;
 
   $: getCurrentClip = (clips: Clip[]): Clip | null => {
+    console.log("run");
     let valid: Clip[] = [];
     for (const clip of clips) {
       if (clip.offset < time && clip.offset + clip.media.duration > time)
@@ -176,7 +229,7 @@
       paused = true;
     }}>⏮️</button
   >
-  <button on:click={updatePauseState}>
+  <button on:click={() => (paused = !paused)}>
     {paused ? "play" : "pause"}
   </button>
   <button
@@ -232,7 +285,7 @@
       time = x / TIME_SCALING;
 
       paused = true;
-      clearActiveAudioSources();
+      // clearActiveAudioSources();
     }}
   >
     {#each { length: Math.ceil(time) } as _, i}
@@ -283,11 +336,21 @@
 <section class="player">
   {#if currentVideo}
     {#if currentVideo.media.type === "video"}
-      <video src={currentVideo.media.src} class="media" autoplay>
+      <video
+        src={currentVideo.media.src}
+        class="media"
+        bind:this={videoEl}
+        title={currentVideo.uuid}
+      >
         <track kind="captions" />
       </video>
     {:else if currentVideo.media.type === "image"}
-      <img src={currentVideo.media.src} class="media" alt="" />
+      <img
+        src={currentVideo.media.src}
+        class="media"
+        alt=""
+        bind:this={imgEl}
+      />
     {/if}
   {/if}
 </section>
