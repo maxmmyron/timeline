@@ -3,21 +3,11 @@
   import TimelineClip from "./lib/TimelineClip.svelte";
   import { resolveMedia } from "./lib/loader";
   import { onMount, tick } from "svelte";
-  import { TIME_SCALING, time } from "./lib/stores";
+  import { TIME_SCALING, time, videoClips } from "./lib/stores";
 
   let paused = true;
 
   let canMoveScrubber = false;
-  let canMoveClip = false;
-
-  /**
-   * UUID of clip being moved
-   */
-  let movedUUID: string | null = null;
-  /**
-   * Distance from left of clip to mouse
-   */
-  let movedOffset = 0;
 
   let z = 0;
 
@@ -29,18 +19,14 @@
    * Media that has been uploaded and fully resolved
    */
   let resolved: Media[] = [];
-  /**
-   * Represents the clips in the timeline
-   */
-  let videoClips: Clip[] = [];
 
   let tickContainer: HTMLDivElement;
   let videoEl: HTMLVideoElement | null = null;
 
   // get the UUID of the current clip (instead of clip itself, to prevent
   // reactivity issues)
-  $: currentUUID = getCurrentClip(videoClips);
-  $: current = videoClips.find((c) => c.uuid === currentUUID) ?? null;
+  $: currentUUID = getCurrentClip($videoClips);
+  $: current = $videoClips.find((c) => c.uuid === currentUUID) ?? null;
 
   $: if (paused === true && videoEl) videoEl.pause();
   $: if (paused === false && videoEl) videoEl.play();
@@ -109,42 +95,17 @@
     files = null;
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (canMoveScrubber) moveScrubber(e.clientX);
-    if (canMoveClip) moveClip(e.clientX);
-  };
-
   const moveScrubber = (clientX: number) => {
     const rect = tickContainer.getBoundingClientRect();
     const x = clientX - rect.left;
     $time = x / TIME_SCALING;
   };
 
-  const moveClip = (clientX: number) => {
-    if (!movedUUID) return;
-
-    const newPos = clientX - movedOffset;
-    const clip = videoClips.find((c) => c.uuid === movedUUID);
-
-    if (!clip) return;
-    clip.offset = Math.max(0, newPos / TIME_SCALING);
-
-    // reassign to trigger reactivity
-    videoClips = [...videoClips];
-  };
-
-  const setupClipMove = (e: MouseEvent, uuid: string) => {
-    canMoveClip = true;
-    movedUUID = uuid;
-    if (!e.currentTarget) return console.error("no current target");
-    let rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-    movedOffset = e.clientX - rect.left;
-  };
-
   const createClip = (resolved: Media): Clip => ({
     media: resolved,
     offset: $time,
     start: 0,
+    end: 0,
     // TODO: improve UUID gen.
     uuid: Math.random().toString(36).substring(7),
     z: z++,
@@ -163,10 +124,11 @@
 </script>
 
 <svelte:window
-  on:mousemove={handleMouseMove}
+  on:mousemove={(e) => {
+    if (canMoveScrubber) moveScrubber(e.clientX);
+  }}
   on:mouseup={() => {
     canMoveScrubber = false;
-    canMoveClip = false;
   }}
 />
 
@@ -202,14 +164,14 @@
     {#each resolved as file}
       <ResolvedMedia
         {file}
-        on:click={() => (videoClips = [...videoClips, createClip(file)])}
+        on:click={() => ($videoClips = [...$videoClips, createClip(file)])}
       />
     {/each}
   </section>
 </section>
 
 <section>
-  <button on:click={() => console.log(videoClips)}>log</button>
+  <button on:click={() => console.log($videoClips)}>log</button>
 </section>
 
 <div class="timeline">
@@ -229,11 +191,10 @@
     {/each}
   </div>
   <div class="row">
-    {#each videoClips as clip}
+    {#each $videoClips as clip}
       <TimelineClip
         {clip}
-        on:click={() => (clip.z = Math.max(...videoClips.map((c) => c.z)) + 1)}
-        on:mousedown={(e) => setupClipMove(e, clip.uuid)}
+        on:click={() => (clip.z = Math.max(...$videoClips.map((c) => c.z)) + 1)}
       />
     {/each}
   </div>
