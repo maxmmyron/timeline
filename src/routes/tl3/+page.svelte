@@ -192,7 +192,6 @@
       />
     {/each}
   </div>
-  <hr />
   <div
     class="scrubber"
     style="transform: translateX({$time * TIME_SCALING}px; z-index: 9999999;"
