@@ -127,9 +127,7 @@
   on:mousemove={(e) => {
     if (canMoveScrubber) moveScrubber(e.clientX);
   }}
-  on:mouseup={() => {
-    canMoveScrubber = false;
-  }}
+  on:mouseup={() => (canMoveScrubber = false)}
 />
 
 <section>
@@ -168,10 +166,6 @@
       />
     {/each}
   </section>
-</section>
-
-<section>
-  <button on:click={() => console.log($videoClips)}>log</button>
 </section>
 
 <div class="timeline">
