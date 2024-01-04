@@ -9,6 +9,18 @@
   let canMoveScrubber = false;
   let tickContainer: HTMLDivElement;
 
+  let canMoveClip = false;
+  /**
+   * UUID of clip being moved
+   */
+  let movedUUID: string | null = null;
+  /**
+   * Distance from left of clip to mouse
+   */
+  let movedOffset = 0;
+
+  $: console.log(canMoveClip, movedUUID, movedOffset);
+
   /**
    * Distance of 1 second in pixels
    */
@@ -106,11 +118,29 @@
     files = null;
   };
 
-  const handleScrubberMove = (e: MouseEvent) => {
-    if (!canMoveScrubber) return;
+  const handleMouseMove = (e: MouseEvent) => {
+    if (canMoveScrubber) moveScrubber(e.clientX);
+    if (canMoveClip) moveClip(e.clientX);
+  };
+
+  const moveScrubber = (clientX: number) => {
     const rect = tickContainer.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+    const x = clientX - rect.left;
     time = x / TIME_SCALING;
+  };
+
+  const moveClip = (clientX: number) => {
+    if (!movedUUID) return;
+
+    const newPos = clientX - movedOffset;
+    const clip = videoClips.find((c) => c.uuid === movedUUID);
+
+    if (!clip) return;
+    console.log("moving");
+    clip.offset = Math.max(0, newPos / TIME_SCALING);
+
+    // reassign to trigger reactivity
+    videoClips = [...videoClips];
   };
 
   // *************************************
@@ -126,7 +156,6 @@
     z: z++,
   });
 
-  let videoRow = 0;
   let z = 0;
 
   $: getCurrentClip = (clips: Clip[]): string | null => {
@@ -141,8 +170,11 @@
 </script>
 
 <svelte:window
-  on:mousemove={handleScrubberMove}
-  on:mouseup={() => (canMoveScrubber = false)}
+  on:mousemove={handleMouseMove}
+  on:mouseup={() => {
+    canMoveScrubber = false;
+    canMoveClip = false;
+  }}
 />
 
 <section>
@@ -168,7 +200,7 @@
 <section>
   <input
     type="file"
-    accept="video/*,audio/*,image/*"
+    accept="video/*"
     multiple
     bind:files
     on:change={resolveFiles}
@@ -183,6 +215,10 @@
   </section>
 </section>
 
+<section>
+  <button on:click={() => console.log(videoClips)}>log</button>
+</section>
+
 <div class="timeline">
   <!-- svelte-ignore a11y-click-events-have-key-events -->
   <div
@@ -190,7 +226,7 @@
     bind:this={tickContainer}
     on:mousedown={(e) => {
       canMoveScrubber = true;
-      handleScrubberMove(e);
+      moveScrubber(e.clientX);
     }}
   >
     {#each { length: Math.ceil(time) } as _, i}
@@ -207,6 +243,12 @@
           TIME_SCALING}px); width: {clip.media.duration *
           TIME_SCALING}px; z-index:{clip.z};"
         on:click={() => (clip.z = Math.max(...videoClips.map((c) => c.z)) + 1)}
+        on:mousedown={(e) => {
+          canMoveClip = true;
+          movedUUID = clip.uuid;
+          movedOffset =
+            e.clientX - e.currentTarget.getBoundingClientRect().left;
+        }}
       >
         <p>{clip.uuid}, {clip.z}</p>
         <p>{clip.media.title}</p>
@@ -292,7 +334,8 @@
   .clip {
     cursor: pointer;
     position: absolute;
-    border: 1px solid rgb(71, 178, 142);
+    /* border: 1px solid rgb(71, 178, 142); */
+    border: none;
     height: 100%;
     border-radius: 12px;
     background-color: aquamarine;
