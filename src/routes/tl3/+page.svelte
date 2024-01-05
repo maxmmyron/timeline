@@ -4,6 +4,7 @@
   import { resolveMedia } from "./lib/loader";
   import { onMount, tick } from "svelte";
   import { TIME_SCALING, time, videoClips } from "./lib/stores";
+  import Runtime from "./lib/Runtime.svelte";
 
   let paused = true;
 
@@ -146,8 +147,7 @@
       $time = 0;
     }}>⏭️</button
   >
-
-  {$time}
+  <Runtime />
 </section>
 
 <section>
