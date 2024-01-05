@@ -43,7 +43,7 @@
     if (!videoEl || !current) return;
 
     if (paused) {
-      videoEl.currentTime = $time - current.offset;
+      videoEl.currentTime = $time - current.offset + current.start;
     }
 
     if (!paused && videoEl.paused) {
@@ -63,7 +63,7 @@
 
     if (!videoEl || !current) return;
 
-    videoEl.currentTime = $time - current.offset;
+    videoEl.currentTime = $time - current.offset + current.start;
   };
 
   let lastTimestamp = 0;
@@ -115,7 +115,8 @@
   $: getCurrentClip = (clips: Clip[]): string | null => {
     let valid: Clip[] = [];
     for (const clip of clips) {
-      if (clip.offset < $time && clip.offset + clip.media.duration > $time)
+      const clipDuration = clip.media.duration - clip.start - clip.end;
+      if (clip.offset < $time && clip.offset + clipDuration > $time)
         valid.push(clip);
       if (clip.offset > $time) break;
     }
