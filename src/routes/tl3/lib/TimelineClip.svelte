@@ -26,24 +26,34 @@
   $: transform = `translateX(${clip.offset * TIME_SCALING}px)`;
   $: width = `${clipLength * TIME_SCALING}px`;
 
-  const moveClip = (clientX: number) => {
-    const newPos = clientX - moveOffset;
+  const moveClip = (e: MouseEvent) => {
+    const offsetPos = e.clientX - moveOffset;
+    const newOffset = Math.max(0, offsetPos / TIME_SCALING);
 
-    clip.offset = Math.max(0, newPos / TIME_SCALING);
+    // update offset of clip with new offset, snapping if possible
+    if (e.shiftKey) clip.offset = snapOnMove(newOffset);
+    else clip.offset = newOffset;
 
     // reassign to trigger reactivity
     $videoClips = [...$videoClips];
   };
 
-  const resizeClip = (clientX: number) => {
-    const delta = clientX - initialResizeMousePos;
+  const resizeClip = (e: MouseEvent) => {
+    const delta = e.clientX - initialResizeMousePos;
+
+    // if holding shift, keep offset stationary (reposition w.r.t left of clip)
+    let newOffset = initialTrimValues.offset;
+    // if *not* holding shift, move offset with clip
+    if (!e.shiftKey) {
+      newOffset = Math.max(
+        initialTrimValues.offset,
+        initialTrimValues.offset + delta / TIME_SCALING
+      );
+    }
 
     if (resizeMode === "left") {
       clip.start = Math.max(0, initialTrimValues.start + delta / TIME_SCALING);
-      clip.offset = Math.max(
-        0,
-        initialTrimValues.offset + delta / TIME_SCALING
-      );
+      clip.offset = newOffset;
     } else if (resizeMode === "right") {
       clip.end = Math.max(0, initialTrimValues.end - delta / TIME_SCALING);
     }
@@ -51,12 +61,65 @@
     // reassign to trigger reactivity
     $videoClips = [...$videoClips];
   };
+
+  /**
+   * Checks if the given offset is within a 0.1s threshold of any other clip's
+   * end. If so, returns a new offset such that the clip is "snapped" to the end
+   * of the nearest clip. Otherwise, returns the original offset.
+   *
+   * @param eagerOffset - The predicted offset of the clip during move. I.e. the
+   * calculated offset before the clip is released from the mouse.
+   */
+  const snapOnMove = (eagerOffset: number) => {
+    const clips = $videoClips
+      // filter out current clip
+      .filter((c) => c.uuid !== clip.uuid)
+      // calculate distance from end of clip to beginning of current clip
+      .map((c) => {
+        const end = c.offset + (c.media.duration - c.start - c.end);
+        const distance = Math.abs(eagerOffset - end);
+        return { clip: c, distance };
+      })
+      .filter((c) => c.distance < 0.1);
+
+    // if no clips, return
+    if (!clips.length) return eagerOffset;
+
+    // reaching here means there is at least one clip within 0.1s threshold, so
+    // we reduce to find the nearest clip.
+    let nearest = clips.reduce((prev, curr) => {
+      if (prev.distance < curr.distance) return prev;
+      return curr;
+    }).clip;
+
+    // calculate the new offset and return.
+    eagerOffset =
+      nearest.offset + (nearest.media.duration - nearest.start - nearest.end);
+
+    return eagerOffset;
+  };
+
+  /**
+   * Snaps the beginning of the resized clip's start/end to the end of the nearest
+   * clip on the left, if within a 0.1s threshold (and vice versa for the end).
+   */
+  const snapOnResize = () => {
+    /**
+     * Edge cases:
+     *  - within 0.1 threshold, however clip's start/end is under necessary offset
+     *    to snap
+     *
+     * if resize:
+     *   if left: snap clip start to nearest clip end if within 0.1s
+     *   if right: snap clip end to nearest clip start if within 0.1s
+     */
+  };
 </script>
 
 <svelte:window
   on:mousemove={(e) => {
-    if (canMoveClip) moveClip(e.clientX);
-    if (resizeMode) resizeClip(e.clientX);
+    if (canMoveClip) moveClip(e);
+    if (resizeMode) resizeClip(e);
   }}
   on:mouseup={() => {
     canMoveClip = false;
