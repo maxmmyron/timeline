@@ -111,7 +111,6 @@
     z: z++,
   });
 
-  // TODO: explain why this is reactive? (it is, but i don't exactly know why)
   $: getCurrentClip = (clips: Clip[]): string | null => {
     let valid: Clip[] = [];
     for (const clip of clips) {
