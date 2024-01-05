@@ -31,8 +31,8 @@
     const newOffset = Math.max(0, offsetPos / TIME_SCALING);
 
     // update offset of clip with new offset, snapping if possible
-    if (e.shiftKey) clip.offset = snapOnMove(newOffset);
-    else clip.offset = newOffset;
+    if (e.shiftKey) clip.offset = newOffset;
+    else clip.offset = snapOnMove(newOffset);
 
     // reassign to trigger reactivity
     $videoClips = [...$videoClips];
@@ -46,16 +46,22 @@
     // if *not* holding shift, move offset with clip
     if (!e.shiftKey) {
       newOffset = Math.max(
-        initialTrimValues.offset,
+        initialTrimValues.offset - initialTrimValues.start,
         initialTrimValues.offset + delta / TIME_SCALING
       );
     }
 
     if (resizeMode === "left") {
-      clip.start = Math.max(0, initialTrimValues.start + delta / TIME_SCALING);
+      clip.start = Math.min(
+        Math.max(0, initialTrimValues.start + delta / TIME_SCALING),
+        clip.media.duration - clip.end
+      );
       clip.offset = newOffset;
     } else if (resizeMode === "right") {
-      clip.end = Math.max(0, initialTrimValues.end - delta / TIME_SCALING);
+      clip.end = Math.min(
+        Math.max(0, initialTrimValues.end - delta / TIME_SCALING),
+        clip.media.duration - clip.start
+      );
     }
 
     // reassign to trigger reactivity
@@ -80,7 +86,7 @@
         const distance = Math.abs(eagerOffset - end);
         return { clip: c, distance };
       })
-      .filter((c) => c.distance < 0.1);
+      .filter((c) => c.distance < 0.05);
 
     // if no clips, return
     if (!clips.length) return eagerOffset;
@@ -103,7 +109,7 @@
    * Snaps the beginning of the resized clip's start/end to the end of the nearest
    * clip on the left, if within a 0.1s threshold (and vice versa for the end).
    */
-  const snapOnResize = () => {
+  const snapOnResize = (eagerSnap: number) => {
     /**
      * Edge cases:
      *  - within 0.1 threshold, however clip's start/end is under necessary offset
