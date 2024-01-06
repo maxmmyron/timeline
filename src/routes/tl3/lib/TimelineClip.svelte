@@ -41,22 +41,25 @@
   const resizeClip = (e: MouseEvent) => {
     const delta = e.clientX - initialResizeMousePos;
 
-    // if holding shift, keep offset stationary (reposition w.r.t left of clip)
-    let newOffset = initialTrimValues.offset;
-    // if *not* holding shift, move offset with clip
-    if (!e.shiftKey) {
-      newOffset = Math.max(
-        initialTrimValues.offset - initialTrimValues.start,
-        initialTrimValues.offset + delta / TIME_SCALING
-      );
-    }
-
     if (resizeMode === "left") {
-      let newStart = Math.min(
+      // if holding shift, keep offset stationary (reposition w.r.t left of clip)
+      let offset = initialTrimValues.offset;
+      // if *not* holding shift, move offset with clip
+      if (!e.shiftKey) {
+        offset = Math.max(
+          initialTrimValues.offset - initialTrimValues.start,
+          initialTrimValues.offset + delta / TIME_SCALING
+        );
+      }
+
+      let start = Math.min(
         Math.max(0, initialTrimValues.start + delta / TIME_SCALING),
         clip.media.duration - clip.end
       );
-      clip.start = snapOnResize(newStart);
+
+      let [newStart, newOffset] = snapOnResize(start, offset);
+
+      clip.start = newStart;
       clip.offset = newOffset;
     } else if (resizeMode === "right") {
       clip.end = Math.min(
@@ -107,7 +110,10 @@
    * Snaps the beginning of the resized clip's start/end to the end of the nearest
    * clip on the left, if within a 0.1s threshold (and vice versa for the end).
    */
-  const snapOnResize = (eagerSnap: number) => {
+  const snapOnResize = (snap: number, offset: number): [number, number] => {
+    // TODO: fix
+    return [snap, offset];
+
     /**
      * Edge cases:
      *  - within 0.1 threshold, however clip's start/end is under necessary offset
@@ -123,29 +129,29 @@
         .filter((c) => c.uuid !== clip.uuid)
         .map((c) => {
           const end = c.offset + (c.media.duration - c.start - c.end);
-          const distance = Math.abs(clip.offset + eagerSnap - end);
+          const distance = Math.abs(offset - end);
           return { clip: c, distance };
         })
         .filter((c) => c.distance < 0.05);
 
-      if (!clips.length) return eagerSnap;
-
-      console.log(
-        clip.uuid,
-        clips.map((c) => c.clip.uuid)
-      );
+      if (!clips.length) return [snap, offset];
 
       let nearest = clips.reduce((prev, curr) => {
         if (prev.distance < curr.distance) return prev;
         return curr;
       }).clip;
 
-      eagerSnap = Math.max(
-        0,
-        nearest.offset + (nearest.media.duration - nearest.start - nearest.end)
-      );
+      // snap = Math.max(0, );
 
-      return eagerSnap;
+      // snap = Math.max(
+      //   0,
+      //   nearest.offset + (nearest.media.duration - nearest.start - nearest.end)
+      // );
+
+      offset =
+        nearest.offset + (nearest.media.duration - nearest.start - nearest.end);
+
+      return [snap, offset];
     } else {
       // const clips = $videoClips
       //   // filter out current clip
@@ -157,7 +163,7 @@
       //     return { clip: c, distance };
       //   })
       //   .filter((c) => c.distance < 0.1);
-      return eagerSnap;
+      return [snap, offset];
     }
   };
 </script>
