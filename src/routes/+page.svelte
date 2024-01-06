@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
   import { resolveMedia } from "$lib/loader";
+  import { exportVideo } from "$lib/export";
   import { TIME_SCALING, time, videoClips } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineClip from "$lib/components//TimelineClip.svelte";
@@ -166,6 +167,10 @@
       />
     {/each}
   </section>
+</section>
+
+<section>
+  <button on:click={exportVideo}>Export</button>
 </section>
 
 <div class="timeline">

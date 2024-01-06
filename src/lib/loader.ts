@@ -1,4 +1,4 @@
-export const resolveMedia = async (file: File): Promise<Media> => {
+export const resolveMedia = async (file: File): Promise<App.Media> => {
   const src = await assertMIME(file).catch(err => { throw err; });
 
   let duration: number = await resolveDuration(src).catch(err => { throw err; })
