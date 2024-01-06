@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { TIME_SCALING, videoClips } from "./stores";
+  import { TIME_SCALING, videoClips, time } from "./stores";
 
   export let clip: Clip;
 
@@ -189,6 +189,7 @@
     canMoveClip = true;
     moveOffset = e.clientX - clipEl.getBoundingClientRect().left;
   }}
+  on:dblclick|stopPropagation={() => ($time = clip.offset)}
   on:click
 >
   <button
