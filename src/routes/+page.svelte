@@ -1,238 +1,288 @@
-<script>
-  // @ts-nocheck
+<script lang="ts">
+  import { onMount, tick } from "svelte";
+  import { resolveMedia } from "$lib/loader";
+  import { TIME_SCALING, time, videoClips } from "$lib/stores";
+  import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
+  import TimelineClip from "$lib/components//TimelineClip.svelte";
+  import Runtime from "$lib/components/Runtime.svelte";
 
-  import Setting from "../components/Setting.svelte";
-  import VideoMock from "../components/VideoMock.svelte";
-  import "../app.css";
-  import { onMount } from "svelte";
-  import Ticks from "../components/Ticks.svelte";
+  let paused = true;
 
-  let timelineScale = 4;
-  let isPaused = true;
-  /**
-   * @type {App.TimelineNode | null}
-   */
-  let curr = null;
-  /**
-   * @type {HTMLDivElement}
-   */
-  let timelineEl;
-  let nodeIncrementor = 0;
+  let canMoveScrubber = false;
 
-  let runtime = 0;
-
-  $: duration = timeline.toArray().reduce((acc, curr) => acc + curr.duration, 0);
-  $: scrubberPos = runtime * 2 ** timelineScale;
-
-  let scrollX = 0;
-  let lastTimestamp = 0;
+  let z = 0;
 
   /**
-   * @param timestamp {number}
+   * Most recent files uploaded by the user
    */
-  const render = (timestamp) => {
-    curr = timeline.head;
-    let offset = 0;
-    while (curr && offset + curr.duration < runtime) {
-      curr.startOffset = offset;
-      offset += curr.duration;
-      curr.endOffset = offset;
-      curr = curr.next;
+  let files: FileList | null = null;
+  /**
+   * Media that has been uploaded and fully resolved
+   */
+  let resolved: App.Media[] = [];
+
+  let tickContainer: HTMLDivElement;
+  let videoEl: HTMLVideoElement | null = null;
+
+  // get the UUID of the current clip (instead of clip itself, to prevent
+  // reactivity issues)
+  $: currentUUID = getCurrentClip($videoClips);
+  $: current = $videoClips.find((c) => c.uuid === currentUUID) ?? null;
+
+  $: if (paused === true && videoEl) videoEl.pause();
+  $: if (paused === false && videoEl) videoEl.play();
+
+  // when currentVideo changes, update
+  $: current, $time, updatePlayer();
+  // reset video time when video changes
+  $: currentUUID, resetVideoTime();
+
+  const updatePlayer = async () => {
+    await tick();
+
+    // if there's no video to play or no current clip, we can return early.
+    if (!videoEl || !current) return;
+
+    if (paused) {
+      videoEl.currentTime = $time - current.offset + current.start;
     }
 
-    if (isPaused) {
+    if (!paused && videoEl.paused) {
+      videoEl.play();
+    }
+  };
+
+  /**
+   * Runs when the current UUID to play changes. Used to reset the video's
+   * currentTime property to correctly account for the current offset.
+   */
+  const resetVideoTime = async () => {
+    // if there's no UUID, there's no video playing; we can return
+    if (!currentUUID) return;
+
+    await tick();
+
+    if (!videoEl || !current) return;
+
+    videoEl.currentTime = $time - current.offset + current.start;
+  };
+
+  let lastTimestamp = 0;
+  const frame = (timestamp: DOMHighResTimeStamp) => {
+    if (paused) {
       lastTimestamp = timestamp;
-      requestAnimationFrame(render);
+      requestAnimationFrame(frame);
       return;
     }
 
     const delta = timestamp - lastTimestamp;
     lastTimestamp = timestamp;
 
-    runtime += delta / 1000;
+    $time += delta / 1000;
 
-    requestAnimationFrame(render);
+    requestAnimationFrame(frame);
   };
 
-  /**
-   * @param time {number}
-   */
-  const setPlayerTime = (time) => {
-    isPaused = true;
-    runtime = time === -1 ? duration : time;
-  };
+  onMount(() => requestAnimationFrame(frame));
 
-  onMount(() => requestAnimationFrame(render));
-
-  /**
-   * @type {App.Timeline}
-   */
-  const timeline = {
-    head: null,
-    tail: null,
-    toArray: () => {
-      const arr = [];
-      let curr = timeline.head;
-      while (curr) {
-        arr.push(curr);
-        curr = curr.next;
-      }
-      return arr;
-    },
-  };
-
-  const clearTimeline = () => {
-    timeline.head = null;
-    timeline.tail = null;
-    runtime = 0;
-  };
-
-  const addNode = () => {
-    /**
-     * @type {App.TimelineNode}
-     */
-    const node = {
-      id: Math.random().toString(36).substr(2, 9),
-      next: null,
-      duration: 4 - Math.random() * 2,
-      endOffset: 0,
-      startOffset: 0,
-      title: `Node ${nodeIncrementor++}`,
-    };
-
-    if (timeline.head === null || timeline.tail === null) {
-      timeline.head = node;
-      timeline.tail = node;
-    } else {
-      timeline.tail.next = node;
-      timeline.tail = node;
+  const resolveFiles = async () => {
+    if (!files) return;
+    for (const file of files) {
+      // TODO: more robust type assertion
+      const media = await resolveMedia(file);
+      resolved = [...resolved, media];
     }
+
+    files = null;
   };
 
-  const removeTailNode = () => {
-    if (timeline.head === null || timeline.tail === null) return;
-    if (timeline.head === timeline.tail) {
-      timeline.head = null;
-      timeline.tail = null;
-    } else {
-      /**
-       * @type {App.TimelineNode}
-       */
-      let curr = timeline.head;
-      while (curr.next && curr.next !== timeline.tail) {
-        curr = curr.next;
-      }
-      curr.next = null;
-      timeline.tail = curr;
+  const moveScrubber = (clientX: number) => {
+    const rect = tickContainer.getBoundingClientRect();
+    const x = clientX - rect.left;
+    $time = x / TIME_SCALING;
+  };
+
+  const createClip = (resolved: App.Media): App.Clip => ({
+    media: resolved,
+    offset: $time,
+    start: 0,
+    end: 0,
+    // TODO: improve UUID gen.
+    uuid: Math.random().toString(36).substring(7),
+    z: z++,
+  });
+
+  $: getCurrentClip = (clips: App.Clip[]): string | null => {
+    let valid: App.Clip[] = [];
+    for (const clip of clips) {
+      const clipDuration = clip.media.duration - clip.start - clip.end;
+      if (clip.offset < $time && clip.offset + clipDuration > $time)
+        valid.push(clip);
+      if (clip.offset > $time) break;
     }
+    return valid.sort((a, b) => b.z - a.z)[0]?.uuid ?? null;
   };
 </script>
 
-<div id="settings-container">
-  <h1>Settings</h1>
-  <div>
-    <Setting name="Timeline timelineScale">
-      <input type="range" min="1" max="10" bind:value={timelineScale} />
-      <output>{timelineScale}</output>
-    </Setting>
+<svelte:window
+  on:mousemove={(e) => {
+    if (canMoveScrubber) moveScrubber(e.clientX);
+  }}
+  on:mouseup={() => (canMoveScrubber = false)}
+/>
 
-    <Setting name="Node Management">
-      <input type="button" value="Clear Timeline" on:click={clearTimeline} />
-      <input type="button" value="Add Node" on:click={addNode} />
-      <input type="button" value="Remove Tail Node" on:click={removeTailNode} />
-      <output>{timeline.toArray().length} nodes</output>
-    </Setting>
+<section>
+  <button
+    on:click={() => {
+      $time = 0;
+      paused = true;
+    }}>⏮️</button
+  >
+  <button on:click={() => (paused = !paused)}>
+    {paused ? "play" : "pause"}
+  </button>
+  <button
+    on:click={() => {
+      paused = true;
+      $time = 0;
+    }}>⏭️</button
+  >
+  <Runtime />
+</section>
 
-    <Setting name="Player">
-      <input type="button" value="⏪" on:click={() => setPlayerTime(0)} />
-      <input type="button" value={isPaused ? "▶️" : "⏸️"} on:click={() => (isPaused = !isPaused)} />
-      <input type="button" value="⏩" on:click={() => setPlayerTime(-1)} />
-      <div style="width: 100%; display:flex; gap: 16px;">
-        <output>Current runtime: {runtime.toPrecision(4)}</output>
-        <output>Total duration: {duration.toPrecision(4)}</output>
-      </div>
-    </Setting>
-  </div>
-</div>
+<section>
+  <input
+    type="file"
+    accept="video/*"
+    multiple
+    bind:files
+    on:change={resolveFiles}
+  />
+  <section>
+    {#each resolved as file}
+      <ResolvedMedia
+        {file}
+        on:click={() => ($videoClips = [...$videoClips, createClip(file)])}
+      />
+    {/each}
+  </section>
+</section>
 
 <div class="timeline">
-  <Ticks {scrollX} scale={timelineScale} bind:isPaused bind:runtime />
   <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <div id="timeline-container" bind:this={timelineEl} on:scroll={(e) => (scrollX = e.target.scrollLeft)}>
-    {#if timeline.head !== null}
-      {#each timeline.toArray() as node}
-        <VideoMock scale={timelineScale} {node} currID={curr?.id || ""} />
-      {/each}
-    {/if}
-    <div id="scrubber" style="left: {scrubberPos}px" />
+  <div
+    class="tick-container"
+    bind:this={tickContainer}
+    on:mousedown={(e) => {
+      canMoveScrubber = true;
+      moveScrubber(e.clientX);
+    }}
+  >
+    {#each { length: Math.ceil($time) + 30 } as _, i}
+      <div class="tick" style="width: {TIME_SCALING}px;">
+        <p>{i}</p>
+      </div>
+    {/each}
   </div>
+  <div class="row">
+    {#each $videoClips as clip}
+      <TimelineClip
+        {clip}
+        on:click={() => (clip.z = Math.max(...$videoClips.map((c) => c.z)) + 1)}
+      />
+    {/each}
+  </div>
+  <div
+    class="scrubber"
+    style="transform: translateX({$time * TIME_SCALING}px; z-index: 9999999;"
+  />
 </div>
 
-<div id="video">
-  {#if curr !== null}
-    <p>{curr.id}</p>
-    <p>{curr.title}</p>
-  {:else}
-    <p>No video selected</p>
-  {/if}
-</div>
+<section class="player">
+  <div>
+    {#if current}
+      <video
+        src={current.media.src}
+        class="media"
+        bind:this={videoEl}
+        title={current.uuid}
+      >
+        <track kind="captions" />
+      </video>
+    {/if}
+  </div>
+</section>
 
 <style>
+  * {
+    box-sizing: border-box;
+  }
+
+  section {
+    border: 1px solid rgba(200 200 200 / 0.75);
+    display: inline-flex;
+    width: fit-content;
+    padding: 8px;
+    gap: 8px;
+  }
+
   .timeline {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    overflow: clip;
-  }
-
-  #settings-container {
-    margin-bottom: 32px;
-    padding: 16px;
-    border: 2px solid black;
-    border-radius: 4px;
-  }
-
-  #settings-container > div {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-
-  #timeline-container {
     position: relative;
+    width: 100vw;
+    overflow: scroll;
+    margin-top: 32px;
+  }
+
+  .timeline > .tick-container {
+    height: 1rem;
     display: flex;
-    width: 100%;
-    overflow-x: scroll;
-    border-top: 1px solid black;
-    border-bottom: 1px solid black;
-    padding: 32px 0;
+    background-color: rgba(200 200 200 / 0.75);
+  }
+
+  .tick {
+    height: 100%;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(100 100 100 / 0.75);
+    position: relative;
+    pointer-events: none;
     user-select: none;
   }
 
-  #scrubber {
+  .tick > p {
     position: absolute;
-    width: 2px;
-    height: 128px;
-    background-color: rgb(11 113 230 / 1);
-    border-radius: 4px;
-    pointer-events: none;
-  }
-  #scrubber::before {
-    content: "";
-    position: absolute;
-    top: -8px;
-    left: -5px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background-color: rgb(11 113 230 / 1);
+    left: 2px;
+    margin: 0;
   }
 
-  #video {
-    margin: 32px auto;
-    aspect-ratio: 16/9;
-    width: max(500px, 75%);
-    border: 2px solid black;
-    border-radius: 4px;
+  .timeline > .row {
+    position: relative;
+    width: 100%;
+    border: 1px solid rgba(200 200 200 / 0.75);
+    border-left: 0;
+    border-right: 0;
+    height: 64px;
+  }
+
+  .scrubber {
+    top: 0;
+    position: absolute;
+    width: 2px;
+    height: 100%;
+    background-color: red;
+  }
+
+  section.player {
+    transform-origin: top left;
+    scale: 0.3;
+  }
+
+  .player > div {
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: black;
   }
 </style>

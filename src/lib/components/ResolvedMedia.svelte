@@ -1,5 +1,5 @@
 <script lang="ts">
-  export let file: Media;
+  export let file: App.Media;
 </script>
 
 <article>

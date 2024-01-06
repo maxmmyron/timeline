@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { TIME_SCALING, videoClips, time } from "./stores";
+  import { TIME_SCALING, videoClips, time } from "$lib/stores";
 
-  export let clip: Clip;
+  export let clip: App.Clip;
 
   let canMoveClip = false;
   let resizeMode: "left" | "right" | null = null;

@@ -2,40 +2,22 @@
 // for information about these interfaces
 declare global {
 	namespace App {
-		interface TimelineNode {
-			id: string;
-			title: string;
+		type Clip = {
+			media: Media;
+			offset: number;
+			start: number;
+			end: number;
+			uuid: string;
+			z: number;
+		};
+
+			type Media = {
+			uuid: string;
+			src: string;
 			duration: number;
-			startOffset: number;
-			endOffset: number;
-			next: TimelineNode | null;
-		}
-
-		interface Timeline {
-			head: TimelineNode | null;
-			tail: TimelineNode | null;
-			toArray(): TimelineNode[];
-		}
-
-		type A = {
-			type: "A";
-			foo: string;
-			bar: number;
+			title: string;
 		};
 
-		type B = {
-			type: "B";
-			baz: string;
-			qux: number;
-		};
-
-		type C = {
-			type: "C";
-			fizz: string;
-			buzz: number;
-		};
-
-		type Media = A | B | C;
 	}
 }
 

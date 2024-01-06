@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { time } from "./stores";
-
+  import { time } from "$lib/stores";
   const timingRules: ((arg0: number) => number)[] = [
     (runtime) => runtime / 3600,
     (runtime) => (runtime % 3600) / 60,
