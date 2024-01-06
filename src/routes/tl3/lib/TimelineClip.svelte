@@ -52,10 +52,11 @@
     }
 
     if (resizeMode === "left") {
-      clip.start = Math.min(
+      let newStart = Math.min(
         Math.max(0, initialTrimValues.start + delta / TIME_SCALING),
         clip.media.duration - clip.end
       );
+      clip.start = snapOnResize(newStart);
       clip.offset = newOffset;
     } else if (resizeMode === "right") {
       clip.end = Math.min(
@@ -78,7 +79,6 @@
    */
   const snapOnMove = (eagerOffset: number) => {
     const clips = $videoClips
-      // filter out current clip
       .filter((c) => c.uuid !== clip.uuid)
       // calculate distance from end of clip to beginning of current clip
       .map((c) => {
@@ -88,7 +88,6 @@
       })
       .filter((c) => c.distance < 0.05);
 
-    // if no clips, return
     if (!clips.length) return eagerOffset;
 
     // reaching here means there is at least one clip within 0.1s threshold, so
@@ -98,7 +97,6 @@
       return curr;
     }).clip;
 
-    // calculate the new offset and return.
     eagerOffset =
       nearest.offset + (nearest.media.duration - nearest.start - nearest.end);
 
@@ -119,6 +117,48 @@
      *   if left: snap clip start to nearest clip end if within 0.1s
      *   if right: snap clip end to nearest clip start if within 0.1s
      */
+
+    if (resizeMode === "left") {
+      const clips = $videoClips
+        .filter((c) => c.uuid !== clip.uuid)
+        .map((c) => {
+          const end = c.offset + (c.media.duration - c.start - c.end);
+          const distance = Math.abs(clip.offset + eagerSnap - end);
+          return { clip: c, distance };
+        })
+        .filter((c) => c.distance < 0.05);
+
+      if (!clips.length) return eagerSnap;
+
+      console.log(
+        clip.uuid,
+        clips.map((c) => c.clip.uuid)
+      );
+
+      let nearest = clips.reduce((prev, curr) => {
+        if (prev.distance < curr.distance) return prev;
+        return curr;
+      }).clip;
+
+      eagerSnap = Math.max(
+        0,
+        nearest.offset + (nearest.media.duration - nearest.start - nearest.end)
+      );
+
+      return eagerSnap;
+    } else {
+      // const clips = $videoClips
+      //   // filter out current clip
+      //   .filter((c) => c.uuid !== clip.uuid)
+      //   // calculate distance from end of clip to beginning of current clip
+      //   .map((c) => {
+      //     const start = c.offset;
+      //     const distance = Math.abs(eagerOffset - end);
+      //     return { clip: c, distance };
+      //   })
+      //   .filter((c) => c.distance < 0.1);
+      return eagerSnap;
+    }
   };
 </script>
 
