@@ -199,16 +199,18 @@
 </div>
 
 <section class="player">
-  {#if current}
-    <video
-      src={current.media.src}
-      class="media"
-      bind:this={videoEl}
-      title={current.uuid}
-    >
-      <track kind="captions" />
-    </video>
-  {/if}
+  <div>
+    {#if current}
+      <video
+        src={current.media.src}
+        class="media"
+        bind:this={videoEl}
+        title={current.uuid}
+      >
+        <track kind="captions" />
+      </video>
+    {/if}
+  </div>
 </section>
 
 <style>
@@ -269,7 +271,18 @@
     background-color: red;
   }
 
-  .player > .media {
-    width: 200px;
+  section.player {
+    transform-origin: top left;
+    scale: 0.3;
+  }
+
+  .player > div {
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: black;
   }
 </style>
