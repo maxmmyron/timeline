@@ -11,11 +11,18 @@ export const exportVideo = async () => {
     throw new Error("ffmpeg.wasm did not load on editor startup. Please refresh the page.");
   }
 
+  /**
+   * TODO: this can be removed by refactoring timeline positioning system to use {offset + start} to define physical position,
+   * and then using PTS in ffmpeg to define timestamps.
+   *
+   * e.g. setpts=PTS+{offset+start}/TB for video, atrim={start}:{duration-end},adelay={offset+start}s for audio
+   */
   for (const { uuid, media } of clips) {
     ffmpegInstance.FS("writeFile", `${uuid}.mp4`, await fetchFile(media.src));
     ffmpegInstance.FS("writeFile", `${uuid}_trimmed.mp4`, "");
   }
 
+  ffmpegInstance.FS("writeFile", "base.mp4", "");
   ffmpegInstance.FS("writeFile", "export.mp4", "");
 
   const duration = Math.max(...clips.map((clip) => clip.offset + (clip.media.duration - clip.end - clip.start)));
@@ -24,72 +31,57 @@ export const exportVideo = async () => {
     return;
   }
 
-  // create black video with empty audio track for duration of video
-  await ffmpegInstance.run("-t", duration.toString(), "-f", "lavfi", "-i", "color=c=black:s=1280x720:r=30", "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-pix_fmt", "yuv420p", "-shortest", "export.mp4");
-
-  // trim each clip
+  // trim clips
   for (const clip of clips) {
     const [baseFile, trimmedFile] = [`${clip.uuid}.mp4`, `${clip.uuid}_trimmed.mp4`];
 
     await ffmpegInstance.run("-i", baseFile, "-ss", clip.start.toString(), "-to", (clip.media.duration - clip.end).toString(), trimmedFile);
   }
 
-  // order clips by z-index
+  // create black video with empty audio track for duration of video
+  await ffmpegInstance.run("-t", duration.toString(), "-f", "lavfi", "-i", "color=c=black:s=1280x720:r=30", "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-pix_fmt", "yuv420p", "-shortest", "base.mp4");
+
+  // sort clips by z index
   clips = clips.sort((a, b) => a.z - b.z);
 
-  // [1:v]setpts=PTS-STARTPTS[v1];
-  // [2:v]setpts=PTS-STARTPTS[v2];
-  // ...
-  // [0:v][v1]overlay=enable=gte(t\,${clips[0].offset})[base1];
-  // [base1][v2]overlay=enable=gte(t\,${clips[1].offset})[base2];
-  // ...
-  // [basen][vn]overlay=enable=gte(t\,${clips[n].offset})[out];
-  const ftr = "setpts=PTS-STARTPTS";
-  let filterPTSResetComponent = clips.map((_, i) => `[${i+1}:v]${ftr}[v${i+1}];`).join("");
-  let filterFirstOverlayComponent = `[0:v][v1]overlay=enable=gte(t\\,${clips[0].offset})[base1];`;
-  let filterOverlayMapComponent = clips.slice(0,clips.length - 2).map((_, i) => `[base${i+1}][v${i+2}]overlay=enable=gte(t\\,${clips[i+1].offset})[base${i+2}];`).join("");
-  let filterLastOverlayComponent = `[base${clips.length - 1}][v${clips.length}]overlay=enable=gte(t\\,${clips[clips.length - 1].offset})[out];`;
+  let vfilter = "";
+  let afilter = "";
 
-  const filter = filterPTSResetComponent + filterFirstOverlayComponent + filterOverlayMapComponent + filterLastOverlayComponent;
 
-  console.log(filterPTSResetComponent + filterFirstOverlayComponent + filterOverlayMapComponent + filterLastOverlayComponent);
+  // define timestamp/audio offsets
+  // this starts at 1 because the base video is at index 0
+  for (let i = 1; i <= clips.length; i++) {
+    const clip = clips[i - 1];
+    const dur = (clip.media.duration - clip.end - clip.start);
+    vfilter += `[${i}:v]setpts=PTS+${clip.offset}/TB[${i}v];`
+    afilter += `[${i}:a]atrim=0:${dur},adelay=${clip.offset}s[${i}a];`
+  }
 
-  console.log(["-i", "export.mp4", ...clips.map(({uuid}) => ["-i", `${uuid}_trimmed.mp4`]).flat(),
-    "-filter_complex", `"${filter}"`, "-map", "[out]", "-map", "0:a", "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "aac", "export.mp4"].join(" "));
+  // add initial video/audio overlay
+  // this is done outside the loop because we're using the base video as the first in link ([0:v], [0:a])
+  vfilter += `[0:v][1v]overlay=enable='between(t\\,${clips[0].offset},${clips[0].offset + (clips[0].media.duration - clips[0].end - clips[0].start)})'[vbase1];`;
+  afilter += `[0:a][1a]amix=inputs=2:duration=first[abase1];`;
 
-  // -map [out] -map 0:a -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac export.mp4
-  await ffmpegInstance.run("-i", "export.mp4", ...clips.map(({uuid}) => ["-i", `${uuid}_trimmed.mp4`]).flat(),
-    "-filter_complex", `"${filter}"`, "-map", "[out]", "-map", "0:a", "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "aac", "export.mp4");
+  // add video/audio overlays for each clip (except for first/last)
+  // start from 2, since we already added the first clip
+  for (let i = 2; i <= clips.length - 1; i++) {
+    const clip = clips[i - 1];
 
-  // concat all clips
-  /**
-   * clips: [a, b, c]
-   *
-   * -i a.mp4 -i b.mp4 -i c.mp4
-   *
-   * -filter_complex
-   * []
-   */
+    vfilter += `[vbase${i - 1}][${i}v]overlay=enable='between(t\\,${clip.offset},${clip.offset + (clip.media.duration - clip.end - clip.start)})'[vbase${i}];`;
+    afilter += `[abase${i - 1}][${i}a]amix=inputs=2:duration=first[abase${i}];`;
+  }
 
-  // // concat all clips
-  // // see: https://stackoverflow.com/a/11175851/9473692
-  // //      https://superuser.com/a/972615
-  // //      https://ffmpeg.org/ffmpeg-filters.html#concat
+  // add final video/audio overlay
+  // this is done outside the loop because the out link is [vout], or [aout]
+  const lastClip = clips[clips.length - 1];
+  vfilter += `[vbase${clips.length - 1}][${clips.length}v]overlay=enable='between(t\\,${lastClip.offset},${lastClip.offset + (lastClip.media.duration - lastClip.end - lastClip.start)})'[vout];`;
 
-  // const ftr = "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:-1:-1:color=black,setsar=1,fps=30,format=yuv420p";
-  // const filters = [
-  //   `-filter_complex`,
-  //   clips.map((_, i) => `[${i}:v]${ftr}[v${i}];`).join("") + clips.map((_, i) => `[v${i}][${i}:a]`).join("") + "concat=n=" + clips.length + `:v=1:a=1[v][a]`,
-  // ];
+  // keep in mind, no semicolon here!
+  afilter += `[abase${clips.length - 1}][${clips.length}a]amix=inputs=2:duration=first[aout]`;
 
-  // await ffmpegInstance.run(
-  //   // describe all inputs
-  //   ...clips.map(({ uuid }) => ["-i", `${uuid}_trimmed.mp4`]).flat(),
-  //   // describe filter set
-  //   ...filters,
-  //   // describe output
-  //   ...[`-map`, `[v]`, `-map`, `[a]`, `-c:v`, `libx264`, `-c:a`, `aac`, "export.mp4"]
-  // );
+  const filter = `${vfilter}${afilter}`;
+
+  await ffmpegInstance.run("-i", "base.mp4", ...clips.map(({uuid}) => ["-i", `${uuid}_trimmed.mp4`]).flat(), "-filter_complex", filter, "-map", "[vout]", "-map", "[aout]", "export.mp4");
 
   // export
   const exportData = ffmpegInstance.FS("readFile", "export.mp4");
@@ -101,4 +93,8 @@ export const exportVideo = async () => {
   link.dispatchEvent(new MouseEvent("click"));
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(link.href), 7000);
+
+  console.log(duration);
+  console.log(filter);
+  console.log(["-i", "base.mp4", ...clips.map(({uuid}) => ["-i", `${uuid}_trimmed.mp4`]).flat(), "-filter_complex", filter, "-map", "[vout]", "-map", "[aout]", "export.mp4"].join(" "));
 };
