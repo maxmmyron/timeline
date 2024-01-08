@@ -50,14 +50,18 @@ export const exportVideo = async () => {
      */
     vfilter += `[${i}:v]trim=duration=${end-start},setpts=PTS-STARTPTS+${clip.offset-clip.start}/TB[${i}v];`
 
+    // define delay, since we need it twice
+    const d = (clip.offset * 1000).toFixed(0);
+
     /**
      * atrim=duration: trim the audio
      *
      * adelay=delay: delay the audio by clip.offset so it starts playing
      * at the same time as the video. NOTE: we use offset * 1000 since it
      * seems like adelay doesn't work with decimal second notation (i.e "3.54s")
+     * We use R|L to specify stereo channels.
      */
-    afilter += `[${i}:a]atrim=${start}:${end},adelay=${(clip.offset * 1000).toFixed(0)}[${i}a];`
+    afilter += `[${i}:a]atrim=${start}:${end},adelay=${d}|${d}[${i}a];`
   }
 
   // -----------------------
@@ -92,7 +96,7 @@ export const exportVideo = async () => {
   // -----------------------
   // RUN FFMPEG
 
-  await ffmpegInstance.run("-i", "base.mp4", ...clips.map(({uuid}) => ["-i", `${uuid}.mp4`]).flat(), "-filter_complex", `${vfilter}${afilter}`, "-map", "[vout]", "-map", "[aout]", "export.mp4");
+  await ffmpegInstance.run("-i", "base.mp4", ...clips.map(({uuid}) => ["-i", `${uuid}.mp4`]).flat(), "-filter_complex", `${vfilter}${afilter}`, "-map", "[vout]", "-map", "[aout]", "-vcodec", "libx264", "-crf", "28", "export.mp4");
 
   // -----------------------
   // EXPORT VIDEO FILE
