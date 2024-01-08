@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { TIME_SCALING, videoClips, time } from "$lib/stores";
+  import { TIME_SCALING, videoClips, time, selected } from "$lib/stores";
 
   export let clip: App.Clip;
 
@@ -166,6 +166,8 @@
       return [snap, offset];
     }
   };
+
+  $: console.log(selected);
 </script>
 
 <svelte:window
@@ -177,10 +179,13 @@
     canMoveClip = false;
     resizeMode = null;
   }}
+  on:click={() => {
+    $selected = null;
+  }}
 />
 
 <button
-  class="clip"
+  class={`clip ${$selected === clip.uuid ? "selected" : ""}`}
   style:transform
   style:width
   style:z-index={clip.z}
@@ -190,6 +195,14 @@
     moveOffset = e.clientX - clipEl.getBoundingClientRect().left;
   }}
   on:dblclick|stopPropagation={() => ($time = clip.offset)}
+  on:click|stopPropagation={() => {
+    $selected = clip.uuid === $selected ? null : clip.uuid;
+  }}
+  on:keydown|stopPropagation={(e) => {
+    if (e.key === "Delete" && $selected === clip.uuid) {
+      $videoClips = $videoClips.filter((c) => c.uuid !== clip.uuid);
+    }
+  }}
   on:click
 >
   <button
@@ -224,8 +237,11 @@
   }
 
   button.clip {
-    /* border: 1px inset solid rgb(71, 178, 142); */
     background-color: aquamarine;
+  }
+
+  button.clip.selected {
+    background-color: rgb(124, 231, 195);
   }
 
   button.trimmer {

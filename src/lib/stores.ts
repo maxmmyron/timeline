@@ -3,6 +3,8 @@ import { writable, type Writable } from "svelte/store";
 
 export const ffmpeg = writable(createFFmpeg({log:true}));
 
+export const selected: Writable<string | null> = writable("");
+
 /**
  * Distance of 1 second in pixels
  */
