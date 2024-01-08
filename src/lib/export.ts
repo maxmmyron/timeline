@@ -70,10 +70,16 @@ export const exportVideo = async () => {
 
   // add final video/audio overlay
   // this is done outside the loop because the out link is [vout], or [aout]
-  const lastClipIdx = clips.length == 1 ? 1 : clips.length - 1;
-  const lastClip = clips[lastClipIdx - 1];
-  const inLink = clips.length == 1 ? `[0:v]` : `[vbase${lastClipIdx}]`;
-  vfilter += `${inLink}[${clips.length}v]overlay=enable='between(t\\,${lastClip.offset},${lastClip.offset + (lastClip.media.duration - lastClip.end - lastClip.start)})'[vout];`;
+
+  if(clips.length == 1) {
+    const inLink = `[0:v]`;
+    vfilter += `${inLink}[1v]overlay=enable='between(t\\,${clips[0].offset},${clips[0].offset + (clips[0].media.duration - clips[0].end - clips[0].start)})'[vout];`
+  } else {
+    const lastClipIdx = clips.length - 1;
+    const lastClip = clips[lastClipIdx];
+    const inLink = `[vbase${lastClipIdx}]`;
+    vfilter += `${inLink}[${clips.length}v]overlay=enable='between(t\\,${lastClip.offset},${lastClip.offset + (lastClip.media.duration - lastClip.end - lastClip.start)})'[vout];`;
+  }
 
   // keep in mind, no semicolon here!
   afilter += `[0:a]${clips.map((_,i)=>`[${i+1}a]`).join('')}amix=inputs=${clips.length+1}:duration=first[aout]`;
