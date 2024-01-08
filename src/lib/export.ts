@@ -19,7 +19,7 @@ export const exportVideo = async () => {
    */
   for (const { uuid, media } of clips) {
     ffmpegInstance.FS("writeFile", `${uuid}.mp4`, await fetchFile(media.src));
-    ffmpegInstance.FS("writeFile", `${uuid}_trimmed.mp4`, "");
+    // ffmpegInstance.FS("writeFile", `${uuid}_trimmed.mp4`, "");
   }
 
   ffmpegInstance.FS("writeFile", "base.mp4", "");
@@ -29,13 +29,6 @@ export const exportVideo = async () => {
   if(duration < 0) {
     console.warn("duration is negative", duration);
     return;
-  }
-
-  // trim clips
-  for (const clip of clips) {
-    const [baseFile, trimmedFile] = [`${clip.uuid}.mp4`, `${clip.uuid}_trimmed.mp4`];
-
-    await ffmpegInstance.run("-i", baseFile, "-ss", clip.start.toString(), "-to", (clip.media.duration - clip.end).toString(), trimmedFile);
   }
 
   // create black video with empty audio track for duration of video
@@ -52,15 +45,20 @@ export const exportVideo = async () => {
   // this starts at 1 because the base video is at index 0
   for (let i = 1; i <= clips.length; i++) {
     const clip = clips[i - 1];
-    const dur = (clip.media.duration - clip.end - clip.start);
-    vfilter += `[${i}:v]setpts=PTS+${clip.offset}/TB[${i}v];`
-    afilter += `[${i}:a]atrim=0:${dur},adelay=${clip.offset}s[${i}a];`
+    const start = clip.start;
+    const end = (clip.media.duration - clip.end);
+    // * e.g. setpts=PTS+{offset+start}/TB for video, atrim={start}:{duration-end},adelay={offset+start}s for audio
+    vfilter += `[${i}:v]trim=duration=${end-start},setpts=PTS-STARTPTS+${clip.offset-clip.start}/TB[${i}v];`
+    // NOTE: here we use offset * 1000 since adelay doesn't work with decimal second notation (i.e "3.54s")
+    afilter += `[${i}:a]atrim=${start}:${end},adelay=${(clip.offset * 1000).toFixed(0)}[${i}a];`
   }
 
   // add initial video/audio overlay
   // this is done outside the loop because we're using the base video as the first in link ([0:v], [0:a])
-  vfilter += `[0:v][1v]overlay=enable='between(t\\,${clips[0].offset},${clips[0].offset + (clips[0].media.duration - clips[0].end - clips[0].start)})'[vbase1];`;
-  afilter += `[0:a][1a]amix=inputs=2:duration=first[abase1];`;
+  // if there's only one clip, we don't need to do this
+  if(clips.length > 1) {
+    vfilter += `[0:v][1v]overlay=enable='between(t\\,${clips[0].offset},${clips[0].offset + (clips[0].media.duration - clips[0].end - clips[0].start)})'[vbase1];`;
+  }
 
   // add video/audio overlays for each clip (except for first/last)
   // start from 2, since we already added the first clip
@@ -68,20 +66,21 @@ export const exportVideo = async () => {
     const clip = clips[i - 1];
 
     vfilter += `[vbase${i - 1}][${i}v]overlay=enable='between(t\\,${clip.offset},${clip.offset + (clip.media.duration - clip.end - clip.start)})'[vbase${i}];`;
-    afilter += `[abase${i - 1}][${i}a]amix=inputs=2:duration=first[abase${i}];`;
   }
 
   // add final video/audio overlay
   // this is done outside the loop because the out link is [vout], or [aout]
-  const lastClip = clips[clips.length - 1];
-  vfilter += `[vbase${clips.length - 1}][${clips.length}v]overlay=enable='between(t\\,${lastClip.offset},${lastClip.offset + (lastClip.media.duration - lastClip.end - lastClip.start)})'[vout];`;
+  const lastClipIdx = clips.length == 1 ? 1 : clips.length - 1;
+  const lastClip = clips[lastClipIdx - 1];
+  const inLink = clips.length == 1 ? `[0:v]` : `[vbase${lastClipIdx}]`;
+  vfilter += `${inLink}[${clips.length}v]overlay=enable='between(t\\,${lastClip.offset},${lastClip.offset + (lastClip.media.duration - lastClip.end - lastClip.start)})'[vout];`;
 
   // keep in mind, no semicolon here!
-  afilter += `[abase${clips.length - 1}][${clips.length}a]amix=inputs=2:duration=first[aout]`;
+  afilter += `[0:a]${clips.map((_,i)=>`[${i+1}a]`).join('')}amix=inputs=${clips.length+1}:duration=first[aout]`;
 
   const filter = `${vfilter}${afilter}`;
 
-  await ffmpegInstance.run("-i", "base.mp4", ...clips.map(({uuid}) => ["-i", `${uuid}_trimmed.mp4`]).flat(), "-filter_complex", filter, "-map", "[vout]", "-map", "[aout]", "export.mp4");
+  await ffmpegInstance.run("-i", "base.mp4", ...clips.map(({uuid}) => ["-i", `${uuid}.mp4`]).flat(), "-filter_complex", filter, "-map", "[vout]", "-map", "[aout]", "export.mp4");
 
   // export
   const exportData = ffmpegInstance.FS("readFile", "export.mp4");
