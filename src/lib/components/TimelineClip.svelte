@@ -57,10 +57,17 @@
         clip.media.duration - clip.end
       );
 
-      let [newStart, newOffset] = snapOnResize(start, offset);
+      // let [newStart, newOffset] = snapOnResize(
+      //   start,
+      //   offset,
+      //   initialTrimValues.start
+      // );
 
-      clip.start = newStart;
-      clip.offset = newOffset;
+      // clip.start = newStart;
+      // clip.offset = newOffset;
+
+      clip.start = start;
+      clip.offset = offset;
     } else if (resizeMode === "right") {
       clip.end = Math.min(
         Math.max(0, initialTrimValues.end - delta / TIME_SCALING),
@@ -110,64 +117,67 @@
    * Snaps the beginning of the resized clip's start/end to the end of the nearest
    * clip on the left, if within a 0.1s threshold (and vice versa for the end).
    */
-  const snapOnResize = (snap: number, offset: number): [number, number] => {
-    // TODO: fix
-    return [snap, offset];
+  // const snapOnResize = (
+  //   snap: number,
+  //   offset: number,
+  //   initialStart: number
+  // ): [number, number] => {
+  //   // TODO: fix
+  //   // return [snap, offset];
 
-    /**
-     * Edge cases:
-     *  - within 0.1 threshold, however clip's start/end is under necessary offset
-     *    to snap
-     *
-     * if resize:
-     *   if left: snap clip start to nearest clip end if within 0.1s
-     *   if right: snap clip end to nearest clip start if within 0.1s
-     */
+  //   /**
+  //    * Edge cases:
+  //    *  - within 0.1 threshold, however clip's start/end is under necessary offset
+  //    *    to snap
+  //    *
+  //    * if resize:
+  //    *   if left: snap clip start to nearest clip end if within 0.1s
+  //    *   if right: snap clip end to nearest clip start if within 0.1s
+  //    */
 
-    if (resizeMode === "left") {
-      const clips = $videoClips
-        .filter((c) => c.uuid !== clip.uuid)
-        .map((c) => {
-          const end = c.offset + (c.media.duration - c.start - c.end);
-          const distance = Math.abs(offset - end);
-          return { clip: c, distance };
-        })
-        .filter((c) => c.distance < 0.05);
+  //   if (resizeMode === "left") {
+  //     const clips = $videoClips
+  //       .filter((c) => c.uuid !== clip.uuid)
+  //       .map((c) => {
+  //         const end = c.offset + (c.media.duration - c.start - c.end);
+  //         const distance = Math.abs(offset - end);
+  //         return { clip: c, distance };
+  //       })
+  //       .filter((c) => c.distance < 0.05);
 
-      if (!clips.length) return [snap, offset];
+  //     if (!clips.length) return [snap, offset];
 
-      let nearest = clips.reduce((prev, curr) => {
-        if (prev.distance < curr.distance) return prev;
-        return curr;
-      }).clip;
+  //     let nearest = clips.reduce((prev, curr) => {
+  //       if (prev.distance < curr.distance) return prev;
+  //       return curr;
+  //     });
 
-      // snap = Math.max(0, );
+  //     let nsnap =
+  //       nearest.clip.offset +
+  //       (nearest.clip.media.duration - nearest.clip.start - nearest.clip.end);
 
-      // snap = Math.max(
-      //   0,
-      //   nearest.offset + (nearest.media.duration - nearest.start - nearest.end)
-      // );
+  //     // TODO: should remain static
+  //     snap = Math.max(0, snap - nearest.distance);
 
-      offset =
-        nearest.offset + (nearest.media.duration - nearest.start - nearest.end);
+  //     offset =
+  //       nearest.clip.offset +
+  //       (nearest.clip.media.duration - nearest.clip.start - nearest.clip.end);
 
-      return [snap, offset];
-    } else {
-      // const clips = $videoClips
-      //   // filter out current clip
-      //   .filter((c) => c.uuid !== clip.uuid)
-      //   // calculate distance from end of clip to beginning of current clip
-      //   .map((c) => {
-      //     const start = c.offset;
-      //     const distance = Math.abs(eagerOffset - end);
-      //     return { clip: c, distance };
-      //   })
-      //   .filter((c) => c.distance < 0.1);
-      return [snap, offset];
-    }
-  };
-
-  $: console.log(selected);
+  //     return [snap, offset];
+  //   } else {
+  //     // const clips = $videoClips
+  //     //   // filter out current clip
+  //     //   .filter((c) => c.uuid !== clip.uuid)
+  //     //   // calculate distance from end of clip to beginning of current clip
+  //     //   .map((c) => {
+  //     //     const start = c.offset;
+  //     //     const distance = Math.abs(eagerOffset - end);
+  //     //     return { clip: c, distance };
+  //     //   })
+  //     //   .filter((c) => c.distance < 0.1);
+  //     return [snap, offset];
+  //   }
+  // };
 </script>
 
 <svelte:window
