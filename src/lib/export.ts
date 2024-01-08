@@ -11,12 +11,6 @@ export const exportVideo = async () => {
     throw new Error("ffmpeg.wasm did not load on editor startup. Please refresh the page.");
   }
 
-  /**
-   * TODO: this can be removed by refactoring timeline positioning system to use {offset + start} to define physical position,
-   * and then using PTS in ffmpeg to define timestamps.
-   *
-   * e.g. setpts=PTS+{offset+start}/TB for video, atrim={start}:{duration-end},adelay={offset+start}s for audio
-   */
   for (const { uuid, media } of clips) {
     ffmpegInstance.FS("writeFile", `${uuid}.mp4`, await fetchFile(media.src));
     // ffmpegInstance.FS("writeFile", `${uuid}_trimmed.mp4`, "");
@@ -47,9 +41,8 @@ export const exportVideo = async () => {
     const clip = clips[i - 1];
     const start = clip.start;
     const end = (clip.media.duration - clip.end);
-    // * e.g. setpts=PTS+{offset+start}/TB for video, atrim={start}:{duration-end},adelay={offset+start}s for audio
     vfilter += `[${i}:v]trim=duration=${end-start},setpts=PTS-STARTPTS+${clip.offset-clip.start}/TB[${i}v];`
-    // NOTE: here we use offset * 1000 since adelay doesn't work with decimal second notation (i.e "3.54s")
+    // NOTE: here we use offset * 1000 since adelay doesn't seem to work with decimal second notation (i.e "3.54s")
     afilter += `[${i}:a]atrim=${start}:${end},adelay=${(clip.offset * 1000).toFixed(0)}[${i}a];`
   }
 
