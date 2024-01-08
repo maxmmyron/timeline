@@ -2,7 +2,6 @@ import { get } from "svelte/store";
 import { ffmpeg, videoClips } from "./stores";
 import { fetchFile } from "@ffmpeg/ffmpeg";
 
-// TODO: black video when no clips present at time
 export const exportVideo = async () => {
   const ffmpegInstance =  get(ffmpeg);
   let clips = get(videoClips);
@@ -86,6 +85,8 @@ export const exportVideo = async () => {
 
   // we can map all audio tracks to the base audio track at the same time (thank god)
   // keep in mind, no semicolon here!
+  // FIXME: audio works fine in stereo for first clip, but after that
+  // they only play in left ear.
   afilter += `[0:a]${clips.map((_,i)=>`[${i+1}a]`).join('')}amix=inputs=${clips.length+1}:duration=first[aout]`;
 
   // -----------------------
