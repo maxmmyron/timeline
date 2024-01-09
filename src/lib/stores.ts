@@ -1,14 +1,12 @@
 import { createFFmpeg } from "@ffmpeg/ffmpeg";
-import { writable, type Writable } from "svelte/store";
+import { derived, writable, type Writable } from "svelte/store";
 
 export const ffmpeg = writable(createFFmpeg({log:true}));
 
 export const selected: Writable<string | null> = writable("");
 
-/**
- * Distance of 1 second in pixels
- */
-export const TIME_SCALING = 100;
+export const scale = writable(1);
+export const scaleFactor = derived(scale, $scale => 100 * $scale);
 
 export const time = writable(0);
 

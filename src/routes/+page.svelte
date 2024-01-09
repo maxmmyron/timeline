@@ -2,7 +2,7 @@
   import { onMount, tick } from "svelte";
   import { resolveMedia } from "$lib/loader";
   import { exportVideo } from "$lib/export";
-  import { TIME_SCALING, time, videoClips } from "$lib/stores";
+  import { scaleFactor, time, videoClips } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineClip from "$lib/components//TimelineClip.svelte";
   import Runtime from "$lib/components/Runtime.svelte";
@@ -100,7 +100,7 @@
   const moveScrubber = (clientX: number) => {
     const rect = tickContainer.getBoundingClientRect();
     const x = clientX - rect.left;
-    $time = x / TIME_SCALING;
+    $time = x / $scaleFactor;
   };
 
   const createClip = (resolved: App.Media): App.Clip => ({
@@ -199,7 +199,7 @@
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <div
         class="tick"
-        style:width="{TIME_SCALING}px"
+        style:width="{$scaleFactor}px"
         on:mousedown={(e) => {
           canMoveScrubber = true;
           moveScrubber(e.clientX);
@@ -216,7 +216,7 @@
   </div>
   <div
     class="scrubber"
-    style="transform: translateX({$time * TIME_SCALING}px; z-index: 9999999;"
+    style="transform: translateX({$time * $scaleFactor}px; z-index: 9999999;"
   />
 </div>
 
