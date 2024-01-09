@@ -2,7 +2,14 @@
   import { onMount, tick } from "svelte";
   import { resolveMedia } from "$lib/loader";
   import { exportVideo } from "$lib/export";
-  import { scaleFactor, time, videoClips, scale } from "$lib/stores";
+  import {
+    scaleFactor,
+    time,
+    videoClips,
+    scale,
+    tickWidth,
+    secondsPerTick,
+  } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineClip from "$lib/components//TimelineClip.svelte";
   import Runtime from "$lib/components/Runtime.svelte";
@@ -37,6 +44,12 @@
   $: current, $time, updatePlayer();
   // reset video time when video changes
   $: currentUUID, resetVideoTime();
+
+  // NOTE: here we use toPrecision to prevent floating point errors from
+  // giving us wonky timestamps
+  $: tickTimings = Array.from({ length: Math.ceil($time) + 30 }, (_, i) =>
+    (i * $secondsPerTick).toPrecision(4)
+  );
 
   const updatePlayer = async () => {
     await tick();
@@ -206,7 +219,11 @@
       }}>⏭️</button
     >
   </div>
-  <Runtime time={$time} />
+  <div class="runtime-controls">
+    <p>{$tickWidth}</p>
+    <p>{$secondsPerTick}</p>
+    <Runtime time={$time} />
+  </div>
   <div>
     <input type="range" min="0.1" max="4" step="0.1" bind:value={$scale} />
     <output>{$scale.toFixed(1)}</output>
@@ -215,17 +232,17 @@
 
 <div class="timeline">
   <div class="tick-container" bind:this={tickContainer}>
-    {#each { length: Math.ceil($time) + 30 } as _, i}
+    {#each tickTimings as time}
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <div
         class="tick"
-        style:width="{$scaleFactor}px"
+        style:width="{$tickWidth}px"
         on:mousedown={(e) => {
           canMoveScrubber = true;
           moveScrubber(e.clientX);
         }}
       >
-        <Runtime time={i} />
+        <Runtime time={parseInt(time)} />
       </div>
     {/each}
   </div>
@@ -277,6 +294,13 @@
     gap: 0.25rem;
   }
 
+  .runtime-controls > p {
+    margin: 0;
+    padding: 0;
+    font-size: 0.75rem;
+    font-family: monospace;
+  }
+
   div.player {
     margin: 0 0.5rem;
     place-content: center center;
@@ -309,6 +333,7 @@
     background-color: rgba(200 200 200 / 0.75);
     border-right: 1px solid rgba(100 100 100 / 0.75);
     position: relative;
+    overflow: hidden;
     user-select: none;
   }
 
