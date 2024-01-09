@@ -2,6 +2,8 @@
   import { scaleFactor, videoClips, time, selected } from "$lib/stores";
 
   export let clip: App.Clip;
+  // this is set to 9 as a dirty default, but is updated in page.svelte
+  export let timelineOffset = 9;
 
   let canMoveClip = false;
   let resizeMode: "left" | "right" | null = null;
@@ -27,7 +29,8 @@
   $: width = `${clipLength * $scaleFactor}px`;
 
   const moveClip = (e: MouseEvent) => {
-    const offsetPos = e.clientX - moveOffset;
+    // subtract timelineOffset to get clientX relative to timeline
+    const offsetPos = e.clientX - timelineOffset - moveOffset;
     const newOffset = Math.max(0, offsetPos / $scaleFactor);
 
     // update offset of clip with new offset, snapping if possible
@@ -56,15 +59,6 @@
         Math.max(0, initialTrimValues.start + delta / $scaleFactor),
         clip.media.duration - clip.end
       );
-
-      // let [newStart, newOffset] = snapOnResize(
-      //   start,
-      //   offset,
-      //   initialTrimValues.start
-      // );
-
-      // clip.start = newStart;
-      // clip.offset = newOffset;
 
       clip.start = start;
       clip.offset = offset;
@@ -224,6 +218,7 @@
   bind:this={clipEl}
   on:mousedown|stopPropagation={(e) => {
     canMoveClip = true;
+    clip.z = $videoClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1;
     moveOffset = e.clientX - clipEl.getBoundingClientRect().left;
   }}
   on:dblclick|stopPropagation={() => ($time = clip.offset)}
@@ -248,6 +243,7 @@
   ></button>
   <p>{clip.uuid}, {clip.z}</p>
   <p>{clip.media.title}</p>
+  <p>{clip.offset}</p>
   <button
     class="trimmer right"
     on:mousedown|capture|stopPropagation={(e) => {
@@ -269,6 +265,7 @@
     height: 100%;
     border: none;
     border-radius: 4px;
+    height: 64px;
   }
 
   button.clip {

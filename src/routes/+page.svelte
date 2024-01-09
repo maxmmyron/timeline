@@ -29,6 +29,17 @@
 
   let tickContainer: HTMLDivElement;
   let videoEl: HTMLVideoElement | null = null;
+  let timelineEl: HTMLDivElement;
+
+  /**
+   * The offset of the timeline from the left side of the screen. computed with
+   * getBoundingClientRect and clientLeft, which accounts for the margin and
+   * border of the element, respectively.
+   *
+   * @default 9 (a dirty default)
+   */
+  $: timelineOffset =
+    timelineEl?.getBoundingClientRect().left + timelineEl?.clientLeft ?? 9;
 
   // get the UUID of the current clip (instead of clip itself, to prevent
   // reactivity issues)
@@ -213,7 +224,7 @@
   <Runtime time={$time} />
 </div>
 
-<div class="timeline">
+<div class="timeline" bind:this={timelineEl}>
   <div class="tick-container" bind:this={tickContainer}>
     {#each tickTimings as time}
       <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -231,7 +242,7 @@
   </div>
   <div class="row">
     {#each $videoClips as clip}
-      <TimelineClip {clip} />
+      <TimelineClip {clip} {timelineOffset} />
     {/each}
   </div>
   <div
