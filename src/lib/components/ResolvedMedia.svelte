@@ -12,20 +12,37 @@
 
 <style>
   article {
-    border: 1px solid gray;
-    padding: 1rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    background-color: rgba(200 200 200 / 0.5);
     display: flex;
-    gap: 1rem;
+    gap: 0.5rem;
+    align-items: center;
   }
-  header {
+
+  article > header {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
   }
   header > p {
     margin: 0;
+    font-family: monospace;
   }
   header > p:first-child {
     font-weight: bold;
+  }
+
+  button {
+    border: none;
+    border-radius: 4px;
+    background-color: white;
+    font-family: monospace;
+    height: fit-content;
+    padding: 0.25rem 0.5rem;
+  }
+
+  button:hover {
+    background-color: rgba(240 240 240 / 1);
   }
 </style>

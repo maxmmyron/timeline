@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { time } from "$lib/stores";
+  export let time = 0;
+
   const timingRules: ((arg0: number) => number)[] = [
     (runtime) => runtime / 3600,
     (runtime) => (runtime % 3600) / 60,
@@ -7,14 +8,14 @@
   ];
 </script>
 
-<article>
+<article class="runtime">
   {#each timingRules as r, i}
     <p>
-      {Math.floor(r($time)).toString().padStart(2, "0")}:
+      {Math.floor(r(time)).toString().padStart(2, "0")}:
     </p>
   {/each}
   <p>
-    {Math.round(($time % 1) * 1000)
+    {Math.round((time % 1) * 1000)
       .toString()
       .padStart(3, "0")
       .slice(0, 3)}
@@ -29,5 +30,6 @@
 
   p {
     font-family: monospace;
+    margin: 0;
   }
 </style>

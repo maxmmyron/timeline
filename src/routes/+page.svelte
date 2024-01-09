@@ -132,26 +132,7 @@
   on:mouseup={() => (canMoveScrubber = false)}
 />
 
-<section>
-  <button
-    on:click={() => {
-      $time = 0;
-      paused = true;
-    }}>⏮️</button
-  >
-  <button on:click={() => (paused = !paused)}>
-    {paused ? "play" : "pause"}
-  </button>
-  <button
-    on:click={() => {
-      paused = true;
-      $time = 0;
-    }}>⏭️</button
-  >
-  <Runtime />
-</section>
-
-<section>
+<div class="ribbon">
   <input
     type="file"
     accept="video/*"
@@ -159,33 +140,72 @@
     bind:files
     on:change={resolveFiles}
   />
-  <section>
-    {#each resolved as file}
-      <ResolvedMedia
-        {file}
-        on:click={() => ($videoClips = [...$videoClips, createClip(file)])}
-      />
-    {/each}
-  </section>
-</section>
-
-<section>
   <button on:click={exportVideo}>Export</button>
-</section>
+</div>
+
+<div class="media-browser">
+  {#each resolved as file}
+    <ResolvedMedia
+      {file}
+      on:click={() => ($videoClips = [...$videoClips, createClip(file)])}
+    />
+  {/each}
+</div>
+
+<div class="player">
+  {#if current}
+    <video
+      src={current.media.src}
+      class="media"
+      bind:this={videoEl}
+      title={current.uuid}
+    >
+      <track kind="captions" />
+    </video>
+  {/if}
+</div>
+
+<div class="ribbon media-ribbon">
+  <div class="media-controls">
+    <button
+      on:click={() => {
+        $time = 0;
+        paused = true;
+      }}>⏮️</button
+    >
+    <button on:click={() => (paused = !paused)}>
+      {paused ? "▶️" : "⏸️"}
+    </button>
+    <button
+      on:click={() => {
+        paused = true;
+        $time = $videoClips.reduce(
+          (acc, clip) =>
+            Math.max(
+              acc,
+              clip.offset + (clip.media.duration - clip.start - clip.end)
+            ),
+          0
+        );
+      }}>⏭️</button
+    >
+  </div>
+  <Runtime time={$time} />
+</div>
 
 <div class="timeline">
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <div
-    class="tick-container"
-    bind:this={tickContainer}
-    on:mousedown={(e) => {
-      canMoveScrubber = true;
-      moveScrubber(e.clientX);
-    }}
-  >
+  <div class="tick-container" bind:this={tickContainer}>
     {#each { length: Math.ceil($time) + 30 } as _, i}
-      <div class="tick" style="width: {TIME_SCALING}px;">
-        <p>{i}</p>
+      <!-- svelte-ignore a11y-click-events-have-key-events -->
+      <div
+        class="tick"
+        style:width="{TIME_SCALING}px"
+        on:mousedown={(e) => {
+          canMoveScrubber = true;
+          moveScrubber(e.clientX);
+        }}
+      >
+        <Runtime time={i} />
       </div>
     {/each}
   </div>
@@ -203,68 +223,80 @@
   />
 </div>
 
-<section class="player">
-  <div>
-    {#if current}
-      <video
-        src={current.media.src}
-        class="media"
-        bind:this={videoEl}
-        title={current.uuid}
-      >
-        <track kind="captions" />
-      </video>
-    {/if}
-  </div>
-</section>
-
 <style>
   * {
     box-sizing: border-box;
   }
 
-  section {
-    border: 1px solid rgba(200 200 200 / 0.75);
-    display: inline-flex;
-    width: fit-content;
-    padding: 8px;
-    gap: 8px;
+  .ribbon {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+  }
+
+  .ribbon.media-ribbon {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr;
+    grid-gap: 0.5rem;
+  }
+
+  .media-browser {
+    display: flex;
+    border: 1px solid rgba(200 200 200 / 1);
+    border-radius: 12px;
+    overflow-x: scroll;
+    padding: 0.5rem;
+    margin: 0 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .media-ribbon > .media-controls {
+    grid-area: 1/2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  div.player {
+    margin: 0 0.5rem;
+    place-content: center center;
+    aspect-ratio: 16 / 9;
+    max-width: 1280px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: black;
   }
 
   .timeline {
+    margin: 0 0.5rem 0.5rem;
     position: relative;
-    width: 100vw;
-    overflow: scroll;
-    margin-top: 32px;
+    overflow-x: scroll;
+    border-radius: 4px;
+    border: 1px solid rgba(200 200 200 / 1);
   }
 
   .timeline > .tick-container {
     height: 1rem;
     display: flex;
-    background-color: rgba(200 200 200 / 0.75);
   }
 
   .tick {
     height: 100%;
     flex-shrink: 0;
+    background-color: rgba(200 200 200 / 0.75);
     border-right: 1px solid rgba(100 100 100 / 0.75);
     position: relative;
-    pointer-events: none;
     user-select: none;
-  }
-
-  .tick > p {
-    position: absolute;
-    left: 2px;
-    margin: 0;
   }
 
   .timeline > .row {
     position: relative;
     width: 100%;
-    border: 1px solid rgba(200 200 200 / 0.75);
-    border-left: 0;
-    border-right: 0;
     height: 64px;
   }
 
@@ -273,21 +305,6 @@
     position: absolute;
     width: 2px;
     height: 100%;
-    background-color: red;
-  }
-
-  section.player {
-    transform-origin: top left;
-    scale: 0.3;
-  }
-
-  .player > div {
-    width: 1280px;
-    height: 720px;
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: black;
+    background-color: rgba(0 0 0 / 0.75);
   }
 </style>

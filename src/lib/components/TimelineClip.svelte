@@ -244,6 +244,7 @@
     height: 100%;
     border: none;
     border-radius: 4px;
+    font-family: monospace;
   }
 
   button.clip {
