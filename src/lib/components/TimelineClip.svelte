@@ -269,7 +269,6 @@
     height: 100%;
     border: none;
     border-radius: 4px;
-    font-family: monospace;
   }
 
   button.clip {
@@ -299,10 +298,6 @@
 
   button.trimmer.right {
     right: 0;
-  }
-
-  button > p {
-    margin: 0;
   }
 
   .cover-name {

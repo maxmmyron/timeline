@@ -6,6 +6,8 @@ body {
   margin: 0;
 }
 
-p {
+p,
+button {
+  margin: 0;
   font-family: monospace;
 }
