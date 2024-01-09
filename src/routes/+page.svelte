@@ -160,6 +160,9 @@
 </div>
 
 <div class="media-browser">
+  {#if resolved.length === 0}
+    <p style:color="rgba(0 0 0 / 0.75)">No media uploaded</p>
+  {/if}
   {#each resolved as file}
     <ResolvedMedia {file} />
   {/each}
@@ -301,8 +304,9 @@
   .tick {
     height: 100%;
     flex-shrink: 0;
-    background-color: rgba(200 200 200 / 0.75);
+    background-color: rgba(220 220 220 / 0.75);
     border-right: 1px solid rgba(100 100 100 / 0.75);
+    padding-left: 2px;
     position: relative;
     overflow: hidden;
     user-select: none;
@@ -310,8 +314,11 @@
 
   .timeline > .row {
     position: relative;
+    display: flex;
+    align-items: center;
     width: 100%;
-    height: 64px;
+    /* TODO: can prob remove dirty calc with flex/grid in .timeline class? */
+    height: calc(100% - 1rem);
   }
 
   .scrubber {
