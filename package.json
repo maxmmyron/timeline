@@ -22,6 +22,7 @@
 	"type": "module",
 	"dependencies": {
 		"@ffmpeg/core": "^0.12.6",
-		"@ffmpeg/ffmpeg": "^0.11.6"
+		"@ffmpeg/ffmpeg": "^0.11.6",
+		"uuid": "^9.0.1"
 	}
 }

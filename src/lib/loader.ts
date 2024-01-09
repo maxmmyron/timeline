@@ -1,11 +1,10 @@
+import {v4 as uuidv4} from "uuid";
+
 export const resolveMedia = async (file: File): Promise<App.Media> => {
   const src = await assertMIME(file).catch(err => { throw err; });
+  const duration = await resolveDuration(src).catch(err => { throw err; })
 
-  let duration: number = await resolveDuration(src).catch(err => { throw err; })
-
-  let uuid = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-
-  return { uuid, src, duration, title: file.name };
+  return { uuid: uuidv4(), src, duration, title: file.name };
 }
 
 const assertMIME = async (file: File) => {

@@ -100,7 +100,6 @@
   const resolveFiles = async () => {
     if (!files) return;
     for (const file of files) {
-      // TODO: more robust type assertion
       const media = await resolveMedia(file);
       resolved = [...resolved, media];
     }

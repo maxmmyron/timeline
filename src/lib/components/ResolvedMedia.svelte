@@ -1,5 +1,6 @@
 <script lang="ts">
   import { videoClips, time } from "$lib/stores";
+  import { v4 as uuidv4 } from "uuid";
 
   export let file: App.Media;
 
@@ -8,8 +9,7 @@
     offset: $time,
     start: 0,
     end: 0,
-    // TODO: improve UUID gen.
-    uuid: Math.random().toString(36).substring(7),
+    uuid: uuidv4(),
     z: $videoClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1,
   });
 </script>
