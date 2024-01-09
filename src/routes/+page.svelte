@@ -2,7 +2,14 @@
   import { onMount, tick } from "svelte";
   import { resolveMedia } from "$lib/loader";
   import { exportVideo } from "$lib/export";
-  import { TIME_SCALING, time, videoClips } from "$lib/stores";
+  import {
+    scaleFactor,
+    time,
+    videoClips,
+    scale,
+    tickWidth,
+    secondsPerTick,
+  } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineClip from "$lib/components//TimelineClip.svelte";
   import Runtime from "$lib/components/Runtime.svelte";
@@ -37,6 +44,12 @@
   $: current, $time, updatePlayer();
   // reset video time when video changes
   $: currentUUID, resetVideoTime();
+
+  // NOTE: here we use toPrecision to prevent floating point errors from
+  // giving us wonky timestamps
+  $: tickTimings = Array.from({ length: Math.ceil($time) + 30 }, (_, i) =>
+    (i * $secondsPerTick).toPrecision(4)
+  );
 
   const updatePlayer = async () => {
     await tick();
@@ -100,7 +113,7 @@
   const moveScrubber = (clientX: number) => {
     const rect = tickContainer.getBoundingClientRect();
     const x = clientX - rect.left;
-    $time = x / TIME_SCALING;
+    $time = x / $scaleFactor;
   };
 
   const createClip = (resolved: App.Media): App.Clip => ({
@@ -130,6 +143,22 @@
     if (canMoveScrubber) moveScrubber(e.clientX);
   }}
   on:mouseup={() => (canMoveScrubber = false)}
+  on:keydown={(e) => {
+    if (e.ctrlKey) {
+      if (e.key === "=") {
+        e.preventDefault();
+        $scale = Math.min(4, $scale + 0.1);
+      }
+      if (e.key === "-") {
+        e.preventDefault();
+        $scale = Math.max(0.1, $scale - 0.1);
+      }
+      if (e.key === "0") {
+        e.preventDefault();
+        $scale = 1;
+      }
+    }
+  }}
 />
 
 <div class="ribbon">
@@ -166,6 +195,10 @@
 </div>
 
 <div class="ribbon media-ribbon">
+  <label>
+    <p>Scale: {$scale.toFixed(1)}</p>
+    <input type="range" min="0.1" max="4" step="0.1" bind:value={$scale} />
+  </label>
   <div class="media-controls">
     <button
       on:click={() => {
@@ -195,17 +228,17 @@
 
 <div class="timeline">
   <div class="tick-container" bind:this={tickContainer}>
-    {#each { length: Math.ceil($time) + 30 } as _, i}
+    {#each tickTimings as time}
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <div
         class="tick"
-        style:width="{TIME_SCALING}px"
+        style:width="{$tickWidth}px"
         on:mousedown={(e) => {
           canMoveScrubber = true;
           moveScrubber(e.clientX);
         }}
       >
-        <Runtime time={i} />
+        <Runtime time={parseInt(time)} />
       </div>
     {/each}
   </div>
@@ -216,7 +249,7 @@
   </div>
   <div
     class="scrubber"
-    style="transform: translateX({$time * TIME_SCALING}px; z-index: 9999999;"
+    style="transform: translateX({$time * $scaleFactor}px; z-index: 9999999;"
   />
 </div>
 
@@ -232,13 +265,6 @@
     padding: 0.5rem;
   }
 
-  .ribbon.media-ribbon {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: 1fr;
-    grid-gap: 0.5rem;
-  }
-
   .media-browser {
     display: flex;
     border: 1px solid rgba(200 200 200 / 1);
@@ -249,12 +275,17 @@
     gap: 0.5rem;
   }
 
-  .media-ribbon > .media-controls {
-    grid-area: 1/2;
+  .media-ribbon > label {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.25rem;
+    gap: 0.5rem;
+  }
+
+  .ribbon.media-ribbon {
+    display: grid;
+    place-items: center;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr;
+    grid-gap: 0.5rem;
   }
 
   div.player {
@@ -289,6 +320,7 @@
     background-color: rgba(200 200 200 / 0.75);
     border-right: 1px solid rgba(100 100 100 / 0.75);
     position: relative;
+    overflow: hidden;
     user-select: none;
   }
 

@@ -5,3 +5,9 @@
 body {
   margin: 0;
 }
+
+p,
+button {
+  margin: 0;
+  font-family: monospace;
+}

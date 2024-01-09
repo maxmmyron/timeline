@@ -27,9 +27,4 @@
     display: flex;
     justify-items: flex-end;
   }
-
-  p {
-    font-family: monospace;
-    margin: 0;
-  }
 </style>

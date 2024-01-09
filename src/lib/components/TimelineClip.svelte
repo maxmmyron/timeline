@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { TIME_SCALING, videoClips, time, selected } from "$lib/stores";
+  import { scaleFactor, videoClips, time, selected } from "$lib/stores";
 
   export let clip: App.Clip;
 
@@ -23,12 +23,12 @@
 
   $: clipLength = clip.media.duration - clip.start - clip.end;
 
-  $: transform = `translateX(${clip.offset * TIME_SCALING}px)`;
-  $: width = `${clipLength * TIME_SCALING}px`;
+  $: transform = `translateX(${clip.offset * $scaleFactor}px)`;
+  $: width = `${clipLength * $scaleFactor}px`;
 
   const moveClip = (e: MouseEvent) => {
     const offsetPos = e.clientX - moveOffset;
-    const newOffset = Math.max(0, offsetPos / TIME_SCALING);
+    const newOffset = Math.max(0, offsetPos / $scaleFactor);
 
     // update offset of clip with new offset, snapping if possible
     if (e.shiftKey) clip.offset = newOffset;
@@ -48,12 +48,12 @@
       if (!e.shiftKey) {
         offset = Math.max(
           initialTrimValues.offset - initialTrimValues.start,
-          initialTrimValues.offset + delta / TIME_SCALING
+          initialTrimValues.offset + delta / $scaleFactor
         );
       }
 
       let start = Math.min(
-        Math.max(0, initialTrimValues.start + delta / TIME_SCALING),
+        Math.max(0, initialTrimValues.start + delta / $scaleFactor),
         clip.media.duration - clip.end
       );
 
@@ -70,7 +70,7 @@
       clip.offset = offset;
     } else if (resizeMode === "right") {
       clip.end = Math.min(
-        Math.max(0, initialTrimValues.end - delta / TIME_SCALING),
+        Math.max(0, initialTrimValues.end - delta / $scaleFactor),
         clip.media.duration - clip.start
       );
     }
@@ -224,7 +224,6 @@
   bind:this={clipEl}
   on:mousedown|stopPropagation={(e) => {
     canMoveClip = true;
-    clip.z = Math.max(...$videoClips.map((c) => c.z)) + 1;
     moveOffset = e.clientX - clipEl.getBoundingClientRect().left;
   }}
   on:dblclick|stopPropagation={() => ($time = clip.offset)}
@@ -236,6 +235,7 @@
       $videoClips = $videoClips.filter((c) => c.uuid !== clip.uuid);
     }
   }}
+  on:click
 >
   <button
     class="trimmer left"
@@ -269,7 +269,6 @@
     height: 100%;
     border: none;
     border-radius: 4px;
-    font-family: monospace;
   }
 
   button.clip {
@@ -299,10 +298,6 @@
 
   button.trimmer.right {
     right: 0;
-  }
-
-  button > p {
-    margin: 0;
   }
 
   .cover-name {

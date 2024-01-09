@@ -25,10 +25,6 @@
     flex-direction: column;
     gap: 0.5rem;
   }
-  header > p {
-    margin: 0;
-    font-family: monospace;
-  }
   header > p:first-child {
     font-weight: bold;
   }
@@ -37,7 +33,6 @@
     border: none;
     border-radius: 4px;
     background-color: white;
-    font-family: monospace;
     height: fit-content;
     padding: 0.25rem 0.5rem;
   }
