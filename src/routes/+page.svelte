@@ -211,10 +211,7 @@
   </div>
   <div class="row">
     {#each $videoClips as clip}
-      <TimelineClip
-        {clip}
-        on:click={() => (clip.z = Math.max(...$videoClips.map((c) => c.z)) + 1)}
-      />
+      <TimelineClip {clip} />
     {/each}
   </div>
   <div

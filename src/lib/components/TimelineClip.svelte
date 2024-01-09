@@ -224,6 +224,7 @@
   bind:this={clipEl}
   on:mousedown|stopPropagation={(e) => {
     canMoveClip = true;
+    clip.z = Math.max(...$videoClips.map((c) => c.z)) + 1;
     moveOffset = e.clientX - clipEl.getBoundingClientRect().left;
   }}
   on:dblclick|stopPropagation={() => ($time = clip.offset)}
@@ -235,7 +236,6 @@
       $videoClips = $videoClips.filter((c) => c.uuid !== clip.uuid);
     }
   }}
-  on:click
 >
   <button
     class="trimmer left"
