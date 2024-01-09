@@ -1,5 +1,17 @@
 <script lang="ts">
+  import { videoClips, time } from "$lib/stores";
+
   export let file: App.Media;
+
+  const createClip = (resolved: App.Media): App.Clip => ({
+    media: resolved,
+    offset: $time,
+    start: 0,
+    end: 0,
+    // TODO: improve UUID gen.
+    uuid: Math.random().toString(36).substring(7),
+    z: $videoClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1,
+  });
 </script>
 
 <article>
@@ -7,7 +19,9 @@
     <p>{file.title}</p>
     <p>{file.duration}s</p>
   </header>
-  <button on:click>add</button>
+  <button on:click={() => ($videoClips = [...$videoClips, createClip(file)])}>
+    add
+  </button>
 </article>
 
 <style>

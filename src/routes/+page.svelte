@@ -18,8 +18,6 @@
 
   let canMoveScrubber = false;
 
-  let z = 0;
-
   /**
    * Most recent files uploaded by the user
    */
@@ -116,16 +114,6 @@
     $time = x / $scaleFactor;
   };
 
-  const createClip = (resolved: App.Media): App.Clip => ({
-    media: resolved,
-    offset: $time,
-    start: 0,
-    end: 0,
-    // TODO: improve UUID gen.
-    uuid: Math.random().toString(36).substring(7),
-    z: z++,
-  });
-
   $: getCurrentClip = (clips: App.Clip[]): string | null => {
     let valid: App.Clip[] = [];
     for (const clip of clips) {
@@ -174,10 +162,7 @@
 
 <div class="media-browser">
   {#each resolved as file}
-    <ResolvedMedia
-      {file}
-      on:click={() => ($videoClips = [...$videoClips, createClip(file)])}
-    />
+    <ResolvedMedia {file} />
   {/each}
 </div>
 
