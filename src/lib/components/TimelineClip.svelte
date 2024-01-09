@@ -178,6 +178,27 @@
   //     return [snap, offset];
   //   }
   // };
+
+  /**
+   * Gets the number of clips that partially obstruct the given clip.
+   */
+  $: coverCount = (() => {
+    let start = clip.offset;
+    let end = clip.offset + clipLength;
+
+    return $videoClips.filter((c) => {
+      // break if z-index is lower
+      if (c.z < clip.z) return false;
+
+      const cStart = c.offset;
+      const cEnd = c.offset + (c.media.duration - c.start - c.end);
+
+      // if clip is fully covered by another clip, don't count it
+      if (cStart < start && cEnd > end) return true;
+
+      return (cStart > start && cStart < end) || (cEnd > start && cEnd < end);
+    }).length;
+  })();
 </script>
 
 <svelte:window
@@ -196,6 +217,7 @@
 
 <button
   class={`clip ${$selected === clip.uuid ? "selected" : ""}`}
+  class:covered={coverCount > 0}
   style:transform
   style:width
   style:z-index={clip.z}
@@ -235,6 +257,9 @@
       initialTrimValues.offset = clip.offset;
     }}
   ></button>
+  {#if coverCount > 0}
+    <div style:height="{coverCount * 0.5}rem" class="cover-name" />
+  {/if}
 </button>
 
 <style>
@@ -255,6 +280,13 @@
     background-color: rgb(124, 231, 195);
   }
 
+  button.clip.covered {
+    border-bottom-left-radius: 0px;
+  }
+  button.clip.covered > button.trimmer.left {
+    border-bottom-left-radius: 0px;
+  }
+
   button.trimmer {
     top: 0;
     width: 0.5rem;
@@ -271,5 +303,15 @@
 
   button > p {
     margin: 0;
+  }
+
+  .cover-name {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 20px;
+
+    background-color: rgb(124, 231, 195);
+    border-radius: 0 0 4px 4px;
   }
 </style>
