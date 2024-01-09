@@ -2,7 +2,7 @@
   import { onMount, tick } from "svelte";
   import { resolveMedia } from "$lib/loader";
   import { exportVideo } from "$lib/export";
-  import { scaleFactor, time, videoClips } from "$lib/stores";
+  import { scaleFactor, time, videoClips, scale } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineClip from "$lib/components//TimelineClip.svelte";
   import Runtime from "$lib/components/Runtime.svelte";
@@ -130,6 +130,22 @@
     if (canMoveScrubber) moveScrubber(e.clientX);
   }}
   on:mouseup={() => (canMoveScrubber = false)}
+  on:keydown={(e) => {
+    if (e.ctrlKey) {
+      if (e.key === "=") {
+        e.preventDefault();
+        $scale = Math.min(4, $scale + 0.1);
+      }
+      if (e.key === "-") {
+        e.preventDefault();
+        $scale = Math.max(0.1, $scale - 0.1);
+      }
+      if (e.key === "0") {
+        e.preventDefault();
+        $scale = 1;
+      }
+    }
+  }}
 />
 
 <div class="ribbon">
@@ -191,6 +207,10 @@
     >
   </div>
   <Runtime time={$time} />
+  <div>
+    <input type="range" min="0.1" max="4" step="0.1" bind:value={$scale} />
+    <output>{$scale.toFixed(1)}</output>
+  </div>
 </div>
 
 <div class="timeline">
