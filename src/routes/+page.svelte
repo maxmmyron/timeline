@@ -265,6 +265,7 @@
     place-content: center center;
     aspect-ratio: 16 / 9;
     max-width: 1280px;
+    max-height: 100%;
     overflow: hidden;
     display: flex;
     justify-content: center;
