@@ -195,6 +195,10 @@
 </div>
 
 <div class="ribbon media-ribbon">
+  <label>
+    <p>Scale: {$scale.toFixed(1)}</p>
+    <input type="range" min="0.1" max="4" step="0.1" bind:value={$scale} />
+  </label>
   <div class="media-controls">
     <button
       on:click={() => {
@@ -219,15 +223,7 @@
       }}>⏭️</button
     >
   </div>
-  <div class="runtime-controls">
-    <p>{$tickWidth}</p>
-    <p>{$secondsPerTick}</p>
-    <Runtime time={$time} />
-  </div>
-  <div>
-    <input type="range" min="0.1" max="4" step="0.1" bind:value={$scale} />
-    <output>{$scale.toFixed(1)}</output>
-  </div>
+  <Runtime time={$time} />
 </div>
 
 <div class="timeline">
@@ -269,13 +265,6 @@
     padding: 0.5rem;
   }
 
-  .ribbon.media-ribbon {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: 1fr;
-    grid-gap: 0.5rem;
-  }
-
   .media-browser {
     display: flex;
     border: 1px solid rgba(200 200 200 / 1);
@@ -286,19 +275,17 @@
     gap: 0.5rem;
   }
 
-  .media-ribbon > .media-controls {
-    grid-area: 1/2;
+  .media-ribbon > label {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.25rem;
+    gap: 0.5rem;
   }
 
-  .runtime-controls > p {
-    margin: 0;
-    padding: 0;
-    font-size: 0.75rem;
-    font-family: monospace;
+  .ribbon.media-ribbon {
+    display: grid;
+    place-items: center;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr;
+    grid-gap: 0.5rem;
   }
 
   div.player {
