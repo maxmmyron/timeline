@@ -44,6 +44,9 @@
   // get the UUID of the current clip (instead of clip itself, to prevent
   // reactivity issues)
   $: currentUUID = getCurrentClip($videoClips);
+
+  // TODO: seems like only one media src would play at a time?
+  // reproduce: upload two vids, add both to timeline, only one plays????
   $: current = $videoClips.find((c) => c.uuid === currentUUID) ?? null;
 
   // change the matrix when the current clip changes
