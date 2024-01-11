@@ -2,41 +2,76 @@
   export let clip: App.Clip;
   export let settingsOpen = false;
 
-  let settingsContainer: HTMLElement;
+  let scaleX: number = 1,
+    scaleY: number = 1,
+    translateX: number = 0,
+    translateY: number = 0;
 
-  const checkWindowClose = (e: MouseEvent) => {
-    if (settingsOpen && !settingsContainer.contains(e.currentTarget as Node)) {
-      settingsOpen = false;
-    }
-  };
+  $: clip.matrix = [
+    scaleX ?? 1,
+    0,
+    0,
+    scaleY ?? 1,
+    translateX ?? 0,
+    translateY ?? 0,
+  ] as App.Matrix;
 </script>
 
-<svelte:window on:click={checkWindowClose} />
-
 {#if settingsOpen}
-  <article class="settings-container" bind:this={settingsContainer}>
-    <button on:click={() => (settingsOpen = false)}>close</button>
+  <article class="settings-container">
+    <div class="button-container">
+      <button on:click={() => (settingsOpen = false)}>close</button>
+      <button on:click={() => (clip.matrix = [1, 0, 0, 1, 0, 0])}>
+        reset
+      </button>
+    </div>
+
+    <p>Scale</p>
     <label class="setting">
-      <p>Scale X</p>
-      <input />
+      <p>X</p>
+      <input type="number" bind:value={scaleX} />
     </label>
     <label class="setting">
-      <input />
+      <p>Y</p>
+      <input type="number" bind:value={scaleY} />
     </label>
 
-    <input />
-    <input />
+    <p>Translate</p>
+    <label class="setting">
+      <p>X</p>
+      <input type="number" bind:value={translateX} />
+    </label>
+    <label class="setting">
+      <p>Y</p>
+      <input type="number" bind:value={translateY} />
+    </label>
   </article>
 {/if}
 
 <style>
-  .overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 100;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0 0 0 / 0.5);
+  .settings-container {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+  }
+
+  .settings-container > .button-container {
+    grid-area: 1/1/2/4;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .setting {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  input {
+    max-width: 2rem;
   }
 </style>
