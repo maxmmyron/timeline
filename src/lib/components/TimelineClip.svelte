@@ -1,6 +1,7 @@
 <script lang="ts">
   import { scaleFactor, videoClips, time, selected } from "$lib/stores";
   import ClipSettings from "./ClipSettings.svelte";
+  import { createEventDispatcher } from "svelte";
 
   export let clip: App.Clip;
   // this is set to 9 as a dirty default, but is updated in page.svelte
@@ -196,6 +197,21 @@
       return (cStart > start && cStart < end) || (cEnd > start && cEnd < end);
     }).length;
   })();
+
+  // we use this event to forward matrix changes to the video handler, since
+  // it won't directly react to those changes itself
+  const matrixDispatcher = createEventDispatcher();
+
+  // dispatch a "matrixChange" event whenever the matrix changes
+  $: clip.matrix, matrixChange();
+
+  /**
+   * Emits a new matrixChange event. The detail parameter of the CustomEvent
+   * interface represents the new matrix of the clip.
+   */
+  const matrixChange = () => {
+    matrixDispatcher("matrixChange", clip.matrix);
+  };
 </script>
 
 <svelte:window
@@ -212,8 +228,6 @@
   }}
 />
 
-<ClipSettings bind:clip bind:settingsOpen />
-
 <button
   class={`clip ${$selected === clip.uuid ? "selected" : ""}`}
   class:covered={coverCount > 0}
@@ -226,7 +240,10 @@
     clip.z = $videoClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1;
     moveOffset = e.clientX - clipEl.getBoundingClientRect().left;
   }}
-  on:dblclick|stopPropagation={() => ($time = clip.offset)}
+  on:dblclick|stopPropagation={() => {
+    if (settingsOpen) return;
+    $time = clip.offset;
+  }}
   on:click|stopPropagation={() => {
     $selected = clip.uuid === $selected ? null : clip.uuid;
   }}
@@ -237,28 +254,37 @@
   }}
   on:click
 >
-  <button
-    class="trimmer left"
-    on:mousedown|capture|stopPropagation={(e) => {
-      resizeMode = "left";
-      initialResizeMousePos = e.clientX;
-      initialTrimValues.start = clip.start;
-      initialTrimValues.offset = clip.offset;
-    }}
-  ></button>
-  <p>{clip.uuid}, {clip.z}</p>
-  <p>{clip.media.title}</p>
-  <p>{clip.offset}</p>
-  <button on:click={() => (settingsOpen = true)}>⚙️</button>
-  <button
-    class="trimmer right"
-    on:mousedown|capture|stopPropagation={(e) => {
-      resizeMode = "right";
-      initialResizeMousePos = e.clientX;
-      initialTrimValues.end = clip.end;
-      initialTrimValues.offset = clip.offset;
-    }}
-  ></button>
+  {#if settingsOpen}
+    <ClipSettings bind:clip bind:settingsOpen />
+  {:else}
+    <button
+      class="trimmer left"
+      on:mousedown|capture|stopPropagation={(e) => {
+        resizeMode = "left";
+        initialResizeMousePos = e.clientX;
+        initialTrimValues.start = clip.start;
+        initialTrimValues.offset = clip.offset;
+      }}
+    ></button>
+    <p>{clip.uuid}, {clip.z}</p>
+    <p>{clip.media.title}</p>
+    <p>{clip.offset}</p>
+    <button
+      class="settings-button"
+      on:click={() => (settingsOpen = !settingsOpen)}
+    >
+      <p>⚙️</p>
+    </button>
+    <button
+      class="trimmer right"
+      on:mousedown|capture|stopPropagation={(e) => {
+        resizeMode = "right";
+        initialResizeMousePos = e.clientX;
+        initialTrimValues.end = clip.end;
+        initialTrimValues.offset = clip.offset;
+      }}
+    ></button>
+  {/if}
   {#if coverCount > 0}
     <div style:height="{coverCount * 0.5}rem" class="cover-name" />
   {/if}
@@ -275,11 +301,26 @@
   }
 
   button.clip {
+    position: relative;
     background-color: aquamarine;
   }
 
   button.clip.selected {
     background-color: rgb(124, 231, 195);
+  }
+
+  button.settings-button {
+    position: absolute;
+    z-index: 2;
+    bottom: 0;
+    left: 0.5rem;
+    margin-left: 0.5rem;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    background-color: rgb(113, 221, 185);
+    border: 1px solid rgb(71, 178, 142);
   }
 
   button.clip.covered {

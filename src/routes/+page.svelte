@@ -46,6 +46,11 @@
   $: currentUUID = getCurrentClip($videoClips);
   $: current = $videoClips.find((c) => c.uuid === currentUUID) ?? null;
 
+  // change the matrix when the current clip changes
+  $: matrix = current?.matrix ?? ([1, 0, 0, 1, 0, 0] as App.Matrix);
+
+  $: console.log(matrix);
+
   $: if (paused === true && videoEl) videoEl.pause();
   $: if (paused === false && videoEl) videoEl.play();
 
@@ -186,7 +191,7 @@
       class="media"
       bind:this={videoEl}
       title={current.uuid}
-      style:transform="matrix({current.matrix.join(",")})"
+      style:transform="matrix({matrix.join(",")})"
     >
       <track kind="captions" />
     </video>
@@ -243,7 +248,20 @@
   </div>
   <div class="row">
     {#each $videoClips as clip}
-      <TimelineClip {clip} {timelineOffset} />
+      <TimelineClip
+        {clip}
+        {timelineOffset}
+        on:matrixChange={(e) => {
+          // when a clip's matrix changes, compare the UUID of the clip to the
+          // current UUID. if they match, update the matrix.
+
+          // TODO: remove this event handler in the future, this blocks multiple
+          // clips from being played at once.
+          if (clip.uuid === currentUUID) {
+            matrix = e.detail;
+          }
+        }}
+      />
     {/each}
   </div>
   <div
