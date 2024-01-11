@@ -49,8 +49,6 @@
   // change the matrix when the current clip changes
   $: matrix = current?.matrix ?? ([1, 0, 0, 1, 0, 0] as App.Matrix);
 
-  $: console.log(matrix);
-
   $: if (paused === true && videoEl) videoEl.pause();
   $: if (paused === false && videoEl) videoEl.play();
 
