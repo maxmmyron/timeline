@@ -12,7 +12,7 @@ declare global {
 			/**
 			 * The 2D transformation matrix of the clip.
 			 */
-			matrix: [number, number, number, number, number, number];
+			matrix: Matrix;
 		};
 
 			type Media = {
@@ -22,6 +22,7 @@ declare global {
 			title: string;
 		};
 
+		type Matrix = [number, number, number, number, number, number];
 	}
 }
 
