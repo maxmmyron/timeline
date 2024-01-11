@@ -301,7 +301,6 @@
   }
 
   button.clip {
-    position: relative;
     background-color: aquamarine;
   }
 
