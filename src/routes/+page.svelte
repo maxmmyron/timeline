@@ -186,6 +186,7 @@
       class="media"
       bind:this={videoEl}
       title={current.uuid}
+      style:transform="matrix({current.matrix.join(",")})"
     >
       <track kind="captions" />
     </video>
