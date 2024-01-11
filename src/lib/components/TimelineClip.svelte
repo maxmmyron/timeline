@@ -1,5 +1,6 @@
 <script lang="ts">
   import { scaleFactor, videoClips, time, selected } from "$lib/stores";
+  import ClipSettings from "./ClipSettings.svelte";
 
   export let clip: App.Clip;
   // this is set to 9 as a dirty default, but is updated in page.svelte
@@ -22,6 +23,8 @@
    * based on recently updated start/end/offset values
    */
   let initialTrimValues = { start: 0, end: 0, offset: 0 };
+
+  let settingsOpen = false;
 
   $: clipLength = clip.media.duration - clip.start - clip.end;
 
@@ -209,6 +212,8 @@
   }}
 />
 
+<ClipSettings bind:clip bind:settingsOpen />
+
 <button
   class={`clip ${$selected === clip.uuid ? "selected" : ""}`}
   class:covered={coverCount > 0}
@@ -244,6 +249,7 @@
   <p>{clip.uuid}, {clip.z}</p>
   <p>{clip.media.title}</p>
   <p>{clip.offset}</p>
+  <button on:click={() => (settingsOpen = true)}>⚙️</button>
   <button
     class="trimmer right"
     on:mousedown|capture|stopPropagation={(e) => {
