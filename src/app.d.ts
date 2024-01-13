@@ -8,7 +8,11 @@ declare global {
 			start: number;
 			end: number;
 			uuid: string;
-			z: number;
+		z: number;
+			/**
+			 * The 2D transformation matrix of the clip.
+			 */
+			matrix: Matrix;
 		};
 
 			type Media = {
@@ -18,6 +22,7 @@ declare global {
 			title: string;
 		};
 
+		type Matrix = [number, number, number, number, number, number];
 	}
 }
 

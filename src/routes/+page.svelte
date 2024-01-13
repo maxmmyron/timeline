@@ -9,6 +9,7 @@
     scale,
     tickWidth,
     secondsPerTick,
+    playerScale,
   } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineClip from "$lib/components//TimelineClip.svelte";
@@ -28,8 +29,17 @@
   let resolved: App.Media[] = [];
 
   let tickContainer: HTMLDivElement;
+  /**
+   * The current playing video
+   */
   let videoEl: HTMLVideoElement | null = null;
+  /**
+   * The container for the video element
+   */
+  let playerWidth: number;
   let timelineEl: HTMLDivElement;
+
+  $: $playerScale = playerWidth / 1280;
 
   /**
    * The offset of the timeline from the left side of the screen. computed with
@@ -44,7 +54,13 @@
   // get the UUID of the current clip (instead of clip itself, to prevent
   // reactivity issues)
   $: currentUUID = getCurrentClip($videoClips);
+
+  // TODO: seems like only one media src would play at a time?
+  // reproduce: upload two vids, add both to timeline, only one plays????
   $: current = $videoClips.find((c) => c.uuid === currentUUID) ?? null;
+
+  // change the matrix when the current clip changes
+  $: matrix = current?.matrix ?? ([1, 0, 0, 1, 0, 0] as App.Matrix);
 
   $: if (paused === true && videoEl) videoEl.pause();
   $: if (paused === false && videoEl) videoEl.play();
@@ -179,13 +195,16 @@
   {/each}
 </div>
 
-<div class="player">
+<div class="player" bind:clientWidth={playerWidth}>
   {#if current}
     <video
       src={current.media.src}
       class="media"
       bind:this={videoEl}
       title={current.uuid}
+      style:transform="matrix({matrix
+        .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
+        .join(",")})"
     >
       <track kind="captions" />
     </video>
@@ -242,7 +261,20 @@
   </div>
   <div class="row">
     {#each $videoClips as clip}
-      <TimelineClip {clip} {timelineOffset} />
+      <TimelineClip
+        {clip}
+        {timelineOffset}
+        on:matrixChange={(e) => {
+          // when a clip's matrix changes, compare the UUID of the clip to the
+          // current UUID. if they match, update the matrix.
+
+          // TODO: remove this event handler in the future, this blocks multiple
+          // clips from being played at once.
+          if (clip.uuid === currentUUID) {
+            matrix = e.detail;
+          }
+        }}
+      />
     {/each}
   </div>
   <div
