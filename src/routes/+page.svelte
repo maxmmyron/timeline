@@ -71,7 +71,9 @@
   $: currentUUID, resetVideoTime();
 
   // NOTE: here we use toPrecision to prevent floating point errors from
-  // giving us wonky timestamps
+  // giving us wonky timestamps.
+  // TODO: find better solution that accounts for long clip near end of timeline
+  // (ticks don't render 30s past end of scrubber)
   $: tickTimings = Array.from({ length: Math.ceil($time) + 30 }, (_, i) =>
     (i * $secondsPerTick).toPrecision(4)
   );
