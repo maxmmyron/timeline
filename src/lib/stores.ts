@@ -31,3 +31,9 @@ export const time = writable(0);
  * Represents the clips in the timeline
  */
 export const videoClips: Writable<App.Clip[]> = writable([]);
+
+/**
+ * The scaling of the video player relative to 1280x720. This is used to scale
+ * each video's matrix values.
+ */
+export const playerScale = writable(1);

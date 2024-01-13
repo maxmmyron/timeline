@@ -9,6 +9,7 @@
     scale,
     tickWidth,
     secondsPerTick,
+    playerScale,
   } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineClip from "$lib/components//TimelineClip.svelte";
@@ -28,8 +29,17 @@
   let resolved: App.Media[] = [];
 
   let tickContainer: HTMLDivElement;
+  /**
+   * The current playing video
+   */
   let videoEl: HTMLVideoElement | null = null;
+  /**
+   * The container for the video element
+   */
+  let playerWidth: number;
   let timelineEl: HTMLDivElement;
+
+  $: $playerScale = playerWidth / 1280;
 
   /**
    * The offset of the timeline from the left side of the screen. computed with
@@ -185,14 +195,16 @@
   {/each}
 </div>
 
-<div class="player">
+<div class="player" bind:clientWidth={playerWidth}>
   {#if current}
     <video
       src={current.media.src}
       class="media"
       bind:this={videoEl}
       title={current.uuid}
-      style:transform="matrix({matrix.join(",")})"
+      style:transform="matrix({matrix
+        .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
+        .join(",")})"
     >
       <track kind="captions" />
     </video>
