@@ -136,7 +136,7 @@
 
   const moveScrubber = (clientX: number) => {
     const rect = tickContainer.getBoundingClientRect();
-    const x = clientX - rect.left;
+    const x = Math.max(0, clientX - rect.left);
     $time = x / $scaleFactor;
   };
 
