@@ -14,6 +14,7 @@
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineClip from "$lib/components//TimelineClip.svelte";
   import Runtime from "$lib/components/Runtime.svelte";
+  import { getClipEndPos, getLastTimelineClip } from "$lib/utils";
 
   let paused = true;
 
@@ -70,9 +71,21 @@
   // reset video time when video changes
   $: currentUUID, resetVideoTime();
 
-  // NOTE: here we use toPrecision to prevent floating point errors from
-  // giving us wonky timestamps
-  $: tickTimings = Array.from({ length: Math.ceil($time) + 30 }, (_, i) =>
+  /**
+   * The number of timings to display on the timeline. If there are no clips,
+   * it's the scrubber time + 30 seconds. Otherwise, it's either the scrubber
+   * time + 30 seconds or the end of the last clip + 30 seconds, whichever is
+   * greater.
+   */
+  $: numTiming =
+    (() => {
+      if ($videoClips.length === 0) return Math.ceil($time);
+      return Math.ceil(Math.max($time, getClipEndPos(getLastTimelineClip()!)));
+    })() + 30;
+
+  $: tickTimings = Array.from({ length: numTiming }, (_, i) =>
+    // NOTE: here we use toPrecision to prevent floating point errors from
+    // giving us wonky timestamps.
     (i * $secondsPerTick).toPrecision(4)
   );
 
