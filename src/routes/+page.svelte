@@ -137,7 +137,7 @@
 
   onMount(() => requestAnimationFrame(frame));
 
-  const resolveFiles = async () => {
+  const upload = async () => {
     if (!files) return;
     for (const file of files) {
       const media = await resolveMedia(file);
@@ -188,18 +188,12 @@
   }}
 />
 
-<div class="ribbon">
-  <input
-    type="file"
-    accept="video/*"
-    multiple
-    bind:files
-    on:change={resolveFiles}
-  />
+<div class="region ribbon">
   <button on:click={exportVideo}>Export</button>
 </div>
 
-<div class="media-browser">
+<div class="region media-browser">
+  <input type="file" accept="video/*" multiple bind:files on:change={upload} />
   {#if resolved.length === 0}
     <p style:color="rgba(0 0 0 / 0.75)">No media uploaded</p>
   {/if}
@@ -208,28 +202,23 @@
   {/each}
 </div>
 
-<div class="player" bind:clientWidth={playerWidth}>
-  {#if current}
-    <video
-      src={current.media.src}
-      class="media"
-      bind:this={videoEl}
-      title={current.uuid}
-      style:transform="matrix({matrix
-        .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
-        .join(",")})"
-    >
-      <track kind="captions" />
-    </video>
-  {/if}
-</div>
-
-<div class="ribbon media-ribbon">
-  <label>
-    <p>Scale: {$scale.toFixed(1)}</p>
-    <input type="range" min="0.1" max="4" step="0.1" bind:value={$scale} />
-  </label>
-  <div class="media-controls">
+<div class="player-container">
+  <div class="player" bind:clientWidth={playerWidth}>
+    {#if current}
+      <video
+        src={current.media.src}
+        class="media"
+        bind:this={videoEl}
+        title={current.uuid}
+        style:transform="matrix({matrix
+          .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
+          .join(",")})"
+      >
+        <track kind="captions" />
+      </video>
+    {/if}
+  </div>
+  <div class="region ribbon media-controls">
     <button
       on:click={() => {
         $time = 0;
@@ -253,10 +242,17 @@
       }}>⏭️</button
     >
   </div>
+</div>
+
+<div class="region ribbon timeline-ribbon">
+  <label>
+    <p>Scale: {$scale.toFixed(1)}</p>
+    <input type="range" min="0.1" max="4" step="0.1" bind:value={$scale} />
+  </label>
   <Runtime time={$time} />
 </div>
 
-<div class="timeline" bind:this={timelineEl}>
+<div class="region timeline" bind:this={timelineEl}>
   <div class="tick-container" bind:this={tickContainer}>
     {#each tickTimings as time}
       <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -301,6 +297,12 @@
     box-sizing: border-box;
   }
 
+  .region {
+    border: 1px solid rgba(200 200 200 / 1);
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+  }
+
   .ribbon {
     display: flex;
     justify-content: space-between;
@@ -310,20 +312,18 @@
 
   .media-browser {
     display: flex;
-    border: 1px solid rgba(200 200 200 / 1);
-    border-radius: 12px;
-    overflow-x: scroll;
-    padding: 0.5rem;
-    margin: 0 0.5rem;
+    flex-direction: column;
+    overflow-y: scroll;
+
     gap: 0.5rem;
   }
 
-  .media-ribbon > label {
+  .timeline-ribbon > label {
     display: flex;
     gap: 0.5rem;
   }
 
-  .ribbon.media-ribbon {
+  .ribbon.timeline-ribbon {
     display: grid;
     place-items: center;
     grid-template-columns: repeat(3, 1fr);
@@ -331,25 +331,34 @@
     grid-gap: 0.5rem;
   }
 
-  div.player {
-    margin: 0 0.5rem;
-    place-content: center center;
+  .player-container {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .player-container .player {
+    position: relative;
+    overflow: hidden;
     aspect-ratio: 16 / 9;
     max-width: 1280px;
     max-height: 100%;
-    overflow: hidden;
+    background-color: black;
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: black;
+  }
+
+  .player-container .ribbon {
+    width: fit-content;
+    margin: 0 auto;
   }
 
   .timeline {
-    margin: 0 0.5rem 0.5rem;
     position: relative;
+    padding: 0;
     overflow-x: scroll;
-    border-radius: 4px;
-    border: 1px solid rgba(200 200 200 / 1);
   }
 
   .timeline > .tick-container {
@@ -383,5 +392,27 @@
     width: 2px;
     height: 100%;
     background-color: rgba(0 0 0 / 0.75);
+  }
+
+  @media (min-width: 1024px) {
+    .ribbon {
+      grid-area: 1/1/2/3;
+    }
+
+    .media-browser {
+      grid-area: 2/1;
+    }
+
+    .player-container {
+      grid-area: 2/2;
+    }
+
+    .ribbon.timeline-ribbon {
+      grid-area: 3/1/4/3;
+    }
+
+    .timeline {
+      grid-area: 4/1/5/3;
+    }
   }
 </style>

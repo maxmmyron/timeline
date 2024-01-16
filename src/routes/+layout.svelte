@@ -17,7 +17,16 @@
     height: 100vh;
     display: grid;
     grid-template-columns: 1fr;
-    grid-template-rows: 48px 96px 1fr 48px 128px;
+    grid-template-rows: 2rem 8rem 1fr 3rem 8rem;
+
+    padding: 0.5rem;
     gap: 0.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    main {
+      grid-template-columns: 280px 1fr;
+      grid-template-rows: 2rem 1fr 3rem 8rem;
+    }
   }
 </style>
