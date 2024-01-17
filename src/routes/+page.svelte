@@ -10,6 +10,8 @@
     tickWidth,
     secondsPerTick,
     playerScale,
+    res,
+    safeRes,
   } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineClip from "$lib/components//TimelineClip.svelte";
@@ -39,8 +41,6 @@
    */
   let playerWidth: number;
   let timelineEl: HTMLDivElement;
-
-  $: $playerScale = playerWidth / 1280;
 
   /**
    * The offset of the timeline from the left side of the screen. computed with
@@ -88,6 +88,37 @@
     // giving us wonky timestamps.
     (i * $secondsPerTick).toPrecision(4)
   );
+
+  let containerHeight: number = 1;
+  let containerWidth: number = 1;
+  // contain container width/height to 1280x720
+  $: safeContainerWidth = Math.min(containerWidth, 1280);
+  $: safeContainerHeight = Math.min(containerHeight, 720);
+
+  // get the aspect ratio of the safe container dimensions, which we use
+  // to determine how to scale the player
+  $: safeContainerAspectRatio = safeContainerWidth / safeContainerHeight;
+
+  let playerRes = [$safeRes[0], $safeRes[1]] as [number, number];
+
+  $: aspect = $safeRes[0] / $safeRes[1];
+
+  // if container aspect > player aspect: scale player to fit height (portrait)
+  // if container aspect < player aspect: scale player to fit width (landscape)
+  $: playerRes = (() => {
+    if (aspect > safeContainerAspectRatio) {
+      // scaling to fit height: wres > playerw
+      const w = Math.max($safeRes[0], safeContainerWidth);
+      return [w, w / aspect];
+    } else {
+      // scaling to fit width: hres > playerh
+      const h = Math.max($safeRes[1], safeContainerHeight);
+      return [h * aspect, h];
+    }
+  })();
+
+  // update scaling factor of player, which is used to scale the video element
+  $: $playerScale = playerRes[0] / $safeRes[0];
 
   const updatePlayer = async () => {
     await tick();
@@ -189,6 +220,16 @@
 />
 
 <div class="region ribbon">
+  <label>
+    <p>res X</p>
+    <input type="number" bind:value={$res[0]} step="2" />
+    <output>{$safeRes[0]}</output>
+  </label>
+  <label>
+    <p>res Y</p>
+    <input type="number" bind:value={$res[1]} step="2" />
+    <output>{$safeRes[1]}</output>
+  </label>
   <button on:click={exportVideo}>Export</button>
 </div>
 
@@ -202,8 +243,17 @@
   {/each}
 </div>
 
-<div class="player-container">
-  <div class="player" bind:clientWidth={playerWidth}>
+<div
+  class="player-container"
+  bind:clientHeight={containerHeight}
+  bind:clientWidth={containerWidth}
+>
+  <div
+    class="player"
+    bind:clientWidth={playerWidth}
+    style:width="{playerRes[0]}px"
+    style:height="{playerRes[1]}px"
+  >
     {#if current}
       <video
         src={current.media.src}
@@ -341,9 +391,7 @@
   .player-container .player {
     position: relative;
     overflow: hidden;
-    aspect-ratio: 16 / 9;
-    max-width: 1280px;
-    max-height: 100%;
+    /* max-width: 1280px; */
     background-color: black;
     display: flex;
     justify-content: center;
