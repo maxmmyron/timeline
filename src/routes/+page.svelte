@@ -93,27 +93,34 @@
   let containerWidth: number = 1;
   // contain container width/height to 1280x720
   $: safeContainerWidth = Math.min(containerWidth, 1280);
-  $: safeContainerHeight = Math.min(containerHeight, 720);
+  // FIXME: this lazily drops 48 px to account for the ribbon--fix in future
+  $: safeContainerHeight = Math.min(containerHeight, 720) - 48;
 
-  // get the aspect ratio of the safe container dimensions, which we use
-  // to determine how to scale the player
-  $: safeContainerAspectRatio = safeContainerWidth / safeContainerHeight;
-
+  /**
+   * The resolution of the player. This value is scaled based on the sizing of
+   * the player's container.
+   */
   let playerRes = [$safeRes[0], $safeRes[1]] as [number, number];
 
-  $: aspect = $safeRes[0] / $safeRes[1];
-
-  // if container aspect > player aspect: scale player to fit height (portrait)
-  // if container aspect < player aspect: scale player to fit width (landscape)
+  /**
+   * Rescale the player resolution when any variable that may affect it changes.
+   */
   $: playerRes = (() => {
-    if (aspect > safeContainerAspectRatio) {
-      // scaling to fit height: wres > playerw
-      const w = Math.max($safeRes[0], safeContainerWidth);
-      return [w, w / aspect];
+    // compare aspect ratio of video's resolution to that of the safe container
+    if ($safeRes[0] / $safeRes[1] < safeContainerWidth / safeContainerHeight) {
+      // if video aspect < safe container aspect, we need to shrink the height
+      // of the player to fit, and scale the width accordingly. we can lazily
+      // assume the player height is the same as the safe container height
+      const playerScalingFactor = safeContainerHeight / $safeRes[1];
+      const w = $safeRes[0] * playerScalingFactor;
+      return [w, safeContainerHeight];
     } else {
-      // scaling to fit width: hres > playerh
-      const h = Math.max($safeRes[1], safeContainerHeight);
-      return [h * aspect, h];
+      // if video aspect > safe container aspect, we need to shrink the width
+      // of the player to fit, and scale the height accordingly. we can lazily
+      // assume the player width is the same as the safe container width
+      const playerScalingFactor = safeContainerWidth / $safeRes[0];
+      const h = $safeRes[1] * playerScalingFactor;
+      return [safeContainerWidth, h];
     }
   })();
 
@@ -220,12 +227,12 @@
 />
 
 <div class="region ribbon">
-  <label>
+  <label class="resolution-label">
     <p>res X</p>
     <input type="number" bind:value={$res[0]} step="2" />
     <output>{$safeRes[0]}</output>
   </label>
-  <label>
+  <label class="resolution-label">
     <p>res Y</p>
     <input type="number" bind:value={$res[1]} step="2" />
     <output>{$safeRes[1]}</output>
@@ -360,6 +367,15 @@
     padding: 0.5rem;
   }
 
+  .resolution-label {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .resolution-label > input {
+    width: 4rem;
+  }
+
   .media-browser {
     display: flex;
     flex-direction: column;
@@ -391,7 +407,8 @@
   .player-container .player {
     position: relative;
     overflow: hidden;
-    /* max-width: 1280px; */
+    left: 50%;
+    transform: translateX(-50%);
     background-color: black;
     display: flex;
     justify-content: center;
