@@ -1,5 +1,5 @@
 import { get } from "svelte/store";
-import { ffmpeg, videoClips } from "./stores";
+import { ffmpeg, safeRes, videoClips } from "./stores";
 import { fetchFile } from "@ffmpeg/ffmpeg";
 
 export const exportVideo = async () => {
@@ -24,7 +24,8 @@ export const exportVideo = async () => {
   }
 
   // create black video with empty audio track for duration of video
-  await ffmpegInstance.run("-t", duration.toString(), "-f", "lavfi", "-i", "color=c=green:s=1280x720:r=30", "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-pix_fmt", "yuv420p", "-shortest", "base.mp4");
+  const dims = get(safeRes);
+  await ffmpegInstance.run("-t", duration.toString(), "-f", "lavfi", "-i", `color=c=black:s=${dims[0]}x${dims[1]}:r=30`, "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-pix_fmt", "yuv420p", "-shortest", "base.mp4");
 
   // sort clips by z index, lowest to highest. we do this so we properly layer the videos.
   clips = clips.sort((a, b) => a.z - b.z);

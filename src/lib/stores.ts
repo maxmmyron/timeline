@@ -33,7 +33,19 @@ export const time = writable(0);
 export const videoClips: Writable<App.Clip[]> = writable([]);
 
 /**
- * The scaling of the video player relative to 1280x720. This is used to scale
+ * The scaling of the video player relative to its native resolution. This is used to scale
  * each video's matrix values.
  */
 export const playerScale = writable(1);
+
+/**
+ * The resolution of the player as inputted by the user. This is rounded to the
+ * nearest even integer.
+ */
+export const res = writable([1280, 720]);
+
+/**
+ * The resolution of the player, rounded to the nearest even integer. This is
+ * safe for use with ffmpeg.
+ */
+export const safeRes = derived(res, $res => [$res[0] - ($res[0] % 2), $res[1] - ($res[1] % 2)]);

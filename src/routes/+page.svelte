@@ -10,6 +10,8 @@
     tickWidth,
     secondsPerTick,
     playerScale,
+    res,
+    safeRes,
   } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineClip from "$lib/components//TimelineClip.svelte";
@@ -39,8 +41,6 @@
    */
   let playerWidth: number;
   let timelineEl: HTMLDivElement;
-
-  $: $playerScale = playerWidth / 1280;
 
   /**
    * The offset of the timeline from the left side of the screen. computed with
@@ -88,6 +88,44 @@
     // giving us wonky timestamps.
     (i * $secondsPerTick).toPrecision(4)
   );
+
+  let containerHeight: number = 1;
+  let containerWidth: number = 1;
+  // contain container width/height to 1280x720
+  $: safeContainerWidth = Math.min(containerWidth, 1280);
+  // FIXME: this lazily drops 48 px to account for the ribbon--fix in future
+  $: safeContainerHeight = Math.min(containerHeight, 720) - 48;
+
+  /**
+   * The resolution of the player. This value is scaled based on the sizing of
+   * the player's container.
+   */
+  let playerRes = [$safeRes[0], $safeRes[1]] as [number, number];
+
+  /**
+   * Rescale the player resolution when any variable that may affect it changes.
+   */
+  $: playerRes = (() => {
+    // compare aspect ratio of video's resolution to that of the safe container
+    if ($safeRes[0] / $safeRes[1] < safeContainerWidth / safeContainerHeight) {
+      // if video aspect < safe container aspect, we need to shrink the height
+      // of the player to fit, and scale the width accordingly. we can lazily
+      // assume the player height is the same as the safe container height
+      const playerScalingFactor = safeContainerHeight / $safeRes[1];
+      const w = $safeRes[0] * playerScalingFactor;
+      return [w, safeContainerHeight];
+    } else {
+      // if video aspect > safe container aspect, we need to shrink the width
+      // of the player to fit, and scale the height accordingly. we can lazily
+      // assume the player width is the same as the safe container width
+      const playerScalingFactor = safeContainerWidth / $safeRes[0];
+      const h = $safeRes[1] * playerScalingFactor;
+      return [safeContainerWidth, h];
+    }
+  })();
+
+  // update scaling factor of player, which is used to scale the video element
+  $: $playerScale = playerRes[0] / $safeRes[0];
 
   const updatePlayer = async () => {
     await tick();
@@ -189,6 +227,16 @@
 />
 
 <div class="region ribbon">
+  <label class="resolution-label">
+    <p>res X</p>
+    <input type="number" bind:value={$res[0]} step="2" />
+    <output>{$safeRes[0]}</output>
+  </label>
+  <label class="resolution-label">
+    <p>res Y</p>
+    <input type="number" bind:value={$res[1]} step="2" />
+    <output>{$safeRes[1]}</output>
+  </label>
   <button on:click={exportVideo}>Export</button>
 </div>
 
@@ -202,8 +250,17 @@
   {/each}
 </div>
 
-<div class="player-container">
-  <div class="player" bind:clientWidth={playerWidth}>
+<div
+  class="player-container"
+  bind:clientHeight={containerHeight}
+  bind:clientWidth={containerWidth}
+>
+  <div
+    class="player"
+    bind:clientWidth={playerWidth}
+    style:width="{playerRes[0]}px"
+    style:height="{playerRes[1]}px"
+  >
     {#if current}
       <video
         src={current.media.src}
@@ -310,6 +367,15 @@
     padding: 0.5rem;
   }
 
+  .resolution-label {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .resolution-label > input {
+    width: 4rem;
+  }
+
   .media-browser {
     display: flex;
     flex-direction: column;
@@ -341,9 +407,8 @@
   .player-container .player {
     position: relative;
     overflow: hidden;
-    aspect-ratio: 16 / 9;
-    max-width: 1280px;
-    max-height: 100%;
+    left: 50%;
+    transform: translateX(-50%);
     background-color: black;
     display: flex;
     justify-content: center;
