@@ -17,6 +17,7 @@
   import TimelineClip from "$lib/components//TimelineClip.svelte";
   import Runtime from "$lib/components/Runtime.svelte";
   import { getClipEndPos, getLastTimelineClip } from "$lib/utils";
+  import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
 
   let paused = true;
 
@@ -301,13 +302,7 @@
   </div>
 </div>
 
-<div class="region ribbon timeline-ribbon">
-  <label>
-    <p>Scale: {$scale.toFixed(1)}</p>
-    <input type="range" min="0.1" max="4" step="0.1" bind:value={$scale} />
-  </label>
-  <Runtime time={$time} />
-</div>
+<TimelineRibbon />
 
 <div class="region timeline" bind:this={timelineEl}>
   <div class="tick-container" bind:this={tickContainer}>
@@ -384,19 +379,6 @@
     gap: 0.5rem;
   }
 
-  .timeline-ribbon > label {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .ribbon.timeline-ribbon {
-    display: grid;
-    place-items: center;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: 1fr;
-    grid-gap: 0.5rem;
-  }
-
   .player-container {
     overflow: hidden;
     display: flex;
@@ -470,10 +452,6 @@
 
     .player-container {
       grid-area: 2/2;
-    }
-
-    .ribbon.timeline-ribbon {
-      grid-area: 3/1/4/3;
     }
 
     .timeline {
