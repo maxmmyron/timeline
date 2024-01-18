@@ -39,7 +39,7 @@ export const videoClips: Writable<App.Clip[]> = writable([]);
 export const playerScale = writable(1);
 
 /**
- * The resolution of the player as inpytted by the user. This is rounded to the
+ * The resolution of the player as inputted by the user. This is rounded to the
  * nearest even integer.
  */
 export const res = writable([1280, 720]);
