@@ -80,9 +80,13 @@
    */
   $: numTiming =
     (() => {
-      if ($videoClips.length === 0) return Math.ceil($time);
-      return Math.ceil(Math.max($time, getClipEndPos(getLastTimelineClip()!)));
+      if ($videoClips.length === 0) return Math.ceil($time / $secondsPerTick);
+      return Math.ceil(
+        Math.max($time, getClipEndPos(getLastTimelineClip()!)) / $secondsPerTick
+      );
     })() + 30;
+
+  $: console.log(numTiming);
 
   $: tickTimings = Array.from({ length: numTiming }, (_, i) =>
     // NOTE: here we use toPrecision to prevent floating point errors from
@@ -306,7 +310,7 @@
 
 <div class="region timeline" bind:this={timelineEl}>
   <div class="tick-container" bind:this={tickContainer}>
-    {#each tickTimings as time}
+    {#each tickTimings as time (time)}
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <div
         class="tick"
