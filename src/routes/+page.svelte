@@ -12,17 +12,12 @@
     playerScale,
     res,
     safeRes,
-    scroll,
   } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
-  import TimelineClip from "$lib/components//TimelineClip.svelte";
-  import Runtime from "$lib/components/Runtime.svelte";
-  import { getClipEndPos, getLastTimelineClip } from "$lib/utils";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
+  import Timeline from "$lib/components/Timeline/Timeline.svelte";
 
   let paused = true;
-
-  let canMoveScrubber = false;
 
   /**
    * Most recent files uploaded by the user
@@ -33,7 +28,6 @@
    */
   let resolved: App.Media[] = [];
 
-  let tickContainer: HTMLDivElement;
   /**
    * The current playing video
    */
@@ -42,17 +36,6 @@
    * The container for the video element
    */
   let playerWidth: number;
-  let timelineEl: HTMLDivElement;
-
-  /**
-   * The offset of the timeline from the left side of the screen. computed with
-   * getBoundingClientRect and clientLeft, which accounts for the margin and
-   * border of the element, respectively.
-   *
-   * @default 9 (a dirty default)
-   */
-  $: timelineOffset =
-    timelineEl?.getBoundingClientRect().left + timelineEl?.clientLeft ?? 9;
 
   // get the UUID of the current clip (instead of clip itself, to prevent
   // reactivity issues)
@@ -72,27 +55,6 @@
   $: current, $time, updatePlayer();
   // reset video time when video changes
   $: currentUUID, resetVideoTime();
-
-  let tickContainerWidth: number;
-
-  /**
-   * The timings to display on the timeline. Each timing is an array of two
-   * numbers: the first is the time in seconds, and the second is the offset of
-   * the tick leftwards.
-   */
-  $: tickTimings = Array.from(
-    // only render the number of ticks that can fit in the tick container
-    { length: Math.ceil(tickContainerWidth / $tickWidth) + 1 },
-    (_, i) => {
-      // timing offset is based on scroll left.
-      // each tickwidth scroll amount is secondsPerTicks
-      const timingOffset = Math.floor($scroll / $tickWidth);
-      // the remainder of the scroll amount is the offset of the tick from the
-      // left side of the screen
-      const tickOffset = $scroll % $tickWidth;
-      return [(i + timingOffset) * $secondsPerTick, tickOffset];
-    }
-  ) as Array<[number, number]>;
 
   $: console.log($secondsPerTick, $tickWidth, $scaleFactor);
 
@@ -192,12 +154,6 @@
     files = null;
   };
 
-  const moveScrubber = (clientX: number) => {
-    const rect = tickContainer.getBoundingClientRect();
-    const x = Math.max(0, clientX - rect.left) + $scroll;
-    $time = x / $scaleFactor;
-  };
-
   $: getCurrentClip = (clips: App.Clip[]): string | null => {
     let valid: App.Clip[] = [];
     for (const clip of clips) {
@@ -211,10 +167,6 @@
 </script>
 
 <svelte:window
-  on:mousemove={(e) => {
-    if (canMoveScrubber) moveScrubber(e.clientX);
-  }}
-  on:mouseup={() => (canMoveScrubber = false)}
   on:keydown={(e) => {
     if (e.ctrlKey) {
       if (e.key === "=") {
@@ -310,53 +262,7 @@
 
 <TimelineRibbon />
 
-<div
-  class="region relative flex flex-col !p-0 overflow-hidden lg:row-start-4 lg:col-start-1 lg:col-span-full"
-  bind:this={timelineEl}
-  on:wheel={(e) => {
-    $scroll = Math.max(0, $scroll + e.deltaY * $secondsPerTick);
-  }}
->
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <div
-    class="h-4 flex"
-    bind:clientWidth={tickContainerWidth}
-    bind:this={tickContainer}
-    on:mousedown={(e) => {
-      canMoveScrubber = true;
-      moveScrubber(e.clientX);
-    }}
-  >
-    {#each tickTimings as [time, offset]}
-      <div class="tick" style:width="{$tickWidth}px" style:left="-{offset}px">
-        <Runtime {time} />
-      </div>
-    {/each}
-  </div>
-  <div class="relative flex items-center w-full h-full">
-    {#each $videoClips as clip}
-      <TimelineClip
-        {clip}
-        {timelineOffset}
-        on:matrixChange={(e) => {
-          // when a clip's matrix changes, compare the UUID of the clip to the
-          // current UUID. if they match, update the matrix.
-
-          // TODO: remove this event handler in the future, this blocks multiple
-          // clips from being played at once.
-          if (clip.uuid === currentUUID) {
-            matrix = e.detail;
-          }
-        }}
-      />
-    {/each}
-  </div>
-  <div
-    class="scrubber"
-    style="transform: translateX({$time * $scaleFactor -
-      $scroll}px; z-index: 9999999;"
-  />
-</div>
+<Timeline {matrix} {currentUUID} />
 
 <style>
   * {
@@ -414,25 +320,6 @@
   .player-container .ribbon {
     width: fit-content;
     margin: 0 auto;
-  }
-
-  .tick {
-    height: 100%;
-    flex-shrink: 0;
-    background-color: rgba(220 220 220 / 0.75);
-    border-right: 1px solid rgba(100 100 100 / 0.75);
-    padding-left: 2px;
-    position: relative;
-    overflow: hidden;
-    user-select: none;
-  }
-
-  .scrubber {
-    top: 0;
-    position: absolute;
-    width: 2px;
-    height: 100%;
-    background-color: rgba(0 0 0 / 0.75);
   }
 
   @media (min-width: 1024px) {
