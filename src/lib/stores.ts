@@ -23,7 +23,7 @@ export const tickWidth = derived(scaleFactor, $scaleFactor => $scaleFactor < 100
  * The number of seconds a single tick represents.
  * This is clamped to 1 second at minimum, if the scale is under 1.
  */
-export const secondsPerTick = derived(scale, $scale => $scale < 1 ? (1 / $scale) : $scale);
+export const secondsPerTick = derived(scale, $scale => $scale < 1 ? (1 / $scale) : 1);
 
 export const time = writable(0);
 
@@ -49,3 +49,8 @@ export const res = writable([1280, 720]);
  * safe for use with ffmpeg.
  */
 export const safeRes = derived(res, $res => [$res[0] - ($res[0] % 2), $res[1] - ($res[1] % 2)]);
+
+/**
+ * The amount the timeline is scrolled horizontally.
+ */
+export const scroll = writable(0);

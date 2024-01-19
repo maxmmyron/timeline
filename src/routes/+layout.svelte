@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ffmpeg } from "$lib/stores";
   import { onMount } from "svelte";
-  import "../app.css";
+  import "../app.pcss";
 
   onMount(async () => {
     if (!$ffmpeg.isLoaded()) await $ffmpeg.load();
@@ -9,7 +9,7 @@
 </script>
 
 <main>
-  <slot />
+  <slot></slot>
 </main>
 
 <style>

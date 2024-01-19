@@ -10,11 +10,11 @@
 
 <article class="runtime">
   {#each timingRules as r, i}
-    <p>
+    <p class="text-slate-900 font-mono text-xs">
       {Math.floor(r(time)).toString().padStart(2, "0")}:
     </p>
   {/each}
-  <p>
+  <p class="text-slate-900 font-mono text-xs">
     {Math.round((time % 1) * 1000)
       .toString()
       .padStart(3, "0")

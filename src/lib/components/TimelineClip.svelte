@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { scaleFactor, videoClips, time, selected } from "$lib/stores";
+  import { scaleFactor, videoClips, time, selected, scroll } from "$lib/stores";
   import ClipSettings from "./ClipSettings.svelte";
   import { createEventDispatcher } from "svelte";
 
@@ -29,7 +29,7 @@
 
   $: clipLength = clip.media.duration - clip.start - clip.end;
 
-  $: transform = `translateX(${clip.offset * $scaleFactor}px)`;
+  $: transform = `translateX(${clip.offset * $scaleFactor - $scroll}px)`;
   $: width = `${clipLength * $scaleFactor}px`;
 
   const moveClip = (e: MouseEvent) => {
