@@ -2,10 +2,10 @@
   export let clip: App.Clip;
   export let settingsOpen = false;
 
-  let scaleX: number = 1,
-    scaleY: number = 1,
-    translateX: number = 0,
-    translateY: number = 0;
+  export let scaleX = 1;
+  export let scaleY = 1;
+  export let translateX = 0;
+  export let translateY = 0;
 
   $: clip.matrix = [
     scaleX ?? 1,

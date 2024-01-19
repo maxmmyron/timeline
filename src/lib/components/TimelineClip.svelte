@@ -255,7 +255,14 @@
   on:click
 >
   {#if settingsOpen}
-    <ClipSettings bind:clip bind:settingsOpen />
+    <ClipSettings
+      bind:clip
+      bind:settingsOpen
+      scaleX={clip.matrix[0]}
+      scaleY={clip.matrix[3]}
+      translateX={clip.matrix[4]}
+      translateY={clip.matrix[5]}
+    />
   {:else}
     <button
       class="trimmer left"

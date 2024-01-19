@@ -262,7 +262,7 @@
 
 <TimelineRibbon />
 
-<Timeline {matrix} {currentUUID} />
+<Timeline bind:matrix bind:currentUUID />
 
 <style>
   * {
