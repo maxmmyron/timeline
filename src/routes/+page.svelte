@@ -12,6 +12,7 @@
     playerScale,
     res,
     safeRes,
+    scroll,
   } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineClip from "$lib/components//TimelineClip.svelte";
@@ -74,8 +75,6 @@
 
   let tickContainerWidth: number;
 
-  let timelineScrollOffset = 0;
-
   /**
    * The timings to display on the timeline. Each timing is an array of two
    * numbers: the first is the time in seconds, and the second is the offset of
@@ -87,15 +86,15 @@
     (_, i) => {
       // timing offset is based on scroll left.
       // each tickwidth scroll amount is secondsPerTicks
-      const timingOffset = Math.floor(timelineScrollOffset / $tickWidth);
+      const timingOffset = Math.floor($scroll / $tickWidth);
       // the remainder of the scroll amount is the offset of the tick from the
       // left side of the screen
-      const tickOffset = timelineScrollOffset % $tickWidth;
+      const tickOffset = $scroll % $tickWidth;
       return [(i + timingOffset) * $secondsPerTick, tickOffset];
     }
   ) as Array<[number, number]>;
 
-  $: console.log(tickTimings);
+  $: console.log($secondsPerTick, $tickWidth, $scaleFactor);
 
   let containerHeight: number = 1;
   let containerWidth: number = 1;
@@ -195,7 +194,7 @@
 
   const moveScrubber = (clientX: number) => {
     const rect = tickContainer.getBoundingClientRect();
-    const x = Math.max(0, clientX - rect.left);
+    const x = Math.max(0, clientX - rect.left) + $scroll;
     $time = x / $scaleFactor;
   };
 
@@ -315,10 +314,7 @@
   class="region relative flex flex-col !p-0 overflow-hidden lg:row-start-4 lg:col-start-1 lg:col-span-full"
   bind:this={timelineEl}
   on:wheel={(e) => {
-    timelineScrollOffset = Math.max(
-      0,
-      timelineScrollOffset + e.deltaY * $secondsPerTick
-    );
+    $scroll = Math.max(0, $scroll + e.deltaY * $secondsPerTick);
   }}
 >
   <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -357,7 +353,8 @@
   </div>
   <div
     class="scrubber"
-    style="transform: translateX({$time * $scaleFactor}px; z-index: 9999999;"
+    style="transform: translateX({$time * $scaleFactor -
+      $scroll}px; z-index: 9999999;"
   />
 </div>
 
