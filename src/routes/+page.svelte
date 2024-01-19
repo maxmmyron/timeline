@@ -72,27 +72,30 @@
   // reset video time when video changes
   $: currentUUID, resetVideoTime();
 
+  let tickContainerWidth: number;
+
+  let timelineScrollOffset = 0;
+
   /**
-   * The number of timings to display on the timeline. If there are no clips,
-   * it's the scrubber time + 30 seconds. Otherwise, it's either the scrubber
-   * time + 30 seconds or the end of the last clip + 30 seconds, whichever is
-   * greater.
+   * The timings to display on the timeline. Each timing is an array of two
+   * numbers: the first is the time in seconds, and the second is the offset of
+   * the tick leftwards.
    */
-  $: numTiming =
-    (() => {
-      if ($videoClips.length === 0) return Math.ceil($time / $secondsPerTick);
-      return Math.ceil(
-        Math.max($time, getClipEndPos(getLastTimelineClip()!)) / $secondsPerTick
-      );
-    })() + 30;
+  $: tickTimings = Array.from(
+    // only render the number of ticks that can fit in the tick container
+    { length: Math.ceil(tickContainerWidth / $tickWidth) + 1 },
+    (_, i) => {
+      // timing offset is based on scroll left.
+      // each tickwidth scroll amount is secondsPerTicks
+      const timingOffset = Math.floor(timelineScrollOffset / $tickWidth);
+      // the remainder of the scroll amount is the offset of the tick from the
+      // left side of the screen
+      const tickOffset = timelineScrollOffset % $tickWidth;
+      return [(i + timingOffset) * $secondsPerTick, tickOffset];
+    }
+  ) as Array<[number, number]>;
 
-  $: console.log(numTiming);
-
-  $: tickTimings = Array.from({ length: numTiming }, (_, i) =>
-    // NOTE: here we use toPrecision to prevent floating point errors from
-    // giving us wonky timestamps.
-    (i * $secondsPerTick).toPrecision(4)
-  );
+  $: console.log(tickTimings);
 
   let containerHeight: number = 1;
   let containerWidth: number = 1;
@@ -308,23 +311,33 @@
 
 <TimelineRibbon />
 
-<div class="region timeline" bind:this={timelineEl}>
-  <div class="tick-container" bind:this={tickContainer}>
-    {#each tickTimings as time (time)}
-      <!-- svelte-ignore a11y-click-events-have-key-events -->
-      <div
-        class="tick"
-        style:width="{$tickWidth}px"
-        on:mousedown={(e) => {
-          canMoveScrubber = true;
-          moveScrubber(e.clientX);
-        }}
-      >
-        <Runtime time={parseInt(time)} />
+<div
+  class="region relative flex flex-col !p-0 overflow-hidden lg:row-start-4 lg:col-start-1 lg:col-span-full"
+  bind:this={timelineEl}
+  on:wheel={(e) => {
+    timelineScrollOffset = Math.max(
+      0,
+      timelineScrollOffset + e.deltaY * $secondsPerTick
+    );
+  }}
+>
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <div
+    class="h-4 flex"
+    bind:clientWidth={tickContainerWidth}
+    bind:this={tickContainer}
+    on:mousedown={(e) => {
+      canMoveScrubber = true;
+      moveScrubber(e.clientX);
+    }}
+  >
+    {#each tickTimings as [time, offset]}
+      <div class="tick" style:width="{$tickWidth}px" style:left="-{offset}px">
+        <Runtime {time} />
       </div>
     {/each}
   </div>
-  <div class="row">
+  <div class="relative flex items-center w-full h-full">
     {#each $videoClips as clip}
       <TimelineClip
         {clip}
@@ -406,17 +419,6 @@
     margin: 0 auto;
   }
 
-  .timeline {
-    position: relative;
-    padding: 0;
-    overflow-x: scroll;
-  }
-
-  .timeline > .tick-container {
-    height: 1rem;
-    display: flex;
-  }
-
   .tick {
     height: 100%;
     flex-shrink: 0;
@@ -426,15 +428,6 @@
     position: relative;
     overflow: hidden;
     user-select: none;
-  }
-
-  .timeline > .row {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
-    /* TODO: can prob remove dirty calc with flex/grid in .timeline class? */
-    height: calc(100% - 1rem);
   }
 
   .scrubber {
@@ -456,10 +449,6 @@
 
     .player-container {
       grid-area: 2/2;
-    }
-
-    .timeline {
-      grid-area: 4/1/5/3;
     }
   }
 </style>

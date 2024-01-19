@@ -4,7 +4,7 @@
   import Runtime from "../Runtime.svelte";
 
   const decrease = () => {
-    $scale = Math.max(0.001, $scale - 0.25);
+    $scale = Math.max(0.02, $scale - 0.25);
   };
 
   const increase = () => {
@@ -30,7 +30,7 @@
     <button class="btn btn-primary" on:click={decrease}>
       <span class="material-icons">remove</span>
     </button>
-    <input type="range" min="0.001" max="5" step="0.001" bind:value={$scale} />
+    <input type="range" min="0.02" max="5" step="0.001" bind:value={$scale} />
     <button class="btn btn-primary" on:click={increase}>
       <span class="material-icons">add</span>
     </button>
