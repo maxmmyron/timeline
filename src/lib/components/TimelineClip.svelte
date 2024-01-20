@@ -1,7 +1,6 @@
 <script lang="ts">
   import { scaleFactor, videoClips, time, selected, scroll } from "$lib/stores";
   import ClipSettings from "./ClipSettings.svelte";
-  import { createEventDispatcher } from "svelte";
 
   export let clip: App.Clip;
   // this is set to 9 as a dirty default, but is updated in page.svelte
@@ -197,21 +196,6 @@
       return (cStart > start && cStart < end) || (cEnd > start && cEnd < end);
     }).length;
   })();
-
-  // we use this event to forward matrix changes to the video handler, since
-  // it won't directly react to those changes itself
-  const matrixDispatcher = createEventDispatcher();
-
-  // dispatch a "matrixChange" event whenever the matrix changes
-  $: clip.matrix, matrixChange();
-
-  /**
-   * Emits a new matrixChange event. The detail parameter of the CustomEvent
-   * interface represents the new matrix of the clip.
-   */
-  const matrixChange = () => {
-    matrixDispatcher("matrixChange", clip.matrix);
-  };
 </script>
 
 <svelte:window
@@ -222,9 +206,6 @@
   on:mouseup={() => {
     canMoveClip = false;
     resizeMode = null;
-  }}
-  on:click={() => {
-    $selected = null;
   }}
 />
 
@@ -245,7 +226,7 @@
     $time = clip.offset;
   }}
   on:click|stopPropagation={() => {
-    $selected = clip.uuid === $selected ? null : clip.uuid;
+    $selected = clip.uuid;
   }}
   on:keydown|stopPropagation={(e) => {
     if (e.key === "Delete" && $selected === clip.uuid) {

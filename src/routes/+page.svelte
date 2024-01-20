@@ -6,16 +6,18 @@
     scaleFactor,
     time,
     videoClips,
-    scale,
     tickWidth,
     secondsPerTick,
     playerScale,
     res,
     safeRes,
+    selected,
   } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
+  import Region from "$lib/components/Region.svelte";
+  import Inspector from "$lib/components/Inspector/Inspector.svelte";
 
   let paused = true;
 
@@ -32,10 +34,6 @@
    * The current playing video
    */
   let videoEl: HTMLVideoElement | null = null;
-  /**
-   * The container for the video element
-   */
-  let playerWidth: number;
 
   // get the UUID of the current clip (instead of clip itself, to prevent
   // reactivity issues)
@@ -166,28 +164,65 @@
   };
 </script>
 
-<div class="region ribbon">
-  <label class="resolution-label">
+<Region
+  class="flex justify-between items-center lg:row-start-1 lg:col-start-1 lg:col-span-full"
+>
+  <label class="flex gap-2">
     <p>res X</p>
-    <input type="number" bind:value={$res[0]} step="2" />
-    <output>{$safeRes[0]}</output>
+    <input
+      class="w-16 px-2 rounded-md border border-gray-100 font-mono text-sm"
+      type="number"
+      bind:value={$res[0]}
+      step="2"
+    />
   </label>
-  <label class="resolution-label">
+  <label class="flex gap-2">
     <p>res Y</p>
-    <input type="number" bind:value={$res[1]} step="2" />
-    <output>{$safeRes[1]}</output>
+    <input
+      class="w-16 px-2 rounded-md border border-gray-100 font-mono text-sm"
+      type="number"
+      bind:value={$res[1]}
+      step="2"
+    />
   </label>
-  <button on:click={exportVideo}>Export</button>
-</div>
+  <button
+    class="bg-gray-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-gray-700"
+    on:click={exportVideo}
+  >
+    <span class="font-mono text-xs text-gray-100">EXPORT</span>
+  </button>
+</Region>
 
-<div class="region media-browser">
-  <input type="file" accept="video/*" multiple bind:files on:change={upload} />
-  {#if resolved.length === 0}
-    <p style:color="rgba(0 0 0 / 0.75)">No media uploaded</p>
+<div class="lg:row-start-2 lg:col-start-1 flex flex-col gap-2">
+  <Region class="flex-grow">
+    <input
+      type="file"
+      accept="video/*"
+      multiple
+      bind:files
+      on:change={upload}
+    />
+    {#if resolved.length === 0}
+      <p style:color="rgba(0 0 0 / 0.75)">No media uploaded</p>
+    {/if}
+    {#each resolved as file}
+      <ResolvedMedia {file} />
+    {/each}
+  </Region>
+  {#if $selected}
+    <Inspector
+      on:matrixChange={(e) => {
+        // when a clip's matrix changes, compare the UUID of the clip to the
+        // current UUID. if they match, update the matrix.
+
+        // TODO: remove this event handler in the future, this blocks multiple
+        // clips from being played at once.
+        if ($selected === currentUUID) {
+          matrix = e.detail;
+        }
+      }}
+    />
   {/if}
-  {#each resolved as file}
-    <ResolvedMedia {file} />
-  {/each}
 </div>
 
 <div
@@ -197,7 +232,6 @@
 >
   <div
     class="player"
-    bind:clientWidth={playerWidth}
     style:width="{playerRes[0]}px"
     style:height="{playerRes[1]}px"
   >
@@ -243,7 +277,7 @@
 
 <TimelineRibbon />
 
-<Timeline bind:matrix bind:currentUUID />
+<Timeline />
 
 <style>
   * {

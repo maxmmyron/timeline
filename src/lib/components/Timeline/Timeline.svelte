@@ -19,9 +19,6 @@
 
   let canMoveScrubber = false;
 
-  export let matrix: App.Matrix = [1, 0, 0, 1, 0, 0];
-  export let currentUUID: string | null = null;
-
   /**
    * The timings to display on the timeline. Each timing is an array of two
    * numbers: the first is the time in seconds, and the second is the offset of
@@ -84,19 +81,7 @@
   </div>
   <div class="relative flex items-center w-full h-full">
     {#each $videoClips as clip}
-      <TimelineClip
-        {clip}
-        on:matrixChange={(e) => {
-          // when a clip's matrix changes, compare the UUID of the clip to the
-          // current UUID. if they match, update the matrix.
-
-          // TODO: remove this event handler in the future, this blocks multiple
-          // clips from being played at once.
-          if (clip.uuid === currentUUID) {
-            matrix = e.detail;
-          }
-        }}
-      />
+      <TimelineClip {clip} />
     {/each}
   </div>
   <div
