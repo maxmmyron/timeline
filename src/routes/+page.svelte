@@ -166,25 +166,6 @@
   };
 </script>
 
-<svelte:window
-  on:keydown={(e) => {
-    if (e.ctrlKey) {
-      if (e.key === "=") {
-        e.preventDefault();
-        $scale = Math.min(4, $scale + 0.1);
-      }
-      if (e.key === "-") {
-        e.preventDefault();
-        $scale = Math.max(0.1, $scale - 0.1);
-      }
-      if (e.key === "0") {
-        e.preventDefault();
-        $scale = 1;
-      }
-    }
-  }}
-/>
-
 <div class="region ribbon">
   <label class="resolution-label">
     <p>res X</p>
