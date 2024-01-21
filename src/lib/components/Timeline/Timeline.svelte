@@ -11,6 +11,7 @@
     time,
     videoClips,
   } from "$lib/stores";
+  import { createEventDispatcher } from "svelte";
 
   let timeline: HTMLElement;
   let tickContainer: HTMLElement;
@@ -38,10 +39,21 @@
     }
   ) as Array<[number, number]>;
 
+  /**
+   * An event dispatcher that emits events related to when the scrubber moves
+   */
+  const scrubberMoveDispatcher = createEventDispatcher();
+
   const moveScrubber = (clientX: number) => {
     const rect = tickContainer.getBoundingClientRect();
     const x = Math.max(0, clientX - rect.left) + $scroll;
     $time = x / $scaleFactor;
+
+    // dispatch a "scrubberMove" event whenever the scrubber moves
+    scrubberMoveDispatcher("scrubberMove", {
+      time: $time,
+      x,
+    });
   };
 </script>
 
