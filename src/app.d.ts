@@ -8,7 +8,7 @@ declare global {
 			start: number;
 			end: number;
 			uuid: string;
-		z: number;
+			z: number;
 			/**
 			 * The 2D transformation matrix of the clip.
 			 */
