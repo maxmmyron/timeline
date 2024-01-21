@@ -14,7 +14,9 @@
 
   // we use this event to forward matrix changes to the video handler, since
   // it won't directly react to those changes itself
-  const matrixDispatcher = createEventDispatcher();
+  const dispatcher = createEventDispatcher<{
+    matrixChange: App.Matrix;
+  }>();
 
   // dispatch a "matrixChange" event whenever the matrix changes
   $: matrix, matrixChange();
@@ -24,7 +26,7 @@
    * interface represents the new matrix of the clip.
    */
   const matrixChange = () => {
-    matrixDispatcher("matrixChange", clip.matrix);
+    dispatcher("matrixChange", clip.matrix);
   };
 </script>
 

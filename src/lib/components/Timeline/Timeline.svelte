@@ -42,7 +42,9 @@
   /**
    * An event dispatcher that emits events related to when the scrubber moves
    */
-  const scrubberMoveDispatcher = createEventDispatcher();
+  const dispatcher = createEventDispatcher<{
+    scrubberMove: { time: number; x: number };
+  }>();
 
   const moveScrubber = (clientX: number) => {
     const rect = tickContainer.getBoundingClientRect();
@@ -50,7 +52,7 @@
     $time = x / $scaleFactor;
 
     // dispatch a "scrubberMove" event whenever the scrubber moves
-    scrubberMoveDispatcher("scrubberMove", {
+    dispatcher("scrubberMove", {
       time: $time,
       x,
     });
@@ -93,7 +95,7 @@
   </div>
   <div class="relative flex items-center w-full h-full">
     {#each $videoClips as clip}
-      <TimelineClip {clip} />
+      <TimelineClip {clip} on:clipMove />
     {/each}
   </div>
   <div

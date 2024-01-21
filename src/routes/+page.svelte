@@ -100,11 +100,11 @@
     // if there's no video to play or no current clip, we can return early.
     if (!videoEl || !current) return;
 
-    if (paused) {
+    if ($paused) {
       videoEl.currentTime = $time - current.offset + current.start;
     }
 
-    if (!paused && videoEl.paused) {
+    if (!$paused && videoEl.paused) {
       videoEl.play();
     }
   };
@@ -120,6 +120,8 @@
     await tick();
 
     if (!videoEl || !current) return;
+
+    console.log("reset");
 
     videoEl.currentTime = $time - current.offset + current.start;
   };
@@ -146,8 +148,6 @@
     }
     return valid.sort((a, b) => b.z - a.z)[0]?.uuid ?? null;
   };
-
-  const updateScrubberPlayback = () => {};
 </script>
 
 <Region
@@ -243,7 +243,7 @@
       }}>⏮️</button
     >
     <button on:click={() => ($paused = !$paused)}>
-      {paused ? "▶️" : "⏸️"}
+      {$paused ? "▶️" : "⏸️"}
     </button>
     <button
       on:click={() => {
@@ -263,4 +263,6 @@
 
 <TimelineRibbon />
 
-<Timeline on:scrubberMove={updateScrubberPlayback} />
+<!-- Update the currentTime property of the current video playing when either
+  the scrubber moves, or the current video's offset is changed (via drag) -->
+<Timeline on:scrubberMove={resetVideoTime} on:clipMove={resetVideoTime} />

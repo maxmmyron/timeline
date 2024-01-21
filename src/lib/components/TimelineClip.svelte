@@ -1,5 +1,6 @@
 <script lang="ts">
   import { scaleFactor, videoClips, time, selected, scroll } from "$lib/stores";
+  import { createEventDispatcher } from "svelte";
 
   export let clip: App.Clip;
   // this is set to 9 as a dirty default, but is updated in page.svelte
@@ -195,6 +196,26 @@
       return (cStart > start && cStart < end) || (cEnd > start && cEnd < end);
     }).length;
   })();
+
+  /**
+   * An event dispatcher responsible for emitting events related to when a clip
+   * is moved.
+   */
+  const dispatcher = createEventDispatcher<{
+    clipMove: {
+      uuid: string;
+    };
+  }>();
+
+  /**
+   * Dispatches a "clipMove" event whenever the clip is moved.
+   */
+  $: clip.offset,
+    (() => {
+      dispatcher("clipMove", {
+        uuid: clip.uuid,
+      });
+    })();
 </script>
 
 <svelte:window
