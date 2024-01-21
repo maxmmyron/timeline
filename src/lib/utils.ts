@@ -28,6 +28,10 @@ export const getClipEndPos = (clip: App.Clip): number => {
 }
 
 let lastTimestamp = 0;
+
+/**
+ * Updates the current time of the timeline when playback is unpaused.
+ */
 export const frame = (timestamp: DOMHighResTimeStamp) => {
   if (get(paused)) {
     lastTimestamp = timestamp;
