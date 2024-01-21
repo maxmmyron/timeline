@@ -43,24 +43,44 @@
         reset
       </button>
     </header>
-    <p>Scale</p>
-    <label class="setting">
-      <p>X</p>
-      <input type="number" bind:value={matrix[0]} />
-    </label>
-    <label class="setting">
-      <p>Y</p>
-      <input type="number" bind:value={matrix[3]} />
-    </label>
+    <section>
+      <p>Scale</p>
+      <label class="flex items-center gap-1">
+        <p>X</p>
+        <input
+          class="border border-gray-300 rounded-md"
+          type="number"
+          bind:value={matrix[0]}
+        />
+      </label>
+      <label class="flex items-center gap-1">
+        <p>Y</p>
+        <input
+          class="border border-gray-300 rounded-md"
+          type="number"
+          bind:value={matrix[3]}
+        />
+      </label>
+    </section>
 
-    <p>Translate</p>
-    <label class="setting">
-      <p>X</p>
-      <input type="number" bind:value={matrix[4]} />
-    </label>
-    <label class="setting">
-      <p>Y</p>
-      <input type="number" bind:value={matrix[5]} />
-    </label>
+    <section>
+      <p>Translate</p>
+      <label class="flex items-center gap-1">
+        <p>X</p>
+        <input
+          class="border border-gray-300 rounded-md"
+          type="number"
+          bind:value={matrix[4]}
+        />
+      </label>
+      <label class="flex items-center gap-1">
+        <p>Y</p>
+        <input
+          class="border border-gray-300 rounded-md"
+          type="number"
+          bind:value={matrix[5]}
+        />
+      </label>
+    </section>
   </section>
 </Region>
