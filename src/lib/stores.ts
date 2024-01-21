@@ -54,3 +54,8 @@ export const safeRes = derived(res, $res => [$res[0] - ($res[0] % 2), $res[1] - 
  * The amount the timeline is scrolled horizontally.
  */
 export const scroll = writable(0);
+
+/**
+ * Whether or not playback is currently paused
+ */
+export const paused = writable(true);

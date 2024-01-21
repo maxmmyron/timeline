@@ -3,7 +3,7 @@
  */
 
 import { get } from "svelte/store";
-import { videoClips } from "./stores";
+import { paused, time, videoClips } from "./stores";
 
 /**
  * Gets the last clip in the timeline.
@@ -26,3 +26,19 @@ export const getClipDuration = (clip: App.Clip): number => {
 export const getClipEndPos = (clip: App.Clip): number => {
   return clip.offset + getClipDuration(clip);
 }
+
+let lastTimestamp = 0;
+export const frame = (timestamp: DOMHighResTimeStamp) => {
+  if (get(paused)) {
+    lastTimestamp = timestamp;
+    requestAnimationFrame(frame);
+    return;
+  }
+
+  const delta = timestamp - lastTimestamp;
+  lastTimestamp = timestamp;
+
+  time.update(t => t + delta / 1000);
+
+  requestAnimationFrame(frame);
+};

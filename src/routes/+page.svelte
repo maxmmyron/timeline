@@ -12,14 +12,14 @@
     res,
     safeRes,
     selected,
+    paused,
   } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
-
-  let paused = true;
+  import { frame } from "$lib/utils";
 
   /**
    * Most recent files uploaded by the user
@@ -42,12 +42,12 @@
   // TODO: seems like only one media src would play at a time?
   // reproduce: upload two vids, add both to timeline, only one plays????
   $: current = $videoClips.find((c) => c.uuid === currentUUID) ?? null;
+  $: currentSrc = current?.media.src ?? null;
 
-  // change the matrix when the current clip changes
   $: matrix = current?.matrix ?? ([1, 0, 0, 1, 0, 0] as App.Matrix);
 
-  $: if (paused === true && videoEl) videoEl.pause();
-  $: if (paused === false && videoEl) videoEl.play();
+  $: if ($paused === true && videoEl) videoEl.pause();
+  $: if ($paused === false && videoEl) videoEl.play();
 
   // when currentVideo changes, update
   $: current, $time, updatePlayer();
@@ -124,22 +124,6 @@
     videoEl.currentTime = $time - current.offset + current.start;
   };
 
-  let lastTimestamp = 0;
-  const frame = (timestamp: DOMHighResTimeStamp) => {
-    if (paused) {
-      lastTimestamp = timestamp;
-      requestAnimationFrame(frame);
-      return;
-    }
-
-    const delta = timestamp - lastTimestamp;
-    lastTimestamp = timestamp;
-
-    $time += delta / 1000;
-
-    requestAnimationFrame(frame);
-  };
-
   onMount(() => requestAnimationFrame(frame));
 
   const upload = async () => {
@@ -162,6 +146,8 @@
     }
     return valid.sort((a, b) => b.z - a.z)[0]?.uuid ?? null;
   };
+
+  const updateScrubberPlayback = () => {};
 </script>
 
 <Region
@@ -226,18 +212,18 @@
 </div>
 
 <div
-  class="player-container"
+  class="overflow-hidden flex flex-col gap-2"
   bind:clientHeight={containerHeight}
   bind:clientWidth={containerWidth}
 >
   <div
-    class="player"
+    class="relative overflow-hidden left-1/2 -translate-x-1/2 bg-black center flex justify-center items-center"
     style:width="{playerRes[0]}px"
     style:height="{playerRes[1]}px"
   >
-    {#if current}
+    {#if current && currentSrc}
       <video
-        src={current.media.src}
+        src={currentSrc}
         class="media"
         bind:this={videoEl}
         title={current.uuid}
@@ -249,19 +235,19 @@
       </video>
     {/if}
   </div>
-  <div class="region ribbon media-controls">
+  <Region class="w-fit mx-auto">
     <button
       on:click={() => {
         $time = 0;
-        paused = true;
+        $paused = true;
       }}>⏮️</button
     >
-    <button on:click={() => (paused = !paused)}>
+    <button on:click={() => ($paused = !$paused)}>
       {paused ? "▶️" : "⏸️"}
     </button>
     <button
       on:click={() => {
-        paused = true;
+        $paused = true;
         $time = $videoClips.reduce(
           (acc, clip) =>
             Math.max(
@@ -272,82 +258,9 @@
         );
       }}>⏭️</button
     >
-  </div>
+  </Region>
 </div>
 
 <TimelineRibbon />
 
-<Timeline />
-
-<style>
-  * {
-    box-sizing: border-box;
-  }
-
-  .region {
-    border: 1px solid rgba(200 200 200 / 1);
-    border-radius: 0.5rem;
-    padding: 0.5rem;
-  }
-
-  .ribbon {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.5rem;
-  }
-
-  .resolution-label {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .resolution-label > input {
-    width: 4rem;
-  }
-
-  .media-browser {
-    display: flex;
-    flex-direction: column;
-    overflow-y: scroll;
-
-    gap: 0.5rem;
-  }
-
-  .player-container {
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .player-container .player {
-    position: relative;
-    overflow: hidden;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: black;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  .player-container .ribbon {
-    width: fit-content;
-    margin: 0 auto;
-  }
-
-  @media (min-width: 1024px) {
-    .ribbon {
-      grid-area: 1/1/2/3;
-    }
-
-    .media-browser {
-      grid-area: 2/1;
-    }
-
-    .player-container {
-      grid-area: 2/2;
-    }
-  }
-</style>
+<Timeline on:scrubberMove={updateScrubberPlayback} />
