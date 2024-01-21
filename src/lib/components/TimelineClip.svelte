@@ -1,6 +1,5 @@
 <script lang="ts">
   import { scaleFactor, videoClips, time, selected, scroll } from "$lib/stores";
-  import ClipSettings from "./ClipSettings.svelte";
 
   export let clip: App.Clip;
   // this is set to 9 as a dirty default, but is updated in page.svelte
@@ -210,8 +209,10 @@
 />
 
 <button
-  class={`clip ${$selected === clip.uuid ? "selected" : ""}`}
-  class:covered={coverCount > 0}
+  class="absolute h-12 border-none rounded-md cursor-pointer bg-gray-300 min-w-2 shadow-sm"
+  class:bg-gray-400={$selected === clip.uuid}
+  class:shadow-lg={$selected === clip.uuid}
+  class:rounded-bl-none={coverCount > 0}
   style:transform
   style:width
   style:z-index={clip.z}
@@ -235,109 +236,33 @@
   }}
   on:click
 >
-  {#if settingsOpen}
-    <ClipSettings
-      bind:clip
-      bind:settingsOpen
-      scaleX={clip.matrix[0]}
-      scaleY={clip.matrix[3]}
-      translateX={clip.matrix[4]}
-      translateY={clip.matrix[5]}
-    />
-  {:else}
-    <button
-      class="trimmer left"
-      on:mousedown|capture|stopPropagation={(e) => {
-        resizeMode = "left";
-        initialResizeMousePos = e.clientX;
-        initialTrimValues.start = clip.start;
-        initialTrimValues.offset = clip.offset;
-      }}
-    ></button>
-    <p>{clip.uuid}, {clip.z}</p>
+  <button
+    class="w-[6px] absolute h-full border-none rounded-l-md cursor-ew-resize bg-gray-950 left-0 top-0"
+    class:rounded-bl-none={coverCount > 0}
+    on:mousedown|capture|stopPropagation={(e) => {
+      resizeMode = "left";
+      initialResizeMousePos = e.clientX;
+      initialTrimValues.start = clip.start;
+      initialTrimValues.offset = clip.offset;
+    }}
+  ></button>
+  <main class="w-full overflow-hidden">
     <p>{clip.media.title}</p>
-    <p>{clip.offset}</p>
-    <button
-      class="settings-button"
-      on:click={() => (settingsOpen = !settingsOpen)}
-    >
-      <p>⚙️</p>
-    </button>
-    <button
-      class="trimmer right"
-      on:mousedown|capture|stopPropagation={(e) => {
-        resizeMode = "right";
-        initialResizeMousePos = e.clientX;
-        initialTrimValues.end = clip.end;
-        initialTrimValues.offset = clip.offset;
-      }}
-    ></button>
-  {/if}
+  </main>
+  <button
+    class="w-[6px] absolute h-full border-none rounded-r-md cursor-ew-resize bg-gray-950 right-0 top-0"
+    on:mousedown|capture|stopPropagation={(e) => {
+      resizeMode = "right";
+      initialResizeMousePos = e.clientX;
+      initialTrimValues.end = clip.end;
+      initialTrimValues.offset = clip.offset;
+    }}
+  ></button>
   {#if coverCount > 0}
-    <div style:height="{coverCount * 0.5}rem" class="cover-name" />
+    <div
+      style:height="{coverCount * 0.5}rem"
+      class="absolute top-full left-0 w-4 bg-gray-300 rounded-b-md"
+      class:bg-gray-400={$selected === clip.uuid}
+    />
   {/if}
 </button>
-
-<style>
-  button {
-    cursor: pointer;
-    position: absolute;
-    height: 100%;
-    border: none;
-    border-radius: 4px;
-    height: 64px;
-  }
-
-  button.clip {
-    background-color: aquamarine;
-  }
-
-  button.clip.selected {
-    background-color: rgb(124, 231, 195);
-  }
-
-  button.settings-button {
-    position: absolute;
-    z-index: 2;
-    bottom: 0;
-    left: 0.5rem;
-    margin-left: 0.5rem;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    justify-content: center;
-    background-color: rgb(113, 221, 185);
-    border: 1px solid rgb(71, 178, 142);
-  }
-
-  button.clip.covered {
-    border-bottom-left-radius: 0px;
-  }
-  button.clip.covered > button.trimmer.left {
-    border-bottom-left-radius: 0px;
-  }
-
-  button.trimmer {
-    top: 0;
-    width: 0.5rem;
-    background-color: rgb(71, 178, 142);
-  }
-
-  button.trimmer.left {
-    left: 0;
-  }
-
-  button.trimmer.right {
-    right: 0;
-  }
-
-  .cover-name {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 20px;
-
-    background-color: rgb(124, 231, 195);
-    border-radius: 0 0 4px 4px;
-  }
-</style>
