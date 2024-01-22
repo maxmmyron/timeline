@@ -31,26 +31,28 @@
 </script>
 
 <Region class="flex-grow">
-  <header class="flex justify-between pb-1 mb-2 border-b border-gray-300">
-    <p class="text-sm font-mono text-gray-950">{clip.media.title}</p>
-    <p class="text-sm font-mono text-gray-950">
-      {clip.media.duration.toPrecision(3)}s
-    </p>
+  <header
+    class="flex justify-between pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800"
+  >
+    <p>{clip.media.title}</p>
+    <p>{clip.media.duration.toPrecision(3)}s</p>
   </header>
 
-  <section class="pb-1 mb-2 border-b border-gray-300">
+  <section
+    class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 space-y-3"
+  >
     <header class="flex justify-between">
       <h2 class="text-sm font-mono">Transforms</h2>
       <button on:click={() => (clip.matrix = [1, 0, 0, 1, 0, 0])}>
         reset
       </button>
     </header>
-    <section>
+    <section class="space-y-2">
       <p>Scale</p>
       <label class="flex items-center gap-1">
         <p>X</p>
         <input
-          class="border border-gray-300 rounded-md"
+          class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
           type="number"
           bind:value={matrix[0]}
         />
@@ -58,19 +60,19 @@
       <label class="flex items-center gap-1">
         <p>Y</p>
         <input
-          class="border border-gray-300 rounded-md"
+          class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
           type="number"
           bind:value={matrix[3]}
         />
       </label>
     </section>
 
-    <section>
+    <section class="space-y-2">
       <p>Translate</p>
       <label class="flex items-center gap-1">
         <p>X</p>
         <input
-          class="border border-gray-300 rounded-md"
+          class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
           type="number"
           bind:value={matrix[4]}
         />
@@ -78,7 +80,7 @@
       <label class="flex items-center gap-1">
         <p>Y</p>
         <input
-          class="border border-gray-300 rounded-md"
+          class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
           type="number"
           bind:value={matrix[5]}
         />

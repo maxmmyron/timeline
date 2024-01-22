@@ -6,7 +6,7 @@
 </script>
 
 <article
-  class="border border-gray-300 rounded-lg p-2 {clazz}"
+  class="border border-zinc-300 rounded-xl p-2 {clazz} dark:border-zinc-800"
   bind:this={el}
   on:wheel
 >

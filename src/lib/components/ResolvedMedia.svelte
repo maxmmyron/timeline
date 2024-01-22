@@ -15,44 +15,20 @@
   });
 </script>
 
-<article>
-  <header>
+<article
+  class="p-2 rounded-md border dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 flex gap-2 items-center justify-between"
+>
+  <header class="flex flex-col gap-2">
     <p>{file.title}</p>
-    <p>{file.duration}s</p>
+    <p>{file.duration.toPrecision(3)}s</p>
   </header>
-  <button on:click={() => ($videoClips = [...$videoClips, createClip(file)])}>
-    add
-  </button>
+  <div class="flex flex-col gap-2">
+    <button
+      on:click={() => ($videoClips = [...$videoClips, createClip(file)])}
+      class="bg-zinc-800 p-1 w-5 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
+    >
+      +
+    </button>
+    <!-- TODO: add delete button -->
+  </div>
 </article>
-
-<style>
-  article {
-    padding: 0.5rem;
-    border-radius: 4px;
-    background-color: rgba(200 200 200 / 0.5);
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-  }
-
-  article > header {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  header > p:first-child {
-    font-weight: bold;
-  }
-
-  button {
-    border: none;
-    border-radius: 4px;
-    background-color: white;
-    height: fit-content;
-    padding: 0.25rem 0.5rem;
-  }
-
-  button:hover {
-    background-color: rgba(240 240 240 / 1);
-  }
-</style>

@@ -47,6 +47,7 @@
   }>();
 
   const moveScrubber = (clientX: number) => {
+    console.log("A");
     const rect = tickContainer.getBoundingClientRect();
     const x = Math.max(0, clientX - rect.left) + $scroll;
     $time = x / $scaleFactor;
@@ -85,7 +86,7 @@
   >
     {#each tickTimings as [time, offset]}
       <div
-        class="h-full shrink-0 bg-slate-300 border-r border-slate-950/40 pl-0.5 relative overflow-hidden select-none"
+        class="h-full shrink-0 bg-zinc-300 border-r border-zinc-950/40 pl-0.5 relative overflow-hidden select-none dark:bg-zinc-900 dark:border-zinc-800"
         style:width="{$tickWidth}px"
         style:left="-{offset}px"
       >
@@ -99,8 +100,7 @@
     {/each}
   </div>
   <div
-    class="absolute top-0 w-1 bg-slate-950/40 h-full rounded-full"
-    style="transform: translateX({$time * $scaleFactor -
-      $scroll}px; z-index: 9999999;"
+    class="absolute top-0 w-0.5 bg-zinc-950/40 h-full rounded-full dark:bg-zinc-600/40 z-[999999999]"
+    style:transform="translateX({$time * $scaleFactor - $scroll}px"
   />
 </Region>

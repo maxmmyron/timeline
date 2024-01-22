@@ -8,25 +8,8 @@
   });
 </script>
 
-<main>
-  <slot></slot>
+<main
+  class="h-dvh p-2 grid gap-2 grid-cols-1 grid-rows-[2rem,8rem,1fr,3rem,8rem] lg:grid-cols-[280px,1fr] lg:grid-rows-[2rem,1fr,3rem,8rem] dark:bg-zinc-950"
+>
+  <slot />
 </main>
-
-<style>
-  main {
-    height: 100vh;
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: 2rem 8rem 1fr 3rem 8rem;
-
-    padding: 0.5rem;
-    gap: 0.5rem;
-  }
-
-  @media (min-width: 1024px) {
-    main {
-      grid-template-columns: 280px 1fr;
-      grid-template-rows: 2rem 1fr 3rem 8rem;
-    }
-  }
-</style>

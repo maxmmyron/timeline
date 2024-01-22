@@ -121,8 +121,6 @@
 
     if (!videoEl || !current) return;
 
-    console.log("reset");
-
     videoEl.currentTime = $time - current.offset + current.start;
   };
 
@@ -156,7 +154,7 @@
   <label class="flex gap-2">
     <p>res X</p>
     <input
-      class="w-16 px-2 rounded-md border border-gray-100 font-mono text-sm"
+      class="w-16 px-2 rounded-md border border-zinc-300 font-mono text-sm dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300"
       type="number"
       bind:value={$res[0]}
       step="2"
@@ -165,29 +163,38 @@
   <label class="flex gap-2">
     <p>res Y</p>
     <input
-      class="w-16 px-2 rounded-md border border-gray-100 font-mono text-sm"
+      class="w-16 px-2 rounded-md border border-zinc-300 font-mono text-sm dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300"
       type="number"
       bind:value={$res[1]}
       step="2"
     />
   </label>
   <button
-    class="bg-gray-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-gray-700"
+    class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
     on:click={exportVideo}
   >
-    <span class="font-mono text-xs text-gray-100">EXPORT</span>
+    <p>Export</p>
   </button>
 </Region>
 
 <div class="lg:row-start-2 lg:col-start-1 flex flex-col gap-2">
-  <Region class="flex-grow">
-    <input
-      type="file"
-      accept="video/*"
-      multiple
-      bind:files
-      on:change={upload}
-    />
+  <Region class="flex-grow flex flex-col gap-1">
+    <label>
+      <p
+        class="w-fit bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
+      >
+        Upload
+      </p>
+      <input
+        class="hidden"
+        type="file"
+        accept="video/*"
+        multiple
+        bind:files
+        on:change={upload}
+      />
+    </label>
+
     {#if resolved.length === 0}
       <p style:color="rgba(0 0 0 / 0.75)">No media uploaded</p>
     {/if}
@@ -235,17 +242,25 @@
       </video>
     {/if}
   </div>
-  <Region class="w-fit mx-auto">
+  <Region class="w-fit flex gap-2 mx-auto">
     <button
+      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
+      aria-label="Skip to start"
       on:click={() => {
         $time = 0;
         $paused = true;
       }}>⏮️</button
     >
-    <button on:click={() => ($paused = !$paused)}>
+    <button
+      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
+      aria-label="Play/pause"
+      on:click={() => ($paused = !$paused)}
+    >
       {$paused ? "▶️" : "⏸️"}
     </button>
     <button
+      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
+      aria-label="Skip to end"
       on:click={() => {
         $paused = true;
         $time = $videoClips.reduce(

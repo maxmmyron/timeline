@@ -33,17 +33,17 @@
 >
   <label class="flex gap-1">
     <button
-      class="bg-gray-800 p-1 w-5 h-5 rounded-md shadow-md flex items-center justify-center border border-gray-700"
+      class="bg-zinc-800 p-1 w-5 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
       on:click={decrease}
     >
-      <span class="text-white">-</span>
+      <span>-</span>
     </button>
     <input type="range" min="0.02" max="5" step="0.001" bind:value={$scale} />
     <button
-      class="bg-gray-800 p-1 w-5 h-5 rounded-md shadow-md flex items-center justify-center border border-gray-700"
+      class="bg-zinc-800 p-1 w-5 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
       on:click={increase}
     >
-      <span class="text-white">+</span>
+      <span>+</span>
     </button>
   </label>
   <Runtime time={$time} />

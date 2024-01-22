@@ -230,7 +230,7 @@
 />
 
 <button
-  class="absolute h-12 border-none rounded-md cursor-pointer bg-gray-300 min-w-2 shadow-sm"
+  class="absolute h-12 border-none rounded-md bg-zinc- min-w-2 shadow-sm dark:bg-zinc-800"
   class:bg-gray-400={$selected === clip.uuid}
   class:shadow-lg={$selected === clip.uuid}
   class:rounded-bl-none={coverCount > 0}
@@ -258,7 +258,7 @@
   on:click
 >
   <button
-    class="w-[6px] absolute h-full border-none rounded-l-md cursor-ew-resize bg-gray-950 left-0 top-0"
+    class="w-[6px] absolute h-full border-none rounded-l-md cursor-ew-resize bg-zinc-900 left-0 top-0"
     class:rounded-bl-none={coverCount > 0}
     on:mousedown|capture|stopPropagation={(e) => {
       resizeMode = "left";
@@ -271,7 +271,7 @@
     <p>{clip.media.title}</p>
   </main>
   <button
-    class="w-[6px] absolute h-full border-none rounded-r-md cursor-ew-resize bg-gray-950 right-0 top-0"
+    class="w-[6px] absolute h-full border-none rounded-r-md cursor-ew-resize bg-zinc-900 right-0 top-0"
     on:mousedown|capture|stopPropagation={(e) => {
       resizeMode = "right";
       initialResizeMousePos = e.clientX;
@@ -282,7 +282,7 @@
   {#if coverCount > 0}
     <div
       style:height="{coverCount * 0.5}rem"
-      class="absolute top-full left-0 w-4 bg-gray-300 rounded-b-md"
+      class="absolute top-full left-0 w-4 bg-zinc-300 rounded-b-md dark:bg-zinc-800"
       class:bg-gray-400={$selected === clip.uuid}
     />
   {/if}

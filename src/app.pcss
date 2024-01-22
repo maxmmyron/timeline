@@ -13,12 +13,48 @@ body {
   margin: 0;
 }
 
-p,
-button {
-  margin: 0;
-  font-family: monospace;
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  button {
+    margin: theme("margin.0");
+    font-family: theme("fontFamily.mono");
+  }
+
+  h1,
+  h2 {
+    font-size: theme("fontSize.sm");
+    color: theme("colors.zinc.700");
+  }
+
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  button {
+    color: theme("colors.zinc.800");
+    font-size: theme("fontSize.xs");
+  }
+
+  @media (prefers-color-scheme: dark) {
+    h1,
+    h2 {
+      color: theme("colors.zinc.200");
+    }
+
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    button {
+      color: theme("colors.zinc.300");
+    }
+  }
 }
-
-@tailwind components;
-
-@tailwind utilities;
