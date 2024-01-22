@@ -230,8 +230,9 @@
 />
 
 <button
-  class="absolute h-12 border-none rounded-md bg-zinc- min-w-2 shadow-sm dark:bg-zinc-800"
-  class:bg-gray-400={$selected === clip.uuid}
+  class="absolute h-12 border border-zinc-800 rounded-md bg-zinc-300 min-w-2 shadow-sm dark:bg-zinc-800"
+  class:bg-zinc-400={$selected === clip.uuid}
+  class:dark:bg-zinc-900={$selected === clip.uuid}
   class:shadow-lg={$selected === clip.uuid}
   class:rounded-bl-none={coverCount > 0}
   style:transform
@@ -259,6 +260,7 @@
 >
   <button
     class="w-[6px] absolute h-full border-none rounded-l-md cursor-ew-resize bg-zinc-900 left-0 top-0"
+    class:dark:bg-zinc-950={$selected === clip.uuid}
     class:rounded-bl-none={coverCount > 0}
     on:mousedown|capture|stopPropagation={(e) => {
       resizeMode = "left";
@@ -272,6 +274,7 @@
   </main>
   <button
     class="w-[6px] absolute h-full border-none rounded-r-md cursor-ew-resize bg-zinc-900 right-0 top-0"
+    class:dark:bg-zinc-950={$selected === clip.uuid}
     on:mousedown|capture|stopPropagation={(e) => {
       resizeMode = "right";
       initialResizeMousePos = e.clientX;

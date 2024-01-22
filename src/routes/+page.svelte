@@ -177,8 +177,9 @@
   </button>
 </Region>
 
-<div class="lg:row-start-2 lg:col-start-1 flex flex-col gap-2">
-  <Region class="flex-grow flex flex-col gap-1">
+<!-- TODO: use grid -->
+<div class="lg:row-start-2 lg:col-start-1 grid">
+  <Region class="flex-grow flex flex-col gap-1 overflow-scroll max-h-[50%]">
     <label>
       <p
         class="w-fit bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
