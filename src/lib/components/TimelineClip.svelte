@@ -3,7 +3,7 @@
   import { createEventDispatcher } from "svelte";
 
   export let clip: App.Clip;
-  // this is set to 9 as a dirty default, but is updated in page.svelte
+  // this is set to 9 as a dirty default
   export let timelineOffset = 9;
 
   let canMoveClip = false;
@@ -253,6 +253,7 @@
   }}
   on:keydown|stopPropagation={(e) => {
     if (e.key === "Delete" && $selected === clip.uuid) {
+      $selected = null;
       $videoClips = $videoClips.filter((c) => c.uuid !== clip.uuid);
     }
   }}
