@@ -30,7 +30,7 @@
   };
 </script>
 
-<Region class="flex-grow">
+<Region class="row-start-2">
   <header
     class="flex justify-between pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800"
   >
