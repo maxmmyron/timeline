@@ -19,7 +19,7 @@
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
-  import { frame } from "$lib/utils";
+  import { frame, getCurrentClip } from "$lib/utils";
 
   /**
    * Most recent files uploaded by the user
@@ -37,7 +37,7 @@
 
   // get the UUID of the current clip (instead of clip itself, to prevent
   // reactivity issues)
-  $: currentUUID = getCurrentClip($videoClips);
+  $: currentUUID = getCurrentClip($videoClips, $time);
 
   // TODO: seems like only one media src would play at a time?
   // reproduce: upload two vids, add both to timeline, only one plays????
@@ -132,17 +132,6 @@
     }
 
     files = null;
-  };
-
-  $: getCurrentClip = (clips: App.Clip[]): string | null => {
-    let valid: App.Clip[] = [];
-    for (const clip of clips) {
-      const clipDuration = clip.media.duration - clip.start - clip.end;
-      if (clip.offset < $time && clip.offset + clipDuration > $time)
-        valid.push(clip);
-      if (clip.offset > $time) break;
-    }
-    return valid.sort((a, b) => b.z - a.z)[0]?.uuid ?? null;
   };
 </script>
 

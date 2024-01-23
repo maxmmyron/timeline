@@ -1,18 +1,8 @@
 <script lang="ts">
   import { videoClips, time } from "$lib/stores";
-  import { v4 as uuidv4 } from "uuid";
+  import { createClip } from "$lib/utils";
 
   export let file: App.Media;
-
-  const createClip = (resolved: App.Media): App.Clip => ({
-    media: resolved,
-    offset: $time,
-    start: 0,
-    end: 0,
-    uuid: uuidv4(),
-    z: $videoClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1,
-    matrix: [1, 0, 0, 1, 0, 0],
-  });
 </script>
 
 <article
