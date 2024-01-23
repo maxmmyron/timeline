@@ -21,7 +21,6 @@ export const getCurrentClip = (clips: App.Clip[], time: number): string | null =
       const clipDuration = clip.media.duration - clip.start - clip.end;
       if (clip.offset < time && clip.offset + clipDuration > time)
         valid.push(clip);
-      if (clip.offset > time) break;
     }
     return valid.sort((a, b) => b.z - a.z)[0]?.uuid ?? null;
   };
