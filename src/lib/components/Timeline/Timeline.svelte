@@ -47,7 +47,6 @@
   }>();
 
   const moveScrubber = (clientX: number) => {
-    console.log("A");
     const rect = tickContainer.getBoundingClientRect();
     const x = Math.max(0, clientX - rect.left) + $scroll;
     $time = x / $scaleFactor;

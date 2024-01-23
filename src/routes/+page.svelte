@@ -54,8 +54,6 @@
   // reset video time when video changes
   $: currentUUID, resetVideoTime();
 
-  $: console.log($secondsPerTick, $tickWidth, $scaleFactor);
-
   let containerHeight: number = 1;
   let containerWidth: number = 1;
   // contain container width/height to 1280x720
