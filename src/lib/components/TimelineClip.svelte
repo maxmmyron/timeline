@@ -270,7 +270,7 @@
     }}
   ></button>
   <main class="w-full overflow-hidden">
-    <p>{clip.media.title}</p>
+    <p class="select-none">{clip.media.title}</p>
   </main>
   <button
     class="w-[6px] absolute h-full border-none rounded-r-md cursor-ew-resize bg-zinc-900 right-0 top-0"
