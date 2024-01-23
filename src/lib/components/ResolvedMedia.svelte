@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { videoClips, time } from "$lib/stores";
+  import { videoClips } from "$lib/stores";
   import { createClip } from "$lib/utils";
 
   export let file: App.Media;

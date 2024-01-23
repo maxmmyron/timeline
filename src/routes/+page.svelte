@@ -3,11 +3,8 @@
   import { resolveMedia } from "$lib/loader";
   import { exportVideo } from "$lib/export";
   import {
-    scaleFactor,
     time,
     videoClips,
-    tickWidth,
-    secondsPerTick,
     playerScale,
     res,
     safeRes,
@@ -21,10 +18,6 @@
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
   import { frame, getCurrentClip } from "$lib/utils";
 
-  /**
-   * Most recent files uploaded by the user
-   */
-  let files: FileList | null = null;
   /**
    * Media that has been uploaded and fully resolved
    */
@@ -124,14 +117,12 @@
 
   onMount(() => requestAnimationFrame(frame));
 
-  const upload = async () => {
-    if (!files) return;
-    for (const file of files) {
+  const upload = async (e: Event & { currentTarget: HTMLInputElement }) => {
+    if (!e.currentTarget.files) return;
+    for (const file of e.currentTarget.files) {
       const media = await resolveMedia(file);
       resolved = [...resolved, media];
     }
-
-    files = null;
   };
 </script>
 
@@ -179,9 +170,8 @@
       <input
         class="hidden"
         type="file"
-        accept="video/*"
+        accept="video/mp4"
         multiple
-        bind:files
         on:change={upload}
       />
     </label>
