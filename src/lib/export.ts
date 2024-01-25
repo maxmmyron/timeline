@@ -1,10 +1,15 @@
 import { get } from "svelte/store";
-import { ffmpeg, safeRes, videoClips } from "./stores";
+import { ffmpeg, safeRes, videoClips, audioClips } from "./stores";
 import { fetchFile } from "@ffmpeg/ffmpeg";
 
 export const exportVideo = async () => {
   const ffmpegInstance =  get(ffmpeg);
-  let clips = get(videoClips);
+  let vClips = get(videoClips);
+
+  /**
+   * Combined array of video and audio clips.
+   */
+  let clips = [...vClips, ...get(audioClips)];
 
   if (!ffmpegInstance.isLoaded()) {
     throw new Error("ffmpeg.wasm did not load on editor startup. Please refresh the page.");
@@ -27,8 +32,8 @@ export const exportVideo = async () => {
   const dims = get(safeRes);
   await ffmpegInstance.run("-t", duration.toString(), "-f", "lavfi", "-i", `color=c=black:s=${dims[0]}x${dims[1]}:r=30`, "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-pix_fmt", "yuv420p", "-shortest", "base.mp4");
 
-  // sort clips by z index, lowest to highest. we do this so we properly layer the videos.
-  clips = clips.sort((a, b) => a.z - b.z);
+  // sort vClips by z index, lowest to highest. we do this so we properly layer the videos.
+  vClips = vClips.sort((a, b) => a.z - b.z);
 
   let vfilter = "";
   let afilter = "";
@@ -50,6 +55,22 @@ export const exportVideo = async () => {
      */
     const scale = `(iw*${clip.matrix[0]}):(ih*${clip.matrix[3]})`;
 
+    // define delay, since we need it twice
+    const d = (clip.offset * 1000).toFixed(0);
+
+    /**
+     * atrim=duration: trim the audio
+     *
+     * adelay=delay: delay the audio by clip.offset so it starts playing
+     * at the same time as the video. NOTE: we use offset * 1000 since it
+     * seems like adelay doesn't work with decimal second notation (i.e "3.54s")
+     * We use R|L to specify stereo channels.
+     */
+    afilter += `[${i}:a]atrim=${start}:${end},adelay=${d}|${d}[${i}a];`
+
+    // if the clip is audio, we don't need to do any video processing
+    if (clip.media.type === "audio") continue;
+
     /**
      * trim=duration: trim the video so it doesn't go past clip.end (otherwise,
      * it video will keep playing as if video was still playing, despite it not
@@ -63,32 +84,19 @@ export const exportVideo = async () => {
      * here since there is only one input link.
      */
     vfilter += `[${i}:v]trim=${trim},setpts=${setpts},scale=${scale}[${i}v];`
-
-    // define delay, since we need it twice
-    const d = (clip.offset * 1000).toFixed(0);
-
-    /**
-     * atrim=duration: trim the audio
-     *
-     * adelay=delay: delay the audio by clip.offset so it starts playing
-     * at the same time as the video. NOTE: we use offset * 1000 since it
-     * seems like adelay doesn't work with decimal second notation (i.e "3.54s")
-     * We use R|L to specify stereo channels.
-     */
-    afilter += `[${i}:a]atrim=${start}:${end},adelay=${d}|${d}[${i}a];`
   }
 
   // -----------------------
   // VIDEO FILTER COMPONENT
 
-  for (let i = 0; i < clips.length; i++) {
+  for (let i = 0; i < vClips.length; i++) {
     // define inLink. If this is the first video, use [0:v], otherwise use [vbase${i}]
     const inLink = i === 0 ? `[0:v]` : `[vbase${i}]`;
     // define outLink. If this is the last video, use [vout], otherwise use [vbase${i+1}]
-    const outLink = i === clips.length - 1 ? `[vout]` : `[vbase${i + 1}]`;
+    const outLink = i === vClips.length - 1 ? `[vout]` : `[vbase${i + 1}]`;
     // NOTE: if there's a single clip, the above logic will result in [v:0] -> [vout] (which is correct)
 
-    const clip = clips[i];
+    const clip = vClips[i];
 
     /**
      * The portion of the ffmpeg filter that defines the position of the clip.
@@ -102,7 +110,10 @@ export const exportVideo = async () => {
      * clip is enabled. This starts at clip.offset, and lasts until the the end
      * of the clip (in absolute positioning: offset + calculated duration).
      */
-    const enabledPeriod = `enable='between(t\\,${clip.offset},${clip.offset + (clip.media.duration - clip.end - clip.start)})'`;
+    const enabledPeriod = `enable='between(t\\,
+      ${clip.offset - clip.start},
+      ${(clip.offset - clip.start) +
+        (clip.media.duration - clip.end - clip.start)})'`;
 
     //overlay=<overlayW>:<overlayH>:<enabledPeriod>
     vfilter += `${inLink}[${i + 1}v]overlay=${overlayPos}:${enabledPeriod}${outLink};`
@@ -113,8 +124,6 @@ export const exportVideo = async () => {
 
   // we can map all audio tracks to the base audio track at the same time (thank god)
   // keep in mind, no semicolon here!
-  // FIXME: audio works fine in stereo for first clip, but after that
-  // they only play in left ear.
   afilter += `[0:a]${clips.map((_,i)=>`[${i+1}a]`).join('')}amix=inputs=${clips.length+1}:duration=first[aout]`;
 
   // -----------------------
