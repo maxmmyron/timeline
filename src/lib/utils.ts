@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { paused, time, videoClips } from "./stores";
 
 /**
- * Gets the current clip at the given time.
+ * Gets the current video clip at the given time.
  *
  * @param clips The clips to search through. This is parametrized so that we can
  * use reactivity whenever the $videoClips store changes.
@@ -15,15 +15,37 @@ import { paused, time, videoClips } from "./stores";
  * use reactivity whenever the $time store changes.
  * @returns The UUID of the current clip, or null if there is no current clip.
  */
-export const getCurrentClip = (clips: App.Clip[], time: number): string | null => {
-    let valid: App.Clip[] = [];
-    for (const clip of clips) {
-      const clipDuration = clip.media.duration - clip.start - clip.end;
-      if (clip.offset < time && clip.offset + clipDuration > time)
-        valid.push(clip);
-    }
-    return valid.sort((a, b) => b.z - a.z)[0]?.uuid ?? null;
-  };
+export const getCurrentVideo = (clips: App.Clip[], time: number): string | null => {
+  let valid: App.Clip[] = [];
+  for (const clip of clips) {
+    const clipDuration = clip.media.duration - clip.start - clip.end;
+    if (clip.offset < time && clip.offset + clipDuration > time)
+      valid.push(clip);
+  }
+  return valid.sort((a, b) => b.z - a.z)[0]?.uuid ?? null;
+};
+
+/**
+ * Gets the current audio clips at the given time. This returns an array because
+ * there can be multiple audio clips playing at once.
+ *
+ * @param clips The clips to search through. This is parametrized so that we can
+ * use reactivity whenever the $audioClips store changes.
+ * @param time The current scrubber time. This is parametrized so that we can
+ * use reactivity whenever the $time store changes.
+ * @returns The UUIDs of the current clips, or null if there are no current
+ * audio clips.
+ */
+export const getCurrentAudio = (clips: App.Clip[], time:number): string[] | null => {
+  let valid: App.Clip[] = [];
+  for (const clip of clips) {
+    const clipDuration = clip.media.duration - clip.start - clip.end;
+    if (clip.offset < time && clip.offset + clipDuration > time)
+      valid.push(clip);
+  }
+  if (valid.length === 0) return null;
+  return valid.map(clip => clip.uuid);
+};
 
 /**
  * Gets the last clip in the timeline.
