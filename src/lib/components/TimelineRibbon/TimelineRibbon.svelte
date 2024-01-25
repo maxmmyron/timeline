@@ -28,14 +28,14 @@
       offset: clip.offset,
       start: clip.start,
       end: clip.end + (clipDuration - timeOffset),
-      matrix: clip.matrix,
+      matrix: [...clip.matrix],
     });
 
     const rightClip = createClip(clip.media, {
       offset: clip.offset + timeOffset,
       start: clip.start + timeOffset,
       end: clip.end,
-      matrix: clip.matrix,
+      matrix: [...clip.matrix],
     });
 
     $videoClips = [...$videoClips, leftClip, rightClip];
