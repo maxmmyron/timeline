@@ -48,7 +48,7 @@
 
   const moveClip = (e: MouseEvent) => {
     // subtract timelineOffset to get clientX relative to timeline
-    const offsetPos = e.clientX - timelineOffset - moveOffset;
+    const offsetPos = e.clientX - timelineOffset - moveOffset + $scroll;
     const newOffset = Math.max(0, offsetPos / $scaleFactor);
 
     // update offset of clip with new offset, snapping if possible
