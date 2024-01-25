@@ -24,19 +24,25 @@
     let timeOffset = $time - clip.offset;
     let clipDuration = clip.media.duration - clip.start - clip.end;
 
-    const leftClip = createClip(clip.media, {
-      offset: clip.offset,
-      start: clip.start,
-      end: clip.end + (clipDuration - timeOffset),
-      matrix: [...clip.matrix],
-    });
+    const leftClip = createClip(
+      { ...clip.media },
+      {
+        offset: clip.offset,
+        start: clip.start,
+        end: clip.end + (clipDuration - timeOffset),
+        matrix: [...clip.matrix],
+      }
+    );
 
-    const rightClip = createClip(clip.media, {
-      offset: clip.offset + timeOffset,
-      start: clip.start + timeOffset,
-      end: clip.end,
-      matrix: [...clip.matrix],
-    });
+    const rightClip = createClip(
+      { ...clip.media },
+      {
+        offset: clip.offset + timeOffset,
+        start: clip.start + timeOffset,
+        end: clip.end,
+        matrix: [...clip.matrix],
+      }
+    );
 
     $videoClips = [...$videoClips, leftClip, rightClip];
     $selected = null;
