@@ -111,7 +111,9 @@
         const distance = Math.abs(eagerOffset - end);
         return { clip: c, distance };
       })
-      .filter((c) => c.distance < 0.05);
+      .filter((c) => c.distance < 0.05 + (0.2 - 0.01 * ($scaleFactor / 25)));
+
+    console.log($scaleFactor);
 
     if (!clips.length) return eagerOffset;
 
@@ -294,8 +296,8 @@
       initialTrimValues.offset = clip.offset;
     }}
   ></button>
-  <main class="w-full overflow-hidden">
-    <p class="select-none">{clip.media.title}</p>
+  <main class="w-full overflow-hidden select-none">
+    <p>{clip.media.title}</p>
   </main>
   <button
     class="w-[6px] absolute h-full border-none rounded-r-md cursor-ew-resize bg-zinc-900 right-0 top-0"
