@@ -27,10 +27,8 @@ export const secondsPerTick = derived(scale, $scale => $scale < 1 ? (1 / $scale)
 
 export const time = writable(0);
 
-/**
- * Represents the clips in the timeline
- */
 export const videoClips: Writable<App.Clip[]> = writable([]);
+export const audioClips: Writable<App.Clip[]> = writable([]);
 
 /**
  * The scaling of the video player relative to its native resolution. This is used to scale
