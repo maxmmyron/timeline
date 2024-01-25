@@ -17,7 +17,7 @@
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
-  import { frame, getCurrentClip } from "$lib/utils";
+  import { frame, getCurrentVideo, getCurrentAudio } from "$lib/utils";
 
   /**
    * Media that has been uploaded and fully resolved
@@ -28,27 +28,42 @@
    * The current playing video
    */
   let videoEl: HTMLVideoElement | null = null;
+  let audioRefs: Record<string, HTMLAudioElement> = {};
 
   // get the UUID of the current clip (instead of clip itself, to prevent
   // reactivity issues)
-  $: currVideoUUID = getCurrentClip($videoClips, $time);
-  $: currAudioUUID = getCurrentClip($audioClips, $time);
+  $: currVideoUUID = getCurrentVideo($videoClips, $time);
+
+  // get the UUIDs of the current audio clips (we return this as a comma-sep
+  // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS!!!!!!
+  $: _currAudioUUIDs = getCurrentAudio($audioClips, $time);
+  $: currAudioUUIDs = _currAudioUUIDs ? _currAudioUUIDs.split(",") : null;
 
   $: currVideo = $videoClips.find((c) => c.uuid === currVideoUUID) ?? null;
   $: currVideoSrc = currVideo?.media.src ?? null;
 
-  $: currAudio = $audioClips.find((c) => c.uuid === currAudioUUID) ?? null;
-  $: currAudioSrc = currAudio?.media.src ?? null;
+  $: currAudio = $audioClips.filter(
+    (c) => currAudioUUIDs?.includes(c.uuid) ?? false
+  );
 
   $: matrix = currVideo?.matrix ?? ([1, 0, 0, 1, 0, 0] as App.Matrix);
 
   $: if ($paused === true && videoEl) videoEl.pause();
+  $: if ($paused === true && currAudioUUIDs) {
+    for (const uuid of currAudioUUIDs) audioRefs[uuid]?.pause();
+  }
+
   $: if ($paused === false && videoEl) videoEl.play();
+  $: if ($paused === false && currAudioUUIDs) {
+    for (const uuid of currAudioUUIDs) audioRefs[uuid]?.play();
+  }
 
   // when currentVideo changes, update
-  $: currVideo, $time, updatePlayer();
+  $: currVideo, $time, updateVideo();
+  $: currAudio, $time, updateAudio();
   // reset video time when video changes
   $: currVideoUUID, resetVideoTime();
+  $: currAudioUUIDs, resetAudioTime();
 
   let containerHeight: number = 1;
   let containerWidth: number = 1;
@@ -88,7 +103,7 @@
   // update scaling factor of player, which is used to scale the video element
   $: $playerScale = playerRes[0] / $safeRes[0];
 
-  const updatePlayer = async () => {
+  const updateVideo = async () => {
     await tick();
 
     // if there's no video to play or no current clip, we can return early.
@@ -103,9 +118,37 @@
     }
   };
 
+  const updateAudio = async () => {
+    await tick();
+
+    // if there's no audio to play or no current clip, we can return early.
+    if (!currAudioUUIDs) return;
+
+    console.log("we iterating");
+
+    for (const uuid of currAudioUUIDs) {
+      // get the corresponding audio element and clip
+      const el = audioRefs[uuid];
+      const clip = currAudio.find((c) => c.uuid === uuid);
+
+      // if there's no audio element or corresponding clip, we can break
+      if (!el || !clip) continue;
+
+      if ($paused) {
+        el.currentTime = $time - clip.offset + clip.start;
+      }
+
+      if (!$paused && el.paused) {
+        console.log("we playing");
+        el.play();
+      }
+    }
+  };
+
   /**
-   * Runs when the current UUID to play changes. Used to reset the video's
-   * currentTime property to correctly account for the current offset.
+   * Runs when the current video UUID to play changes, or when the scrubber is
+   * moved and we are playing a video. Used to reset the currentTime property to
+   * correctly account for the current offset.
    */
   const resetVideoTime = async () => {
     // if there's no UUID, there's no video playing; we can return
@@ -116,6 +159,32 @@
     if (!videoEl || !currVideo) return;
 
     videoEl.currentTime = $time - currVideo.offset + currVideo.start;
+  };
+
+  /**
+   * Runs when any current audio UUIDs to play changes, or when the scrubber is
+   * moved and we are playing audio. Used to reset the currentTime property of
+   * all current audio clips to correctly account for the current offset.
+   */
+  const resetAudioTime = async () => {
+    await tick();
+
+    // if there are no audio UUIDs, we can break
+    if (!currAudioUUIDs) return;
+
+    console.log("we iterating reset");
+
+    for (const uuid of currAudioUUIDs) {
+      // get the corresponding audio element and clip
+      const el = audioRefs[uuid];
+      const clip = currAudio.find((c) => c.uuid === uuid);
+
+      // if there's no audio element or corresponding clip, we can break
+      // TODO: ensure this never happens and remove in future.
+      if (!el || !clip) continue;
+
+      el.currentTime = $time - clip.offset + clip.start;
+    }
   };
 
   onMount(() => requestAnimationFrame(frame));
@@ -215,7 +284,6 @@
     {#if currVideo && currVideoSrc}
       <video
         src={currVideoSrc}
-        class="media"
         bind:this={videoEl}
         title={currVideo.uuid}
         style:transform="matrix({matrix
@@ -264,4 +332,24 @@
 
 <!-- Update the currentTime property of the current video playing when either
   the scrubber moves, or the current video's offset is changed (via drag) -->
-<Timeline on:scrubberMove={resetVideoTime} on:clipMove={resetVideoTime} />
+<Timeline
+  on:scrubberMove={() => {
+    resetVideoTime();
+    resetAudioTime();
+  }}
+  on:clipMove={() => {
+    resetVideoTime();
+    resetAudioTime();
+  }}
+/>
+
+{#if currAudio.length > 0}
+  {#each currAudio as clip (clip.uuid)}
+    <audio
+      class="hidden"
+      src={clip.media.src}
+      title={clip.uuid}
+      bind:this={audioRefs[clip.uuid]}
+    />
+  {/each}
+{/if}

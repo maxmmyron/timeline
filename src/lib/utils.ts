@@ -26,8 +26,10 @@ export const getCurrentVideo = (clips: App.Clip[], time: number): string | null 
 };
 
 /**
- * Gets the current audio clips at the given time. This returns an array because
- * there can be multiple audio clips playing at once.
+ * Gets the current audio clips at the given time. This returns a comma-
+ * separated list of UUIDs, because svelte's reactivity system doesn't work
+ * the same way with arrays as it does with primitive strings.
+ *
  *
  * @param clips The clips to search through. This is parametrized so that we can
  * use reactivity whenever the $audioClips store changes.
@@ -36,7 +38,7 @@ export const getCurrentVideo = (clips: App.Clip[], time: number): string | null 
  * @returns The UUIDs of the current clips, or null if there are no current
  * audio clips.
  */
-export const getCurrentAudio = (clips: App.Clip[], time:number): string[] | null => {
+export const getCurrentAudio = (clips: App.Clip[], time:number): string | null => {
   let valid: App.Clip[] = [];
   for (const clip of clips) {
     const clipDuration = clip.media.duration - clip.start - clip.end;
@@ -44,7 +46,7 @@ export const getCurrentAudio = (clips: App.Clip[], time:number): string[] | null
       valid.push(clip);
   }
   if (valid.length === 0) return null;
-  return valid.map(clip => clip.uuid);
+  return valid.map(clip => clip.uuid).join(",");
 };
 
 /**
