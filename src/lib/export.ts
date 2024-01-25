@@ -6,6 +6,9 @@ export const exportVideo = async () => {
   const ffmpegInstance =  get(ffmpeg);
   let vClips = get(videoClips);
 
+  // sort vClips by z index, lowest to highest. we do this so we properly layer the videos.
+  vClips = vClips.sort((a, b) => a.z - b.z);
+
   /**
    * Combined array of video and audio clips.
    */
@@ -32,9 +35,6 @@ export const exportVideo = async () => {
   // create black video with empty audio track for duration of video
   const dims = get(safeRes);
   await ffmpegInstance.run("-t", duration.toString(), "-f", "lavfi", "-i", `color=c=black:s=${dims[0]}x${dims[1]}:r=30`, "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-pix_fmt", "yuv420p", "-shortest", "base.mp4");
-
-  // sort vClips by z index, lowest to highest. we do this so we properly layer the videos.
-  vClips = vClips.sort((a, b) => a.z - b.z);
 
   let vfilter = "";
   let afilter = "";
@@ -127,7 +127,11 @@ export const exportVideo = async () => {
   // -----------------------
   // RUN FFMPEG
 
-  await ffmpegInstance.run("-i", "base.mp4", ...clips.map(({uuid}) => ["-i", `${uuid}.mp4`]).flat(), "-filter_complex", `${vfilter}${afilter}`, "-map", "[vout]", "-map", "[aout]", "-vcodec", "libx264", "-crf", "28", "export.mp4");
+  const inputFiles = [...clips.map(({uuid, media}) => {
+    const type = media.type === "audio" ? "mp3" : "mp4";
+    return ["-i", `${uuid}.${type}`];
+  })].flat();
+  await ffmpegInstance.run("-i", "base.mp4", ...inputFiles, "-filter_complex", `${vfilter}${afilter}`, "-map", "[vout]", "-map", "[aout]", "-vcodec", "libx264", "-crf", "28", "export.mp4");
 
   // -----------------------
   // EXPORT VIDEO FILE
@@ -143,5 +147,5 @@ export const exportVideo = async () => {
   setTimeout(() => URL.revokeObjectURL(link.href), 7000);
 
   console.log(`Downloaded export.mp4 (${duration}s)`);
-  console.log(["-i", "base.mp4", ...clips.map(({uuid}) => ["-i", `${uuid}.mp4`]).flat(), "-filter_complex", `${vfilter}${afilter}`, "-map", "[vout]", "-map", "[aout]", "export.mp4"].join(" "));
+  console.log(["-i", "base.mp4", ...inputFiles, "-filter_complex", `${vfilter}${afilter}`, "-map", "[vout]", "-map", "[aout]", "export.mp4"].join(" "));
 };
