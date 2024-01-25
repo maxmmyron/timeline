@@ -15,7 +15,7 @@ declare global {
 			matrix: Matrix;
 		};
 
-			type Media = {
+		type Media = {
 			uuid: string;
 			src: string;
 			duration: number;
