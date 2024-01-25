@@ -18,9 +18,22 @@ export const exportVideo = async () => {
     throw new Error("ffmpeg.wasm did not load on editor startup. Please refresh the page.");
   }
 
-  for (const { uuid, media } of clips) {
+  let loadedMedia: Array<string> = [];
+  let clipMediaMap = new Map<string, number>();
+
+  for (const {uuid, media} of clips) {
+    // if we haven't loaded this media yet, load it
     const type = media.type === "audio" ? "mp3" : "mp4";
-    ffmpegInstance.FS("writeFile", `${uuid}.${type}`, await fetchFile(media.src));
+    const srcName = `${media.uuid}.${type}`;
+    if (!loadedMedia.includes(srcName)) {
+      ffmpegInstance.FS("writeFile", srcName, await fetchFile(media.src));
+      // after loading media, add it to the loadedMedia array
+      loadedMedia.push(srcName);
+    }
+
+    // map the clip's uuid to the clip's media's position in the loadedMedia array
+    // (assume this to be loadedMedia.length); we add one to account for base.mp4
+    clipMediaMap.set(uuid, loadedMedia.length);
   }
 
   ffmpegInstance.FS("writeFile", "base.mp4", "");
@@ -43,11 +56,18 @@ export const exportVideo = async () => {
   // TRIM AND DELAY COMPONENTS
   for (let i = 1; i <= clips.length; i++) {
     const clip = clips[i - 1];
+    // FIXME: this does not work. seems like we can't build a complex filter that takes a single video, and splits it across a timeline
+    // TODO: use split=n[s1][s2][...] to split the video into n identical streams. https://ffmpeg.org/ffmpeg-filters.html#split_002c-asplit
+    const inputIdx = clipMediaMap.get(clip.uuid);
+    if(inputIdx === undefined) {
+      throw new Error("inputIdx is undefined. This shouldn't happen!");
+    }
     const start = clip.start;
     const end = (clip.media.duration - clip.end);
 
     const trim = `duration=${end-start}`;
-    const setpts = `PTS-STARTPTS+${clip.offset-clip.start}/TB`;
+    // const setpts = `PTS-STARTPTS+${clip.offset-clip.start}/TB`;
+    const setpts = `PTS-STARTPTS+${clip.offset}/TB`;
     /**
      * The portion of the ffmpeg filter that defines the scale of the clip.
      * w/h represent the width and height of the clip, respectively; we multiply
@@ -67,7 +87,7 @@ export const exportVideo = async () => {
      * seems like adelay doesn't work with decimal second notation (i.e "3.54s")
      * We use R|L to specify stereo channels.
      */
-    afilter += `[${i}:a]atrim=${start}:${end},adelay=${d}|${d}[${i}a];`
+    afilter += `[${inputIdx}:a]atrim=${start}:${end},adelay=${d}|${d}[${i}a];`
 
     // if the clip is audio, we don't need to do any video processing
     if (clip.media.type === "audio") continue;
@@ -84,7 +104,7 @@ export const exportVideo = async () => {
      * scale=width:height: scale the video to the clip's dimensions. we do this
      * here since there is only one input link.
      */
-    vfilter += `[${i}:v]trim=${trim},setpts=${setpts},scale=${scale}[${i}v];`
+    vfilter += `[${inputIdx}:v]trim=${trim},setpts=${setpts},scale=${scale}[${i}v];`
   }
 
   // -----------------------
@@ -127,11 +147,7 @@ export const exportVideo = async () => {
   // -----------------------
   // RUN FFMPEG
 
-  const inputFiles = [...clips.map(({uuid, media}) => {
-    const type = media.type === "audio" ? "mp3" : "mp4";
-    return ["-i", `${uuid}.${type}`];
-  })].flat();
-  await ffmpegInstance.run("-i", "base.mp4", ...inputFiles, "-filter_complex", `${vfilter}${afilter}`, "-map", "[vout]", "-map", "[aout]", "-vcodec", "libx264", "-crf", "28", "export.mp4");
+  await ffmpegInstance.run("-i", "base.mp4", ...[...loadedMedia.map((src) =>  ["-i", src])].flat(), "-filter_complex", `${vfilter}${afilter}`, "-map", "[vout]", "-map", "[aout]", "-vcodec", "libx264", "-crf", "28", "export.mp4");
 
   // -----------------------
   // EXPORT VIDEO FILE
@@ -147,5 +163,5 @@ export const exportVideo = async () => {
   setTimeout(() => URL.revokeObjectURL(link.href), 7000);
 
   console.log(`Downloaded export.mp4 (${duration}s)`);
-  console.log(["-i", "base.mp4", ...inputFiles, "-filter_complex", `${vfilter}${afilter}`, "-map", "[vout]", "-map", "[aout]", "export.mp4"].join(" "));
+  console.log(["-i", "base.mp4", ...[...loadedMedia.map((src) =>  ["-i", src])].flat(), "-filter_complex", `${vfilter}${afilter}`, "-map", "[vout]", "-map", "[aout]", "export.mp4"].join(" "));
 };
