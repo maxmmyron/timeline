@@ -16,7 +16,8 @@ export const exportVideo = async () => {
   }
 
   for (const { uuid, media } of clips) {
-    ffmpegInstance.FS("writeFile", `${uuid}.mp4`, await fetchFile(media.src));
+    const type = media.type === "audio" ? "mp3" : "mp4";
+    ffmpegInstance.FS("writeFile", `${uuid}.${type}`, await fetchFile(media.src));
   }
 
   ffmpegInstance.FS("writeFile", "base.mp4", "");
@@ -110,10 +111,7 @@ export const exportVideo = async () => {
      * clip is enabled. This starts at clip.offset, and lasts until the the end
      * of the clip (in absolute positioning: offset + calculated duration).
      */
-    const enabledPeriod = `enable='between(t\\,
-      ${clip.offset - clip.start},
-      ${(clip.offset - clip.start) +
-        (clip.media.duration - clip.end - clip.start)})'`;
+    const enabledPeriod = `enable='between(t\\,${clip.offset},${clip.offset + (clip.media.duration - clip.end - clip.start)})'`;
 
     //overlay=<overlayW>:<overlayH>:<enabledPeriod>
     vfilter += `${inLink}[${i + 1}v]overlay=${overlayPos}:${enabledPeriod}${outLink};`
