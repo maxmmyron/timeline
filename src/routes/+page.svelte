@@ -170,7 +170,7 @@
       <input
         class="hidden"
         type="file"
-        accept="video/mp4"
+        accept="video/mp4,audio/mp3"
         multiple
         on:change={upload}
       />
@@ -180,7 +180,7 @@
       <p style:color="rgba(0 0 0 / 0.75)">No media uploaded</p>
     {/if}
     {#each resolved as file}
-      <ResolvedMedia {file} />
+      <ResolvedMedia media={file} />
     {/each}
   </Region>
   {#if $selected}
