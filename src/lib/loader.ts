@@ -18,9 +18,9 @@ const assertMIME = async (file: File, type: 'video' | 'audio') => {
   // is valid)
   if(temp === "maybe" || temp === "probably") {
     if (type === "video" && ext !== "mp4" && ext !== "m4v") {
-      throw new Error('Non MP4 video files are not supported.');
-    } else if (type === "audio" && ext !== "mp3") {
-      throw new Error('Non MP3 audio files are not supported.');
+      throw new Error(`Non MP4 video files are not supported. (Got ${file.type})`);
+    } else if (type === "audio" && ext !== "mpeg") {
+      throw new Error(`Non MP3 audio files are not supported. (Got ${file.type})`);
     }
     return URL.createObjectURL(file);
   }
