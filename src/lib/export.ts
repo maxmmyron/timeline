@@ -100,25 +100,15 @@ export const exportVideo = async () => {
   // TRIM AND DELAY COMPONENTS
   for (let i = 1; i <= clips.length; i++) {
     const clip = clips[i - 1];
+
     const start = clip.start;
     const end = (clip.media.duration - clip.end);
-
-    const trim = `duration=${end-start}`;
-    // const setpts = `PTS-STARTPTS+${clip.offset-clip.start}/TB`;
-    const setpts = `PTS-STARTPTS+${clip.offset}/TB`;
-    /**
-     * The portion of the ffmpeg filter that defines the scale of the clip.
-     * w/h represent the width and height of the clip, respectively; we multiply
-     * these by the clip's matrix[0] and matrix[3] values to get the scaled
-     * dimensions.
-     */
-    const scale = `(iw*${clip.matrix[0]}):(ih*${clip.matrix[3]})`;
 
     // define delay, since we need it twice
     const d = (clip.offset * 1000).toFixed(0);
 
     /**
-     * atrim=duration: trim the audio
+     * atrim=start:end: trim the audio
      *
      * adelay=delay: delay the audio by clip.offset so it starts playing
      * at the same time as the video. NOTE: we use offset * 1000 since it
@@ -131,7 +121,22 @@ export const exportVideo = async () => {
     if (clip.media.type === "audio") continue;
 
     /**
-     * trim=duration: trim the video so it doesn't go past clip.end (otherwise,
+     * The portion of the ffmpeg video filter that determines when in the final
+     * video this input starts. We reset the presentation timestamp to 0, and
+     * then add the clip's offset to it.
+     */
+    const setpts = `PTS-STARTPTS+${clip.offset}/TB`;
+
+    /**
+     * The portion of the ffmpeg filter that defines the scale of the clip.
+     * w/h represent the width and height of the clip, respectively; we multiply
+     * these by the clip's matrix[0] and matrix[3] values to get the scaled
+     * dimensions.
+     */
+    const scale = `(iw*${clip.matrix[0]}):(ih*${clip.matrix[3]})`;
+
+    /**
+     * trim=start:end: trim the video so it doesn't go past clip.end (otherwise,
      * it video will keep playing as if video was still playing, despite it not
      * being visible/audible)
      *
@@ -142,13 +147,8 @@ export const exportVideo = async () => {
      * scale=width:height: scale the video to the clip's dimensions. we do this
      * here since there is only one input link.
      */
-    vFilter += `[v_split${i}]trim=${trim},setpts=${setpts},scale=${scale}[${i}v];`
+    vFilter += `[v_split${i}]trim=${start}:${end},setpts=${setpts},scale=${scale}[${i}v];`
   }
-
-  // console.log(aFilter);
-  // console.log(vFilter);
-
-  // return;
 
   // -----------------------
   // VIDEO FILTER COMPONENT
