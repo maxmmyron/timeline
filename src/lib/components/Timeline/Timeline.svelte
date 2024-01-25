@@ -10,6 +10,7 @@
     tickWidth,
     time,
     videoClips,
+    audioClips,
   } from "$lib/stores";
   import { createEventDispatcher } from "svelte";
 
@@ -93,10 +94,17 @@
       </div>
     {/each}
   </div>
-  <div class="relative flex items-center w-full h-full">
-    {#each $videoClips as clip}
-      <TimelineClip {clip} on:clipMove />
-    {/each}
+  <div class="relative flex flex-col h-full gap-0.5 bg-zinc-800">
+    <div class="relative flex items-center w-full h-1/2 bg-zinc-950">
+      {#each $videoClips as clip}
+        <TimelineClip {clip} on:clipMove />
+      {/each}
+    </div>
+    <div class="relative flex items-center w-full h-1/2 bg-zinc-950">
+      {#each $audioClips as clip}
+        <TimelineClip {clip} on:clipMove />
+      {/each}
+    </div>
   </div>
   <div
     class="absolute top-0 w-0.5 bg-zinc-950/40 h-full rounded-full dark:bg-zinc-600/40 z-[999999999]"

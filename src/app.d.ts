@@ -15,11 +15,12 @@ declare global {
 			matrix: Matrix;
 		};
 
-			type Media = {
+		type Media = {
 			uuid: string;
 			src: string;
 			duration: number;
 			title: string;
+			type: "video" | "audio";
 		};
 
 		type Matrix = [number, number, number, number, number, number];

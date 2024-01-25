@@ -1,10 +1,25 @@
 <script lang="ts">
-  import { scaleFactor, videoClips, time, selected, scroll } from "$lib/stores";
+  import {
+    scaleFactor,
+    videoClips,
+    time,
+    selected,
+    scroll,
+    audioClips,
+  } from "$lib/stores";
   import { createEventDispatcher } from "svelte";
 
   export let clip: App.Clip;
   // this is set to 9 as a dirty default
   export let timelineOffset = 9;
+
+  /**
+   * Whether or not the clip is an audio clip.
+   */
+  $: isAudio = clip.media.type === "audio";
+
+  $: selectedUUID = $selected ? $selected[0] : null;
+  $: selectedType = $selected ? $selected[1] : null;
 
   let canMoveClip = false;
   let resizeMode: "left" | "right" | null = null;
@@ -41,7 +56,8 @@
     else clip.offset = snapOnMove(newOffset);
 
     // reassign to trigger reactivity
-    $videoClips = [...$videoClips];
+    if (isAudio) $audioClips = [...$audioClips];
+    else $videoClips = [...$videoClips];
   };
 
   const resizeClip = (e: MouseEvent) => {
@@ -73,7 +89,8 @@
     }
 
     // reassign to trigger reactivity
-    $videoClips = [...$videoClips];
+    if (isAudio) $audioClips = [...$audioClips];
+    else $videoClips = [...$videoClips];
   };
 
   /**
@@ -85,7 +102,8 @@
    * calculated offset before the clip is released from the mouse.
    */
   const snapOnMove = (eagerOffset: number) => {
-    const clips = $videoClips
+    const arr = isAudio ? $audioClips : $videoClips;
+    const clips = arr
       .filter((c) => c.uuid !== clip.uuid)
       // calculate distance from end of clip to beginning of current clip
       .map((c) => {
@@ -183,7 +201,8 @@
     let start = clip.offset;
     let end = clip.offset + clipLength;
 
-    return $videoClips.filter((c) => {
+    let arr = isAudio ? $audioClips : $videoClips;
+    return arr.filter((c) => {
       // break if z-index is lower
       if (c.z < clip.z) return false;
 
@@ -231,9 +250,9 @@
 
 <button
   class="absolute h-12 border border-zinc-800 rounded-md bg-zinc-300 min-w-2 shadow-sm dark:bg-zinc-800"
-  class:bg-zinc-400={$selected === clip.uuid}
-  class:dark:bg-zinc-900={$selected === clip.uuid}
-  class:shadow-lg={$selected === clip.uuid}
+  class:bg-zinc-400={selectedUUID === clip.uuid}
+  class:dark:bg-zinc-900={selectedUUID === clip.uuid}
+  class:shadow-lg={selectedUUID === clip.uuid}
   class:rounded-bl-none={coverCount > 0}
   style:transform
   style:width
@@ -241,7 +260,10 @@
   bind:this={clipEl}
   on:mousedown|stopPropagation={(e) => {
     canMoveClip = true;
-    clip.z = $videoClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1;
+    if (isAudio)
+      clip.z = $audioClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1;
+    else
+      clip.z = $videoClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1;
     moveOffset = e.clientX - clipEl.getBoundingClientRect().left;
   }}
   on:dblclick|stopPropagation={() => {
@@ -249,19 +271,21 @@
     $time = clip.offset;
   }}
   on:click|stopPropagation={() => {
-    $selected = clip.uuid;
+    $selected = [clip.uuid, clip.media.type];
   }}
   on:keydown|stopPropagation={(e) => {
-    if (e.key === "Delete" && $selected === clip.uuid) {
+    if (e.key === "Delete" && selectedUUID === clip.uuid) {
       $selected = null;
-      $videoClips = $videoClips.filter((c) => c.uuid !== clip.uuid);
+      if (isAudio)
+        $audioClips = $audioClips.filter((c) => c.uuid !== clip.uuid);
+      else $videoClips = $videoClips.filter((c) => c.uuid !== clip.uuid);
     }
   }}
   on:click
 >
   <button
     class="w-[6px] absolute h-full border-none rounded-l-md cursor-ew-resize bg-zinc-900 left-0 top-0"
-    class:dark:bg-zinc-950={$selected === clip.uuid}
+    class:dark:bg-zinc-950={selectedUUID === clip.uuid}
     class:rounded-bl-none={coverCount > 0}
     on:mousedown|capture|stopPropagation={(e) => {
       resizeMode = "left";
@@ -275,7 +299,7 @@
   </main>
   <button
     class="w-[6px] absolute h-full border-none rounded-r-md cursor-ew-resize bg-zinc-900 right-0 top-0"
-    class:dark:bg-zinc-950={$selected === clip.uuid}
+    class:dark:bg-zinc-950={selectedUUID === clip.uuid}
     on:mousedown|capture|stopPropagation={(e) => {
       resizeMode = "right";
       initialResizeMousePos = e.clientX;
@@ -287,7 +311,7 @@
     <div
       style:height="{coverCount * 0.5}rem"
       class="absolute top-full left-0 w-4 bg-zinc-300 rounded-b-md dark:bg-zinc-800"
-      class:bg-gray-400={$selected === clip.uuid}
+      class:bg-gray-400={selectedUUID === clip.uuid}
     />
   {/if}
 </button>

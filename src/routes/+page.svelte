@@ -10,13 +10,14 @@
     safeRes,
     selected,
     paused,
+    audioClips,
   } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
-  import { frame, getCurrentClip } from "$lib/utils";
+  import { frame, getCurrentVideo, getCurrentAudio } from "$lib/utils";
 
   /**
    * Media that has been uploaded and fully resolved
@@ -27,25 +28,42 @@
    * The current playing video
    */
   let videoEl: HTMLVideoElement | null = null;
+  let audioRefs: Record<string, HTMLAudioElement> = {};
 
   // get the UUID of the current clip (instead of clip itself, to prevent
   // reactivity issues)
-  $: currentUUID = getCurrentClip($videoClips, $time);
+  $: currVideoUUID = getCurrentVideo($videoClips, $time);
 
-  // TODO: seems like only one media src would play at a time?
-  // reproduce: upload two vids, add both to timeline, only one plays????
-  $: current = $videoClips.find((c) => c.uuid === currentUUID) ?? null;
-  $: currentSrc = current?.media.src ?? null;
+  // get the UUIDs of the current audio clips (we return this as a comma-sep
+  // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS!!!!!!
+  $: _currAudioUUIDs = getCurrentAudio($audioClips, $time);
+  $: currAudioUUIDs = _currAudioUUIDs ? _currAudioUUIDs.split(",") : null;
 
-  $: matrix = current?.matrix ?? ([1, 0, 0, 1, 0, 0] as App.Matrix);
+  $: currVideo = $videoClips.find((c) => c.uuid === currVideoUUID) ?? null;
+  $: currVideoSrc = currVideo?.media.src ?? null;
+
+  $: currAudio = $audioClips.filter(
+    (c) => currAudioUUIDs?.includes(c.uuid) ?? false
+  );
+
+  $: matrix = currVideo?.matrix ?? ([1, 0, 0, 1, 0, 0] as App.Matrix);
 
   $: if ($paused === true && videoEl) videoEl.pause();
+  $: if ($paused === true && currAudioUUIDs) {
+    for (const uuid of currAudioUUIDs) audioRefs[uuid]?.pause();
+  }
+
   $: if ($paused === false && videoEl) videoEl.play();
+  $: if ($paused === false && currAudioUUIDs) {
+    for (const uuid of currAudioUUIDs) audioRefs[uuid]?.play();
+  }
 
   // when currentVideo changes, update
-  $: current, $time, updatePlayer();
+  $: currVideo, $time, updateVideo();
+  $: currAudio, $time, updateAudio();
   // reset video time when video changes
-  $: currentUUID, resetVideoTime();
+  $: currVideoUUID, resetVideoTime();
+  $: currAudioUUIDs, resetAudioTime();
 
   let containerHeight: number = 1;
   let containerWidth: number = 1;
@@ -85,14 +103,14 @@
   // update scaling factor of player, which is used to scale the video element
   $: $playerScale = playerRes[0] / $safeRes[0];
 
-  const updatePlayer = async () => {
+  const updateVideo = async () => {
     await tick();
 
     // if there's no video to play or no current clip, we can return early.
-    if (!videoEl || !current) return;
+    if (!videoEl || !currVideo) return;
 
     if ($paused) {
-      videoEl.currentTime = $time - current.offset + current.start;
+      videoEl.currentTime = $time - currVideo.offset + currVideo.start;
     }
 
     if (!$paused && videoEl.paused) {
@@ -100,19 +118,73 @@
     }
   };
 
+  const updateAudio = async () => {
+    await tick();
+
+    // if there's no audio to play or no current clip, we can return early.
+    if (!currAudioUUIDs) return;
+
+    console.log("we iterating");
+
+    for (const uuid of currAudioUUIDs) {
+      // get the corresponding audio element and clip
+      const el = audioRefs[uuid];
+      const clip = currAudio.find((c) => c.uuid === uuid);
+
+      // if there's no audio element or corresponding clip, we can break
+      if (!el || !clip) continue;
+
+      if ($paused) {
+        el.currentTime = $time - clip.offset + clip.start;
+      }
+
+      if (!$paused && el.paused) {
+        console.log("we playing");
+        el.play();
+      }
+    }
+  };
+
   /**
-   * Runs when the current UUID to play changes. Used to reset the video's
-   * currentTime property to correctly account for the current offset.
+   * Runs when the current video UUID to play changes, or when the scrubber is
+   * moved and we are playing a video. Used to reset the currentTime property to
+   * correctly account for the current offset.
    */
   const resetVideoTime = async () => {
     // if there's no UUID, there's no video playing; we can return
-    if (!currentUUID) return;
+    if (!currVideoUUID) return;
 
     await tick();
 
-    if (!videoEl || !current) return;
+    if (!videoEl || !currVideo) return;
 
-    videoEl.currentTime = $time - current.offset + current.start;
+    videoEl.currentTime = $time - currVideo.offset + currVideo.start;
+  };
+
+  /**
+   * Runs when any current audio UUIDs to play changes, or when the scrubber is
+   * moved and we are playing audio. Used to reset the currentTime property of
+   * all current audio clips to correctly account for the current offset.
+   */
+  const resetAudioTime = async () => {
+    await tick();
+
+    // if there are no audio UUIDs, we can break
+    if (!currAudioUUIDs) return;
+
+    console.log("we iterating reset");
+
+    for (const uuid of currAudioUUIDs) {
+      // get the corresponding audio element and clip
+      const el = audioRefs[uuid];
+      const clip = currAudio.find((c) => c.uuid === uuid);
+
+      // if there's no audio element or corresponding clip, we can break
+      // TODO: ensure this never happens and remove in future.
+      if (!el || !clip) continue;
+
+      el.currentTime = $time - clip.offset + clip.start;
+    }
   };
 
   onMount(() => requestAnimationFrame(frame));
@@ -170,7 +242,7 @@
       <input
         class="hidden"
         type="file"
-        accept="video/mp4"
+        accept="video/mp4,audio/mp3"
         multiple
         on:change={upload}
       />
@@ -180,7 +252,7 @@
       <p style:color="rgba(0 0 0 / 0.75)">No media uploaded</p>
     {/if}
     {#each resolved as file}
-      <ResolvedMedia {file} />
+      <ResolvedMedia media={file} />
     {/each}
   </Region>
   {#if $selected}
@@ -191,7 +263,7 @@
 
         // TODO: remove this event handler in the future, this blocks multiple
         // clips from being played at once.
-        if ($selected === currentUUID) {
+        if ($selected === currVideoUUID) {
           matrix = e.detail;
         }
       }}
@@ -209,12 +281,11 @@
     style:width="{playerRes[0]}px"
     style:height="{playerRes[1]}px"
   >
-    {#if current && currentSrc}
+    {#if currVideo && currVideoSrc}
       <video
-        src={currentSrc}
-        class="media"
+        src={currVideoSrc}
         bind:this={videoEl}
-        title={current.uuid}
+        title={currVideo.uuid}
         style:transform="matrix({matrix
           .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
           .join(",")})"
@@ -261,4 +332,24 @@
 
 <!-- Update the currentTime property of the current video playing when either
   the scrubber moves, or the current video's offset is changed (via drag) -->
-<Timeline on:scrubberMove={resetVideoTime} on:clipMove={resetVideoTime} />
+<Timeline
+  on:scrubberMove={() => {
+    resetVideoTime();
+    resetAudioTime();
+  }}
+  on:clipMove={() => {
+    resetVideoTime();
+    resetAudioTime();
+  }}
+/>
+
+{#if currAudio.length > 0}
+  {#each currAudio as clip (clip.uuid)}
+    <audio
+      class="hidden"
+      src={clip.media.src}
+      title={clip.uuid}
+      bind:this={audioRefs[clip.uuid]}
+    />
+  {/each}
+{/if}

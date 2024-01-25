@@ -1,32 +1,38 @@
 import {v4 as uuidv4} from "uuid";
 
 export const resolveMedia = async (file: File): Promise<App.Media> => {
-  const src = await assertMIME(file).catch(err => { throw err; });
-  const duration = await resolveDuration(src).catch(err => { throw err; })
+  const type = file.type.split('/')[0] as 'video' | 'audio';
+  const src = await assertMIME(file, type);
+  const duration = await resolveDuration(src, type);
 
-  return { uuid: uuidv4(), src, duration, title: file.name };
+  return { uuid: uuidv4(), src, duration, title: file.name, type };
 }
 
-const assertMIME = async (file: File) => {
-  if(!file.type.includes('video')) throw new Error('Only video files are supported.');
-
+const assertMIME = async (file: File, type: 'video' | 'audio') => {
   let ext = file.type.split('/')[1];
 
-    const temp = document.createElement('video').canPlayType(file.type)
-    if(temp === "maybe" || temp === "probably") {
-      if(ext !== "mp4") {
-        throw new Error('Non MP4 video files are not supported.');
-      }
-      return URL.createObjectURL(file);
+  // create a template element to check if the browser can play the file
+  const temp = document.createElement(type).canPlayType(file.type);
+
+  // if the browser can play the file, return the file's URL (if the MIME type
+  // is valid)
+  if(temp === "maybe" || temp === "probably") {
+    if (type === "video" && ext !== "mp4" && ext !== "m4v") {
+      throw new Error(`Non MP4 video files are not supported. (Got ${file.type})`);
+    } else if (type === "audio" && ext !== "mpeg") {
+      throw new Error(`Non MP3 audio files are not supported. (Got ${file.type})`);
     }
-    else throw new Error('Your browser does not support this video format.');
+    return URL.createObjectURL(file);
+  }
+  else throw new Error('Your browser does not support this format.');
 };
 
-const resolveDuration = async (src: string) => new Promise<number>((resolve) => {
-  const video = document.createElement("video");
-  video.src = src;
-  video.preload = "metadata";
-  video.load();
+const resolveDuration = async (src: string, type: 'video' | 'audio') => new Promise<number>((resolve) => {
+  let temp: HTMLVideoElement | HTMLAudioElement = document.createElement(type);
 
-  video.addEventListener("loadedmetadata", () => resolve(video.duration));
+  temp.src = src;
+  temp.preload = "metadata";
+  temp.load();
+
+  temp.addEventListener("loadedmetadata", () => resolve(temp.duration));
 });
