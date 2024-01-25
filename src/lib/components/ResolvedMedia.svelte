@@ -8,10 +8,11 @@
 <article
   class="p-2 rounded-md border dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 flex gap-2 items-center justify-between"
 >
-  <header class="flex flex-col gap-2">
-    <p>{media.title}</p>
-    <p>{media.duration.toPrecision(3)}s</p>
-    <p>{media.type}</p>
+  <header class="flex flex-col gap-2 min-w-0">
+    <p class="text-ellipsis overflow-hidden whitespace-nowrap">
+      {media.title}
+    </p>
+    <p>{media.duration.toPrecision(3)}s - {media.type}</p>
   </header>
   <div class="flex flex-col gap-2">
     <button

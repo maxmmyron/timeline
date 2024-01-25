@@ -10,6 +10,7 @@
     safeRes,
     selected,
     paused,
+    audioClips,
   } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
@@ -30,22 +31,24 @@
 
   // get the UUID of the current clip (instead of clip itself, to prevent
   // reactivity issues)
-  $: currentUUID = getCurrentClip($videoClips, $time);
+  $: currVideoUUID = getCurrentClip($videoClips, $time);
+  $: currAudioUUID = getCurrentClip($audioClips, $time);
 
-  // TODO: seems like only one media src would play at a time?
-  // reproduce: upload two vids, add both to timeline, only one plays????
-  $: current = $videoClips.find((c) => c.uuid === currentUUID) ?? null;
-  $: currentSrc = current?.media.src ?? null;
+  $: currVideo = $videoClips.find((c) => c.uuid === currVideoUUID) ?? null;
+  $: currVideoSrc = currVideo?.media.src ?? null;
 
-  $: matrix = current?.matrix ?? ([1, 0, 0, 1, 0, 0] as App.Matrix);
+  $: currAudio = $audioClips.find((c) => c.uuid === currAudioUUID) ?? null;
+  $: currAudioSrc = currAudio?.media.src ?? null;
+
+  $: matrix = currVideo?.matrix ?? ([1, 0, 0, 1, 0, 0] as App.Matrix);
 
   $: if ($paused === true && videoEl) videoEl.pause();
   $: if ($paused === false && videoEl) videoEl.play();
 
   // when currentVideo changes, update
-  $: current, $time, updatePlayer();
+  $: currVideo, $time, updatePlayer();
   // reset video time when video changes
-  $: currentUUID, resetVideoTime();
+  $: currVideoUUID, resetVideoTime();
 
   let containerHeight: number = 1;
   let containerWidth: number = 1;
@@ -89,10 +92,10 @@
     await tick();
 
     // if there's no video to play or no current clip, we can return early.
-    if (!videoEl || !current) return;
+    if (!videoEl || !currVideo) return;
 
     if ($paused) {
-      videoEl.currentTime = $time - current.offset + current.start;
+      videoEl.currentTime = $time - currVideo.offset + currVideo.start;
     }
 
     if (!$paused && videoEl.paused) {
@@ -106,13 +109,13 @@
    */
   const resetVideoTime = async () => {
     // if there's no UUID, there's no video playing; we can return
-    if (!currentUUID) return;
+    if (!currVideoUUID) return;
 
     await tick();
 
-    if (!videoEl || !current) return;
+    if (!videoEl || !currVideo) return;
 
-    videoEl.currentTime = $time - current.offset + current.start;
+    videoEl.currentTime = $time - currVideo.offset + currVideo.start;
   };
 
   onMount(() => requestAnimationFrame(frame));
@@ -191,7 +194,7 @@
 
         // TODO: remove this event handler in the future, this blocks multiple
         // clips from being played at once.
-        if ($selected === currentUUID) {
+        if ($selected === currVideoUUID) {
           matrix = e.detail;
         }
       }}
@@ -209,12 +212,12 @@
     style:width="{playerRes[0]}px"
     style:height="{playerRes[1]}px"
   >
-    {#if current && currentSrc}
+    {#if currVideo && currVideoSrc}
       <video
-        src={currentSrc}
+        src={currVideoSrc}
         class="media"
         bind:this={videoEl}
-        title={current.uuid}
+        title={currVideo.uuid}
         style:transform="matrix({matrix
           .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
           .join(",")})"
