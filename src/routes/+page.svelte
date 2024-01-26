@@ -172,8 +172,6 @@
       resolved = [...resolved, media];
     }
   };
-
-  $: console.log(currVideo);
 </script>
 
 <Region
