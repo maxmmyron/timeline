@@ -113,8 +113,6 @@
       })
       .filter((c) => c.distance < 0.05 + (0.2 - 0.01 * ($scaleFactor / 25)));
 
-    console.log($scaleFactor);
-
     if (!clips.length) return eagerOffset;
 
     // reaching here means there is at least one clip within 0.1s threshold, so

@@ -17,53 +17,51 @@
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
-  import { frame, getCurrentVideo, getCurrentAudio } from "$lib/utils";
+  import { frame, getCurrentClips } from "$lib/utils";
 
   /**
    * Media that has been uploaded and fully resolved
    */
   let resolved: App.Media[] = [];
 
-  /**
-   * The current playing video
-   */
-  let videoEl: HTMLVideoElement | null = null;
+  let videoRefs: Record<string, HTMLVideoElement> = {};
   let audioRefs: Record<string, HTMLAudioElement> = {};
 
-  // get the UUID of the current clip (instead of clip itself, to prevent
-  // reactivity issues)
-  $: currVideoUUID = getCurrentVideo($videoClips, $time);
-
   // get the UUIDs of the current audio clips (we return this as a comma-sep
-  // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS!!!!!!
-  $: _currAudioUUIDs = getCurrentAudio($audioClips, $time);
-  $: currAudioUUIDs = _currAudioUUIDs ? _currAudioUUIDs.split(",") : null;
+  // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS
+  $: _videoUUIDs = getCurrentClips($videoClips, $time);
+  $: videoUUIDs = _videoUUIDs ? _videoUUIDs.split(",") : null;
 
-  $: currVideo = $videoClips.find((c) => c.uuid === currVideoUUID) ?? null;
-  $: currVideoSrc = currVideo?.media.src ?? null;
+  $: _audioUUIDs = getCurrentClips($audioClips, $time);
+  $: audioUUIDs = _audioUUIDs ? _audioUUIDs.split(",") : null;
 
-  $: currAudio = $audioClips.filter(
-    (c) => currAudioUUIDs?.includes(c.uuid) ?? false
+  $: currVideo = $videoClips.filter(
+    (v) => videoUUIDs?.includes(v.uuid) ?? false
   );
 
-  $: matrix = currVideo?.matrix ?? ([1, 0, 0, 1, 0, 0] as App.Matrix);
+  $: currAudio = $audioClips.filter(
+    (c) => audioUUIDs?.includes(c.uuid) ?? false
+  );
 
-  $: if ($paused === true && videoEl) videoEl.pause();
-  $: if ($paused === true && currAudioUUIDs) {
-    for (const uuid of currAudioUUIDs) audioRefs[uuid]?.pause();
+  // Pause video/audio if able to
+  $: if ($paused === true) {
+    if (videoUUIDs) for (const uuid of videoUUIDs) videoRefs[uuid]?.pause();
+    if (audioUUIDs) for (const uuid of audioUUIDs) audioRefs[uuid]?.pause();
   }
 
-  $: if ($paused === false && videoEl) videoEl.play();
-  $: if ($paused === false && currAudioUUIDs) {
-    for (const uuid of currAudioUUIDs) audioRefs[uuid]?.play();
+  // Play video/audio if able to when player unpauses
+  $: if ($paused === false) {
+    if (videoUUIDs) for (const uuid of videoUUIDs) videoRefs[uuid]?.play();
+    if (audioUUIDs) for (const uuid of audioUUIDs) audioRefs[uuid]?.play();
   }
 
-  // when currentVideo changes, update
-  $: currVideo, $time, updateVideo();
-  $: currAudio, $time, updateAudio();
-  // reset video time when video changes
-  $: currVideoUUID, resetVideoTime();
-  $: currAudioUUIDs, resetAudioTime();
+  // update video/audio playback when video/audio/time changes
+  $: $time, updatePlayback("video", currVideo);
+  $: $time, updatePlayback("audio", currAudio);
+
+  // reset video/audio time when currently playing UUIDs change
+  $: resetPlayback("video", videoUUIDs);
+  $: resetPlayback("audio", audioUUIDs);
 
   let containerHeight: number = 1;
   let containerWidth: number = 1;
@@ -103,33 +101,26 @@
   // update scaling factor of player, which is used to scale the video element
   $: $playerScale = playerRes[0] / $safeRes[0];
 
-  const updateVideo = async () => {
+  /**
+   * Iterates through the UUIDs of the specified type, and updates the playback
+   * status accordingly as new clips enter the current time.
+   *
+   * @param type
+   * @param clips This is included as a parameter to leverage reactive labeling
+   */
+  const updatePlayback = async (type: "video" | "audio", clips: App.Clip[]) => {
     await tick();
 
-    // if there's no video to play or no current clip, we can return early.
-    if (!videoEl || !currVideo) return;
-
-    if ($paused) {
-      videoEl.currentTime = $time - currVideo.offset + currVideo.start;
-    }
-
-    if (!$paused && videoEl.paused) {
-      videoEl.play();
-    }
-  };
-
-  const updateAudio = async () => {
-    await tick();
+    const uuids = type === "video" ? videoUUIDs : audioUUIDs;
+    const refs = type === "video" ? videoRefs : audioRefs;
 
     // if there's no audio to play or no current clip, we can return early.
-    if (!currAudioUUIDs) return;
+    if (!uuids) return;
 
-    console.log("we iterating");
-
-    for (const uuid of currAudioUUIDs) {
+    for (const uuid of uuids) {
       // get the corresponding audio element and clip
-      const el = audioRefs[uuid];
-      const clip = currAudio.find((c) => c.uuid === uuid);
+      const el = refs[uuid];
+      const clip = clips.find((c) => c.uuid === uuid);
 
       // if there's no audio element or corresponding clip, we can break
       if (!el || !clip) continue;
@@ -139,48 +130,33 @@
       }
 
       if (!$paused && el.paused) {
-        console.log("we playing");
         el.play();
       }
     }
   };
 
   /**
-   * Runs when the current video UUID to play changes, or when the scrubber is
-   * moved and we are playing a video. Used to reset the currentTime property to
-   * correctly account for the current offset.
+   * Resets the playback of all current clips. This is run when the scrubber is
+   * moved, or when the current video/audio UUIDs change.
+   *
+   * @param type
+   * @param uuids This is included as a parameter to leverage reactive labeling
    */
-  const resetVideoTime = async () => {
-    // if there's no UUID, there's no video playing; we can return
-    if (!currVideoUUID) return;
-
+  const resetPlayback = async (
+    type: "video" | "audio",
+    uuids: string[] | null
+  ) => {
     await tick();
 
-    if (!videoEl || !currVideo) return;
+    const refs = type === "video" ? videoRefs : audioRefs;
+    const currClips = type === "video" ? currVideo : currAudio;
 
-    videoEl.currentTime = $time - currVideo.offset + currVideo.start;
-  };
+    if (!uuids) return;
 
-  /**
-   * Runs when any current audio UUIDs to play changes, or when the scrubber is
-   * moved and we are playing audio. Used to reset the currentTime property of
-   * all current audio clips to correctly account for the current offset.
-   */
-  const resetAudioTime = async () => {
-    await tick();
+    for (const uuid of uuids) {
+      const el = refs[uuid];
+      const clip = currClips.find((c) => c.uuid === uuid);
 
-    // if there are no audio UUIDs, we can break
-    if (!currAudioUUIDs) return;
-
-    console.log("we iterating reset");
-
-    for (const uuid of currAudioUUIDs) {
-      // get the corresponding audio element and clip
-      const el = audioRefs[uuid];
-      const clip = currAudio.find((c) => c.uuid === uuid);
-
-      // if there's no audio element or corresponding clip, we can break
-      // TODO: ensure this never happens and remove in future.
       if (!el || !clip) continue;
 
       el.currentTime = $time - clip.offset + clip.start;
@@ -196,6 +172,8 @@
       resolved = [...resolved, media];
     }
   };
+
+  $: console.log(currVideo);
 </script>
 
 <Region
@@ -256,18 +234,7 @@
     {/each}
   </Region>
   {#if $selected}
-    <Inspector
-      on:matrixChange={(e) => {
-        // when a clip's matrix changes, compare the UUID of the clip to the
-        // current UUID. if they match, update the matrix.
-
-        // TODO: remove this event handler in the future, this blocks multiple
-        // clips from being played at once.
-        if ($selected === currVideoUUID) {
-          matrix = e.detail;
-        }
-      }}
-    />
+    <Inspector />
   {/if}
 </div>
 
@@ -277,21 +244,25 @@
   bind:clientWidth={containerWidth}
 >
   <div
-    class="relative overflow-hidden left-1/2 -translate-x-1/2 bg-black center flex justify-center items-center"
+    class="relative overflow-hidden left-1/2 -translate-x-1/2 bg-black center"
     style:width="{playerRes[0]}px"
     style:height="{playerRes[1]}px"
   >
-    {#if currVideo && currVideoSrc}
-      <video
-        src={currVideoSrc}
-        bind:this={videoEl}
-        title={currVideo.uuid}
-        style:transform="matrix({matrix
-          .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
-          .join(",")})"
-      >
-        <track kind="captions" />
-      </video>
+    {#if currVideo.length > 0}
+      {#each currVideo as clip (clip.uuid)}
+        <video
+          class="absolute top-1/2 left-1/2"
+          src={clip.media.src}
+          title={clip.uuid}
+          bind:this={videoRefs[clip.uuid]}
+          style:transform="translate(-50%, -50%) matrix({clip.matrix
+            .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
+            .join(",")})"
+          style:z-index={clip.z}
+        >
+          <track kind="captions" />
+        </video>
+      {/each}
     {/if}
   </div>
   <Region class="w-fit flex gap-2 mx-auto">
@@ -334,12 +305,12 @@
   the scrubber moves, or the current video's offset is changed (via drag) -->
 <Timeline
   on:scrubberMove={() => {
-    resetVideoTime();
-    resetAudioTime();
+    resetPlayback("video", videoUUIDs);
+    resetPlayback("audio", audioUUIDs);
   }}
   on:clipMove={() => {
-    resetVideoTime();
-    resetAudioTime();
+    resetPlayback("video", videoUUIDs);
+    resetPlayback("audio", audioUUIDs);
   }}
 />
 
