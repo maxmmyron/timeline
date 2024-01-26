@@ -1,13 +1,8 @@
 <script lang="ts">
   import { scale, videoClips, time, selected, audioClips } from "$lib/stores";
-  import { createClip, getCurrentVideo, getCurrentAudio } from "$lib/utils";
+  import { createClip, getCurrentClips } from "$lib/utils";
   import Region from "../Region.svelte";
   import Runtime from "../Runtime.svelte";
-
-  $: currVideoUUID = getCurrentVideo($videoClips, $time);
-
-  // TODO: implement slicing audio. How should this work?
-  $: currAudioUUID = getCurrentAudio($audioClips, $time);
 
   const decrease = () => {
     $scale = Math.max(0.02, $scale - 0.25);
@@ -17,9 +12,15 @@
     $scale = Math.min(5, $scale + 0.25);
   };
 
-  const sliceVideo = () => {
-    if (!currVideoUUID) return;
-    const clip = $videoClips.find((c) => c.uuid === currVideoUUID) as App.Clip;
+  const slice = (type: "video" | "audio", clips: App.Clip[]) => {
+    if (!$selected) return;
+    if ($selected[1] !== type) return;
+
+    const clip = clips.find((c) => c.uuid === $selected![0]) as App.Clip;
+
+    // if the time is outside the clip, do nothing
+    if ($time < clip.offset || $time > clip.offset + clip.media.duration)
+      return;
 
     let timeOffset = $time - clip.offset;
     let clipDuration = clip.media.duration - clip.start - clip.end;
@@ -44,9 +45,14 @@
       }
     );
 
-    $videoClips = [...$videoClips, leftClip, rightClip];
+    clips = [...clips, leftClip, rightClip];
+    const oldUUID = $selected[0];
     $selected = null;
-    $videoClips = $videoClips.filter((c) => c.uuid !== currVideoUUID);
+    clips = clips.filter((c) => c.uuid !== oldUUID);
+
+    // update stores to reflect changes
+    if (type === "video") $videoClips = clips;
+    else $audioClips = clips;
   };
 </script>
 
@@ -69,11 +75,18 @@
 <Region
   class="grid place-items-center grid-cols-3 gap-2 lg:col-start-1 lg:col-span-full lg:row-start-3 lg:row-span-1"
 >
-  <button
-    class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700 disabled:brightness-50 disabled:cursor-not-allowed disabled:shadow-none"
-    disabled={!currVideoUUID}
-    on:click={sliceVideo}>slice vid</button
-  >
+  <div class="flex gap-2">
+    <button
+      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700 disabled:brightness-50 disabled:cursor-not-allowed disabled:shadow-none"
+      disabled={!$selected || $selected[1] !== "video"}
+      on:click={() => slice("video", $videoClips)}>slice vid</button
+    >
+    <button
+      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700 disabled:brightness-50 disabled:cursor-not-allowed disabled:shadow-none"
+      disabled={!$selected || $selected[1] !== "audio"}
+      on:click={() => slice("audio", $audioClips)}>slice aud</button
+    >
+  </div>
   <label class="flex gap-1">
     <button
       class="bg-zinc-800 p-1 w-5 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
