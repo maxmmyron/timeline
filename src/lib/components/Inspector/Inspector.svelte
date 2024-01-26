@@ -10,34 +10,13 @@
   $: [selectedUUID, selectedType] = $selected as [string, "video" | "audio"];
 
   $: clipArr = selectedType === "audio" ? $audioClips : $videoClips;
-  $: clip = clipArr.find((c) => c.uuid === selectedUUID) as App.Clip;
-  $: matrix = clip.matrix;
+  $: clipIdx = clipArr.findIndex((c) => c.uuid === selectedUUID);
+  $: clip = clipArr[clipIdx];
 
   onMount(() => {
     if ($selected === null)
       throw new Error("Inspector has mounted without a selected clip.");
   });
-
-  // we use this event to forward matrix changes to the video handler, since
-  // it won't directly react to those changes itself
-  const dispatcher = createEventDispatcher<{
-    matrixChange: App.Matrix;
-  }>();
-
-  // dispatch a "matrixChange" event whenever the matrix changes
-  $: matrix, matrixChange();
-
-  /**
-   * Emits a new matrixChange event. The detail parameter of the CustomEvent
-   * interface represents the new matrix of the clip.
-   */
-  const matrixChange = () => {
-    if (!clip) return;
-    // don't emit if the selected clip is audio, because the video handler
-    // doesn't care about audio clips' matrices
-    if (selectedType === "audio") return;
-    dispatcher("matrixChange", clip.matrix);
-  };
 </script>
 
 <Region class="row-start-2">
@@ -66,7 +45,7 @@
           <input
             class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
             type="number"
-            bind:value={matrix[0]}
+            bind:value={clipArr[clipIdx].matrix[0]}
           />
         </label>
         <label class="flex items-center gap-1">
@@ -74,7 +53,7 @@
           <input
             class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
             type="number"
-            bind:value={matrix[3]}
+            bind:value={clipArr[clipIdx].matrix[3]}
           />
         </label>
       </section>
@@ -86,7 +65,7 @@
           <input
             class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
             type="number"
-            bind:value={matrix[4]}
+            bind:value={clipArr[clipIdx].matrix[4]}
           />
         </label>
         <label class="flex items-center gap-1">
@@ -94,7 +73,7 @@
           <input
             class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
             type="number"
-            bind:value={matrix[5]}
+            bind:value={clipArr[clipIdx].matrix[5]}
           />
         </label>
       </section>
