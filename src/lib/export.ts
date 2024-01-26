@@ -81,8 +81,6 @@ export const exportVideo = async () => {
     }
   }
 
-  // return;
-
   ffmpegInstance.FS("writeFile", "base.mp4", "");
   ffmpegInstance.FS("writeFile", "export.mp4", "");
 
