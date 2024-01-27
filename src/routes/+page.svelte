@@ -203,9 +203,11 @@
   </button>
 </Region>
 
-<div class="lg:row-start-2 lg:col-start-1 grid grid-cols-1 grid-rows-2 gap-2">
+<div
+  class="relative lg:row-start-2 lg:col-start-1 grid grid-cols-1 grid-rows-2 gap-2 overflow-scroll"
+>
   <Region
-    class="flex-grow flex flex-col gap-1 overflow-scroll row-start-1 {$selected
+    class="flex-grow flex flex-col gap-1 row-start-1 {$selected
       ? ''
       : 'row-span-full'}"
   >
@@ -227,12 +229,16 @@
     {#if resolved.length === 0}
       <p style:color="rgba(0 0 0 / 0.75)">No media uploaded</p>
     {/if}
-    {#each resolved as file}
-      <ResolvedMedia media={file} />
-    {/each}
+    <div class="flex-grow flex flex-col gap-1 overflow-scroll">
+      {#each resolved as file}
+        <ResolvedMedia media={file} />
+      {/each}
+    </div>
   </Region>
   {#if $selected}
-    <Inspector />
+    {#key $selected}
+      <Inspector uuid={$selected[0]} type={$selected[1]} />
+    {/key}
   {/if}
 </div>
 
@@ -257,6 +263,7 @@
             .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
             .join(",")})"
           style:z-index={clip.z}
+          volume={clip.volume}
         >
           <track kind="captions" />
         </video>
@@ -319,6 +326,7 @@
       src={clip.media.src}
       title={clip.uuid}
       bind:this={audioRefs[clip.uuid]}
+      volume={clip.volume}
     />
   {/each}
 {/if}
