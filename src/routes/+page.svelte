@@ -263,7 +263,7 @@
             .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
             .join(",")})"
           style:z-index={clip.z}
-          volume={clip.volume}
+          bind:volume={clip.volume}
         >
           <track kind="captions" />
         </video>
@@ -326,7 +326,7 @@
       src={clip.media.src}
       title={clip.uuid}
       bind:this={audioRefs[clip.uuid]}
-      volume={clip.volume}
+      bind:volume={clip.volume}
     />
   {/each}
 {/if}
