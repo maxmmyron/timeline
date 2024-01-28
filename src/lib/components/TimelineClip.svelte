@@ -19,10 +19,16 @@
   $: isAudio = clip.media.type === "audio";
 
   $: selectedUUID = $selected ? $selected[0] : null;
-  $: selectedType = $selected ? $selected[1] : null;
 
   let canMoveClip = false;
   let resizeMode: "left" | "right" | null = null;
+
+  /**
+   * The last offset of the clip. We use this to diff against the current clip
+   * offset to prevent reactivity from unnecessarily triggering the clipMove
+   * event.
+   */
+  let lastOffset = 0;
 
   let clipEl: HTMLButtonElement;
 
@@ -231,6 +237,14 @@
    */
   $: clip.offset,
     (() => {
+      /**
+       * FIXME: we need to diff against a non-reactive "lastOffset" variable
+       * because the clip object reacts to other changes around the application,
+       * and svelte doesn't have perfect fine-grained reactivity yet. this seems
+       * fixable with svelte 5 runes.
+       */
+      if (clip.offset === lastOffset) return;
+      lastOffset = clip.offset;
       dispatcher("clipMove", {
         uuid: clip.uuid,
       });
