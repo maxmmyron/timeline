@@ -88,4 +88,5 @@ export const createClip = (resolved: App.Media, opts?: Partial<App.Clip>): App.C
   uuid: uuidv4(),
   z: get(videoClips).reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1,
   matrix: opts?.matrix ?? [1, 0, 0, 1, 0, 0],
+  volume: 1,
 });
