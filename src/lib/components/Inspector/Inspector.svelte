@@ -12,18 +12,17 @@
   let matrix = clip.matrix;
   let volume = clip.volume;
 
-  $: matrix, updateClip();
-  $: volume, updateClip();
+  $: updateProp("matrix", matrix);
+  $: updateProp("volume", volume);
 
-  const updateClip = () => {
-    clip = { ...clip, matrix, volume };
-
+  const updateProp = <T extends keyof typeof clip>(
+    prop: T,
+    val: (typeof clip)[T]
+  ) => {
     if (type === "video") {
-      $videoClips[clipIdx] = clip;
-      $videoClips = $videoClips;
+      $videoClips[clipIdx][prop] = val;
     } else {
-      $audioClips[clipIdx] = clip;
-      $audioClips = $audioClips;
+      $audioClips[clipIdx][prop] = val;
     }
   };
 </script>
@@ -43,14 +42,7 @@
     >
       <header class="flex justify-between">
         <h2 class="text-sm font-mono">Transforms</h2>
-        <button
-          on:click={() => {
-            matrix = [1, 0, 0, 1, 0, 0];
-            updateClip();
-          }}
-        >
-          reset
-        </button>
+        <button on:click={() => (matrix = [1, 0, 0, 1, 0, 0])}> reset </button>
       </header>
       <section class="space-y-2">
         <p>Scale</p>
@@ -60,7 +52,6 @@
             class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
             type="number"
             bind:value={matrix[0]}
-            on:change={updateClip}
           />
         </label>
         <label class="flex items-center gap-1">
@@ -69,7 +60,6 @@
             class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
             type="number"
             bind:value={matrix[3]}
-            on:change={updateClip}
           />
         </label>
       </section>
@@ -82,7 +72,6 @@
             class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
             type="number"
             bind:value={matrix[4]}
-            on:change={updateClip}
           />
         </label>
         <label class="flex items-center gap-1">
@@ -91,7 +80,6 @@
             class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
             type="number"
             bind:value={matrix[5]}
-            on:change={updateClip}
           />
         </label>
       </section>
@@ -102,12 +90,7 @@
   >
     <header class="flex justify-between">
       <h2 class="text-sm font-mono">Audio</h2>
-      <button
-        on:click={() => {
-          volume = 1;
-          updateClip();
-        }}>reset</button
-      >
+      <button on:click={() => (volume = 1)}>reset</button>
     </header>
 
     <section class="space-y-2">
@@ -120,7 +103,6 @@
           max="1"
           step="0.01"
           bind:value={volume}
-          on:change={updateClip}
         />
         <output><p>{volume}</p></output>
       </label>
