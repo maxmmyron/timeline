@@ -11,6 +11,8 @@
     selected,
     paused,
     audioClips,
+    exportStatus,
+    exportPercentage,
   } from "$lib/stores";
   import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
@@ -195,12 +197,27 @@
       step="2"
     />
   </label>
-  <button
-    class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
-    on:click={exportVideo}
-  >
-    <p>Export</p>
-  </button>
+  <div class="flex items-center gap-2">
+    {#if $exportStatus !== "export" && $exportStatus !== "setup"}
+      <div class="h-1 w-24 rounded-full"></div>
+    {:else if $exportStatus === "setup"}
+      <div class="h-1 w-24 rounded-full bg-zinc-800 animate-pulse"></div>
+    {:else}
+      <div class="h-1 w-24 rounded-full bg-zinc-800">
+        <div
+          class="h-full bg-blue-400 rounded-full transition-all"
+          style:width="{$exportPercentage * 100}%"
+        ></div>
+      </div>
+    {/if}
+    <button
+      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex flex-col items-center justify-center border border-zinc-700 disabled:brightness-50 disabled:cursor-not-allowed disabled:shadow-none"
+      on:click={exportVideo}
+      disabled={$exportStatus !== "idle" && $exportStatus !== "done"}
+    >
+      <p>Export</p>
+    </button>
+  </div>
 </Region>
 
 <div
