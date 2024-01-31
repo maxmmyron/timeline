@@ -177,6 +177,13 @@
       uploaded = [...uploaded, resolveMedia(file)];
     }
   };
+
+  const fileUpload = async (e: DragEvent) => {
+    if (!e.dataTransfer) return;
+    for (const file of e.dataTransfer.files) {
+      uploaded = [...uploaded, resolveMedia(file)];
+    }
+  };
 </script>
 
 <Region
@@ -230,6 +237,7 @@
     class="flex-grow flex flex-col gap-1 row-start-1 {$selected
       ? ''
       : 'row-span-full'}"
+    on:drop={(e) => fileUpload(e)}
   >
     <label>
       <p
