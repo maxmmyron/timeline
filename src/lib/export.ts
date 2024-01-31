@@ -1,8 +1,11 @@
 import { get } from "svelte/store";
-import { ffmpeg, safeRes, videoClips, audioClips } from "./stores";
+import { ffmpeg, safeRes, videoClips, audioClips, exportStatus, exportPercentage } from "./stores";
 import { fetchFile } from "@ffmpeg/ffmpeg";
 
 export const exportVideo = async () => {
+  exportStatus.set("setup");
+  exportPercentage.set(0);
+
   const ffmpegInstance =  get(ffmpeg);
   let vClips = get(videoClips);
 
@@ -15,6 +18,7 @@ export const exportVideo = async () => {
   let clips = [...vClips, ...get(audioClips)];
 
   if (!ffmpegInstance.isLoaded()) {
+    exportStatus.set("error");
     throw new Error("ffmpeg.wasm did not load on editor startup. Please refresh the page.");
   }
 
@@ -86,8 +90,8 @@ export const exportVideo = async () => {
 
   const duration = Math.max(...clips.map((clip) => clip.offset + (clip.media.duration - clip.end - clip.start)));
   if(duration < 0) {
-    console.warn("duration is negative", duration);
-    return;
+    exportStatus.set("error");
+    throw new Error("Export duration is negative.");
   }
 
   // create black video with empty audio track for duration of video
@@ -113,7 +117,7 @@ export const exportVideo = async () => {
      * seems like adelay doesn't work with decimal second notation (i.e "3.54s")
      * We use R|L to specify stereo channels.
      */
-    aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d}[${i}a];`
+    aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d},volume=${clip.volume}[${i}a];`
 
     // if the clip is audio, we don't need to do any video processing
     if (clip.media.type === "audio") continue;
@@ -188,12 +192,23 @@ export const exportVideo = async () => {
   // -----------------------
   // RUN FFMPEG
 
-  await ffmpegInstance.run("-i", "base.mp4", ...[...loadedMedia.map((src) =>  ["-i", src])].flat(), "-filter_complex", `${vFilter}${aFilter}`, "-map", "[vout]", "-map", "[aout]", "-vcodec", "libx264", "-crf", "28", "export.mp4");
+  try {
+    ffmpegInstance.setProgress(({ratio}) => exportPercentage.set(ratio));
+    exportStatus.set("export");
+    await ffmpegInstance.run("-i", "base.mp4", ...[...loadedMedia.map((src) =>  ["-i", src])].flat(), "-filter_complex", `${vFilter}${aFilter}`, "-map", "[vout]", "-map", "[aout]", "-vcodec", "libx264", "-crf", "28", "export.mp4");
+  } catch(e) {
+    exportStatus.set("error");
+    throw e;
+  }
+
+  ffmpegInstance.setProgress(({ratio}) => {});
 
   // -----------------------
   // EXPORT VIDEO FILE
 
   const exportData = ffmpegInstance.FS("readFile", "export.mp4");
+
+  exportStatus.set("done");
 
   const link = document.createElement("a");
   link.download = "export.mp4";
