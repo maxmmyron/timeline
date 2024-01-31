@@ -117,7 +117,7 @@ export const exportVideo = async () => {
      * seems like adelay doesn't work with decimal second notation (i.e "3.54s")
      * We use R|L to specify stereo channels.
      */
-    aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d}[${i}a];`
+    aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d},volume=${clip.volume}[${i}a];`
 
     // if the clip is audio, we don't need to do any video processing
     if (clip.media.type === "audio") continue;
