@@ -7,7 +7,11 @@ export const resolveMedia = (file: File): {uuid: string, title: string, media: P
     uuid,
     title: file.name,
     media: new Promise(async (resolve, reject) => {
-      const type = file.type.split('/')[0] as 'video' | 'audio';
+      let fileType = file.type.split('/')[0];
+      if (fileType !== "video" && fileType !== "audio") {
+        reject(new Error("Unsupported file type."));
+      }
+      const type = fileType as "video" | "audio";
 
       const src = await assertMIME(file, type);
       const duration = await resolveDuration(src, type);
@@ -15,8 +19,6 @@ export const resolveMedia = (file: File): {uuid: string, title: string, media: P
       resolve({ uuid, src, duration, title: file.name, type });
     }),
   }
-
-  // return { uuid: uuidv4(), src, duration, title: file.name, type };
 }
 
 const assertMIME = async (file: File, type: 'video' | 'audio') => {
