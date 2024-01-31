@@ -14,17 +14,21 @@
     exportStatus,
     exportPercentage,
   } from "$lib/stores";
-  import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
   import { frame, getCurrentClips } from "$lib/utils";
+  import Media from "$lib/components/Media.svelte";
 
   /**
    * Media that has been uploaded and fully resolved
    */
-  let resolved: App.Media[] = [];
+  let uploaded: Array<{
+    uuid: string;
+    title: string;
+    media: Promise<App.Media>;
+  }> = [];
 
   let videoRefs: Record<string, HTMLVideoElement> = {};
   let audioRefs: Record<string, HTMLAudioElement> = {};
@@ -170,8 +174,7 @@
   const upload = async (e: Event & { currentTarget: HTMLInputElement }) => {
     if (!e.currentTarget.files) return;
     for (const file of e.currentTarget.files) {
-      const media = await resolveMedia(file);
-      resolved = [...resolved, media];
+      uploaded = [...uploaded, resolveMedia(file)];
     }
   };
 </script>
@@ -243,12 +246,19 @@
       />
     </label>
 
-    {#if resolved.length === 0}
+    {#if uploaded.length === 0}
       <p style:color="rgba(0 0 0 / 0.75)">No media uploaded</p>
     {/if}
     <div class="flex-grow flex flex-col gap-1 overflow-scroll">
-      {#each resolved as file}
-        <ResolvedMedia media={file} />
+      {#each uploaded as { uuid, title, media } (uuid)}
+        <Media
+          {uuid}
+          {title}
+          {media}
+          removeMedia={() => {
+            uploaded = uploaded.filter((m) => m.uuid !== uuid);
+          }}
+        />
       {/each}
     </div>
   </Region>
