@@ -252,7 +252,6 @@
     <div class="flex-grow flex flex-col gap-1 overflow-scroll">
       {#each uploaded as { uuid, title, media } (uuid)}
         <Media
-          {uuid}
           {title}
           {media}
           removeMedia={() => {
