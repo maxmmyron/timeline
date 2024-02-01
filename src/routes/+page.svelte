@@ -30,7 +30,7 @@
     media: Promise<App.Media>;
   }> = [];
 
-  let uploadedHashes: number[] = [];
+  // let uploadedHashes: number[] = [];
 
   let videoRefs: Record<string, HTMLVideoElement> = {};
   let audioRefs: Record<string, HTMLAudioElement> = {};
@@ -175,11 +175,10 @@
 
   const upload = async (fileList: FileList) => {
     for (const file of fileList) {
-      const hash = cyrb53((await file.arrayBuffer).toString());
-      if (uploadedHashes.includes(hash)) continue;
-      else uploadedHashes = [...uploadedHashes, hash];
-
-      console.log("Uploading", file.name, "with hash", hash);
+      // const hash = cyrb53((await file.arrayBuffer).toString());
+      // console.log("Uploading", file.name, "with hash", hash);
+      // if (uploadedHashes.includes(hash)) continue;
+      // else uploadedHashes = [...uploadedHashes, hash];
 
       uploaded = [...uploaded, resolveMedia(file)];
     }
@@ -287,8 +286,8 @@
     style:width="{playerRes[0]}px"
     style:height="{playerRes[1]}px"
   >
-    {#if currVideo.length > 0}
-      {#each currVideo as clip (clip.uuid)}
+    {#if $videoClips.length > 0}
+      {#each $videoClips as clip (clip.uuid)}
         <video
           class="absolute top-1/2 left-1/2"
           src={clip.media.src}
@@ -298,6 +297,7 @@
             .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
             .join(",")})"
           style:z-index={clip.z}
+          class:hidden={currVideo.findIndex((c) => c.uuid === clip.uuid) === -1}
           bind:volume={clip.volume}
         >
           <track kind="captions" />
