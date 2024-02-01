@@ -18,7 +18,7 @@
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
-  import { frame, getCurrentClips } from "$lib/utils";
+  import { cyrb53, frame, getCurrentClips } from "$lib/utils";
   import Media from "$lib/components/Media.svelte";
 
   /**
@@ -29,6 +29,8 @@
     title: string;
     media: Promise<App.Media>;
   }> = [];
+
+  let uploadedHashes: number[] = [];
 
   let videoRefs: Record<string, HTMLVideoElement> = {};
   let audioRefs: Record<string, HTMLAudioElement> = {};
@@ -171,16 +173,14 @@
 
   onMount(() => requestAnimationFrame(frame));
 
-  const upload = async (e: Event & { currentTarget: HTMLInputElement }) => {
-    if (!e.currentTarget.files) return;
-    for (const file of e.currentTarget.files) {
-      uploaded = [...uploaded, resolveMedia(file)];
-    }
-  };
+  const upload = async (fileList: FileList) => {
+    for (const file of fileList) {
+      const hash = cyrb53((await file.arrayBuffer).toString());
+      if (uploadedHashes.includes(hash)) continue;
+      else uploadedHashes = [...uploadedHashes, hash];
 
-  const fileUpload = async (e: DragEvent) => {
-    if (!e.dataTransfer) return;
-    for (const file of e.dataTransfer.files) {
+      console.log("Uploading", file.name, "with hash", hash);
+
       uploaded = [...uploaded, resolveMedia(file)];
     }
   };
@@ -237,7 +237,7 @@
     class="flex-grow flex flex-col gap-1 row-start-1 {$selected
       ? ''
       : 'row-span-full'}"
-    on:drop={(e) => fileUpload(e)}
+    on:drop={(e) => e.dataTransfer?.files && upload(e.dataTransfer.files)}
   >
     <label>
       <p
@@ -250,7 +250,8 @@
         type="file"
         accept="video/mp4,audio/mp3"
         multiple
-        on:change={upload}
+        on:change={(e) =>
+          e.currentTarget.files && upload(e.currentTarget.files)}
       />
     </label>
 
