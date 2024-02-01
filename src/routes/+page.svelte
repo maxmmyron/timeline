@@ -30,7 +30,7 @@
     media: Promise<App.Media>;
   }> = [];
 
-  let uploadedHashes: number[] = [];
+  // let uploadedHashes: number[] = [];
 
   let videoRefs: Record<string, HTMLVideoElement> = {};
   let audioRefs: Record<string, HTMLAudioElement> = {};
@@ -53,8 +53,8 @@
 
   // Pause video/audio if able to
   $: if ($paused === true) {
-    if (videoUUIDs) for (const uuid of videoUUIDs) videoRefs[uuid]?.pause();
-    if (audioUUIDs) for (const uuid of audioUUIDs) audioRefs[uuid]?.pause();
+    for (const { uuid } of $videoClips) videoRefs[uuid]?.pause();
+    for (const { uuid } of $audioClips) audioRefs[uuid]?.pause();
   }
 
   // Play video/audio if able to when player unpauses
@@ -116,25 +116,34 @@
    * @param type
    * @param clips This is included as a parameter to leverage reactive labeling
    */
-  const updatePlayback = async (type: "video" | "audio", clips: App.Clip[]) => {
+  const updatePlayback = async (type: "video" | "audio", curr: App.Clip[]) => {
     await tick();
 
-    const uuids = type === "video" ? videoUUIDs : audioUUIDs;
+    const clips = type === "video" ? $videoClips : $audioClips;
     const refs = type === "video" ? videoRefs : audioRefs;
 
     // if there's no audio to play or no current clip, we can return early.
-    if (!uuids) return;
+    if (!clips) return;
 
-    for (const uuid of uuids) {
-      // get the corresponding audio element and clip
+    for (const { uuid } of clips) {
       const el = refs[uuid];
-      const clip = clips.find((c) => c.uuid === uuid);
 
-      // if there's no audio element or corresponding clip, we can break
-      if (!el || !clip) continue;
+      const clip = curr.find((c) => c.uuid === uuid);
+
+      // no clip = clip isn't currently playing
+      if (!clip) {
+        if (!el.paused) el.pause();
+        continue;
+      }
 
       if ($paused) {
-        el.currentTime = $time - clip.offset + clip.start;
+        el.currentTime = Math.max(
+          0,
+          Math.min(
+            clip.media.duration - clip.end,
+            $time - clip.offset + clip.start
+          )
+        );
       }
 
       if (!$paused && el.paused) {
@@ -167,7 +176,13 @@
 
       if (!el || !clip) continue;
 
-      el.currentTime = $time - clip.offset + clip.start;
+      el.currentTime = Math.max(
+        0,
+        Math.min(
+          clip.media.duration - clip.end,
+          $time - clip.offset + clip.start
+        )
+      );
     }
   };
 
@@ -175,11 +190,10 @@
 
   const upload = async (fileList: FileList) => {
     for (const file of fileList) {
-      const hash = cyrb53((await file.arrayBuffer).toString());
-      if (uploadedHashes.includes(hash)) continue;
-      else uploadedHashes = [...uploadedHashes, hash];
-
-      console.log("Uploading", file.name, "with hash", hash);
+      // const hash = cyrb53((await file.arrayBuffer).toString());
+      // console.log("Uploading", file.name, "with hash", hash);
+      // if (uploadedHashes.includes(hash)) continue;
+      // else uploadedHashes = [...uploadedHashes, hash];
 
       uploaded = [...uploaded, resolveMedia(file)];
     }
@@ -287,8 +301,8 @@
     style:width="{playerRes[0]}px"
     style:height="{playerRes[1]}px"
   >
-    {#if currVideo.length > 0}
-      {#each currVideo as clip (clip.uuid)}
+    {#if $videoClips.length > 0}
+      {#each $videoClips as clip (clip.uuid)}
         <video
           class="absolute top-1/2 left-1/2"
           src={clip.media.src}
@@ -298,6 +312,7 @@
             .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
             .join(",")})"
           style:z-index={clip.z}
+          class:hidden={currVideo.findIndex((c) => c.uuid === clip.uuid) === -1}
           bind:volume={clip.volume}
         >
           <track kind="captions" />
