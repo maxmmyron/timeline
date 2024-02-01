@@ -14,17 +14,23 @@
     exportStatus,
     exportPercentage,
   } from "$lib/stores";
-  import ResolvedMedia from "$lib/components/ResolvedMedia.svelte";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
-  import { frame, getCurrentClips } from "$lib/utils";
+  import { cyrb53, frame, getCurrentClips } from "$lib/utils";
+  import Media from "$lib/components/Media.svelte";
 
   /**
    * Media that has been uploaded and fully resolved
    */
-  let resolved: App.Media[] = [];
+  let uploaded: Array<{
+    uuid: string;
+    title: string;
+    media: Promise<App.Media>;
+  }> = [];
+
+  let uploadedHashes: number[] = [];
 
   let videoRefs: Record<string, HTMLVideoElement> = {};
   let audioRefs: Record<string, HTMLAudioElement> = {};
@@ -167,11 +173,15 @@
 
   onMount(() => requestAnimationFrame(frame));
 
-  const upload = async (e: Event & { currentTarget: HTMLInputElement }) => {
-    if (!e.currentTarget.files) return;
-    for (const file of e.currentTarget.files) {
-      const media = await resolveMedia(file);
-      resolved = [...resolved, media];
+  const upload = async (fileList: FileList) => {
+    for (const file of fileList) {
+      const hash = cyrb53((await file.arrayBuffer).toString());
+      if (uploadedHashes.includes(hash)) continue;
+      else uploadedHashes = [...uploadedHashes, hash];
+
+      console.log("Uploading", file.name, "with hash", hash);
+
+      uploaded = [...uploaded, resolveMedia(file)];
     }
   };
 </script>
@@ -227,6 +237,7 @@
     class="flex-grow flex flex-col gap-1 row-start-1 {$selected
       ? ''
       : 'row-span-full'}"
+    on:drop={(e) => e.dataTransfer?.files && upload(e.dataTransfer.files)}
   >
     <label>
       <p
@@ -239,16 +250,23 @@
         type="file"
         accept="video/mp4,audio/mp3"
         multiple
-        on:change={upload}
+        on:change={(e) =>
+          e.currentTarget.files && upload(e.currentTarget.files)}
       />
     </label>
 
-    {#if resolved.length === 0}
+    {#if uploaded.length === 0}
       <p style:color="rgba(0 0 0 / 0.75)">No media uploaded</p>
     {/if}
     <div class="flex-grow flex flex-col gap-1 overflow-scroll">
-      {#each resolved as file}
-        <ResolvedMedia media={file} />
+      {#each uploaded as { uuid, title, media } (uuid)}
+        <Media
+          {title}
+          {media}
+          removeMedia={() => {
+            uploaded = uploaded.filter((m) => m.uuid !== uuid);
+          }}
+        />
       {/each}
     </div>
   </Region>

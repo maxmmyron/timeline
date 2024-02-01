@@ -1,11 +1,24 @@
 import {v4 as uuidv4} from "uuid";
 
-export const resolveMedia = async (file: File): Promise<App.Media> => {
-  const type = file.type.split('/')[0] as 'video' | 'audio';
-  const src = await assertMIME(file, type);
-  const duration = await resolveDuration(src, type);
+export const resolveMedia = (file: File): {uuid: string, title: string, media: Promise<App.Media>} => {
+  const uuid = uuidv4();
 
-  return { uuid: uuidv4(), src, duration, title: file.name, type };
+  return {
+    uuid,
+    title: file.name,
+    media: new Promise(async (resolve, reject) => {
+      let fileType = file.type.split('/')[0];
+      if (fileType !== "video" && fileType !== "audio") {
+        reject(new Error("Unsupported file type."));
+      }
+      const type = fileType as "video" | "audio";
+
+      const src = await assertMIME(file, type);
+      const duration = await resolveDuration(src, type);
+
+      resolve({ uuid, src, duration, title: file.name, type });
+    }),
+  }
 }
 
 const assertMIME = async (file: File, type: 'video' | 'audio') => {
