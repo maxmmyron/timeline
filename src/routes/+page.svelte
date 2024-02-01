@@ -53,8 +53,8 @@
 
   // Pause video/audio if able to
   $: if ($paused === true) {
-    if (videoUUIDs) for (const uuid of videoUUIDs) videoRefs[uuid]?.pause();
-    if (audioUUIDs) for (const uuid of audioUUIDs) audioRefs[uuid]?.pause();
+    for (const { uuid } of $videoClips) videoRefs[uuid]?.pause();
+    for (const { uuid } of $audioClips) audioRefs[uuid]?.pause();
   }
 
   // Play video/audio if able to when player unpauses
@@ -116,25 +116,34 @@
    * @param type
    * @param clips This is included as a parameter to leverage reactive labeling
    */
-  const updatePlayback = async (type: "video" | "audio", clips: App.Clip[]) => {
+  const updatePlayback = async (type: "video" | "audio", curr: App.Clip[]) => {
     await tick();
 
-    const uuids = type === "video" ? videoUUIDs : audioUUIDs;
+    const clips = type === "video" ? $videoClips : $audioClips;
     const refs = type === "video" ? videoRefs : audioRefs;
 
     // if there's no audio to play or no current clip, we can return early.
-    if (!uuids) return;
+    if (!clips) return;
 
-    for (const uuid of uuids) {
-      // get the corresponding audio element and clip
+    for (const { uuid } of clips) {
       const el = refs[uuid];
-      const clip = clips.find((c) => c.uuid === uuid);
 
-      // if there's no audio element or corresponding clip, we can break
-      if (!el || !clip) continue;
+      const clip = curr.find((c) => c.uuid === uuid);
+
+      // no clip = clip isn't currently playing
+      if (!clip) {
+        if (!el.paused) el.pause();
+        continue;
+      }
 
       if ($paused) {
-        el.currentTime = $time - clip.offset + clip.start;
+        el.currentTime = Math.max(
+          0,
+          Math.min(
+            clip.media.duration - clip.end,
+            $time - clip.offset + clip.start
+          )
+        );
       }
 
       if (!$paused && el.paused) {
@@ -167,7 +176,13 @@
 
       if (!el || !clip) continue;
 
-      el.currentTime = $time - clip.offset + clip.start;
+      el.currentTime = Math.max(
+        0,
+        Math.min(
+          clip.media.duration - clip.end,
+          $time - clip.offset + clip.start
+        )
+      );
     }
   };
 
