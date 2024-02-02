@@ -47,6 +47,5 @@
         ×
       </button>
     {/await}
-    <!-- TODO: add delete button -->
   </div>
 </article>
