@@ -60,3 +60,5 @@ export const paused = writable(true);
 
 export const exportStatus: Writable<"idle" | "setup" | "export" | "done" | "error"> = writable("idle");
 export const exportPercentage = writable(0);
+
+export const aCtx = writable(new AudioContext());

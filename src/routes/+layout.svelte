@@ -1,10 +1,14 @@
 <script lang="ts">
-  import { ffmpeg } from "$lib/stores";
+  import { ffmpeg, aCtx } from "$lib/stores";
   import { onMount } from "svelte";
   import "../app.pcss";
 
   onMount(async () => {
     if (!$ffmpeg.isLoaded()) await $ffmpeg.load();
+    if (!$aCtx)
+      $aCtx = new AudioContext({
+        latencyHint: "interactive",
+      });
   });
 </script>
 
