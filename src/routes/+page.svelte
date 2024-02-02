@@ -24,11 +24,7 @@
   /**
    * Media that has been uploaded and fully resolved
    */
-  let uploaded: Array<{
-    uuid: string;
-    title: string;
-    media: Promise<App.Media>;
-  }> = [];
+  let uploaded: Array<ReturnType<typeof resolveMedia>> = [];
 
   // let uploadedHashes: number[] = [];
 
