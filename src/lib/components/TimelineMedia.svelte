@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { aCtx, vRefs, aRefs, playerScale } from "$lib/stores";
+  import { aCtx, iRefs, vRefs, aRefs, playerScale } from "$lib/stores";
   import { onMount } from "svelte";
 
   export let clip: App.Clip;
@@ -47,6 +47,19 @@
   >
     <track kind="captions" />
   </video>
+{:else if clip.media.type === "image"}
+  <img
+    class="absolute top-1/2 left-1/2"
+    src={clip.media.src}
+    title={clip.uuid}
+    alt=""
+    bind:this={$iRefs[clip.uuid]}
+    style:transform="translate(-50%, -50%) matrix({clip.matrix
+      .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
+      .join(",")})"
+    style:z-index={clip.z}
+    class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
+  />
 {:else if clip.media.type === "audio"}
   <audio
     class="hidden"
