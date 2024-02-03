@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
-  import { resolveMedia } from "$lib/loader";
   import { exportVideo } from "$lib/export";
   import {
     time,
@@ -13,27 +12,17 @@
     audioClips,
     exportStatus,
     exportPercentage,
+    vRefs,
+    aRefs,
+    aCtx,
   } from "$lib/stores";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
   import { cyrb53, frame, getCurrentClips } from "$lib/utils";
-  import Media from "$lib/components/Media.svelte";
-
-  /**
-   * Media that has been uploaded and fully resolved
-   */
-  let uploaded: Array<{
-    uuid: string;
-    title: string;
-    media: Promise<App.Media>;
-  }> = [];
-
-  // let uploadedHashes: number[] = [];
-
-  let videoRefs: Record<string, HTMLVideoElement> = {};
-  let audioRefs: Record<string, HTMLAudioElement> = {};
+  import MediaBrowser from "$lib/components/MediaBrowser.svelte";
+  import TimelineMedia from "$lib/components/TimelineMedia.svelte";
 
   // get the UUIDs of the current audio clips (we return this as a comma-sep
   // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS
@@ -52,16 +41,18 @@
   );
 
   // Pause video/audio if able to
-  $: if ($paused === true) {
-    for (const { uuid } of $videoClips) videoRefs[uuid]?.pause();
-    for (const { uuid } of $audioClips) audioRefs[uuid]?.pause();
-  }
-
-  // Play video/audio if able to when player unpauses
-  $: if ($paused === false) {
-    if (videoUUIDs) for (const uuid of videoUUIDs) videoRefs[uuid]?.play();
-    if (audioUUIDs) for (const uuid of audioUUIDs) audioRefs[uuid]?.play();
-  }
+  $: if ($paused)
+    (async () => {
+      await $aCtx!.suspend();
+      for (const { uuid } of $videoClips) $vRefs[uuid]?.pause();
+      for (const { uuid } of $audioClips) $aRefs[uuid]?.pause();
+    })();
+  $: if (!$paused)
+    (async () => {
+      await $aCtx!.resume();
+      if (videoUUIDs) for (const uuid of videoUUIDs) $vRefs[uuid]?.play();
+      if (audioUUIDs) for (const uuid of audioUUIDs) $aRefs[uuid]?.play();
+    })();
 
   // update video/audio playback when video/audio/time changes
   $: $time, updatePlayback("video", currVideo);
@@ -120,22 +111,25 @@
     await tick();
 
     const clips = type === "video" ? $videoClips : $audioClips;
-    const refs = type === "video" ? videoRefs : audioRefs;
+    const refs = type === "video" ? $vRefs : $aRefs;
 
     // if there's no audio to play or no current clip, we can return early.
     if (!clips) return;
 
     for (const { uuid } of clips) {
       const el = refs[uuid];
-
       const clip = curr.find((c) => c.uuid === uuid);
 
-      // no clip = clip isn't currently playing
+      // if there's no el, continue
+      if (!el) continue;
+
+      // if there's no clip, pause the corresponding media element and continue
       if (!clip) {
-        if (!el.paused) el.pause();
+        el.pause();
         continue;
       }
 
+      // if we're paused, we can just set the current time of the media element
       if ($paused) {
         el.currentTime = Math.max(
           0,
@@ -144,10 +138,11 @@
             $time - clip.offset + clip.start
           )
         );
-      }
-
-      if (!$paused && el.paused) {
-        el.play();
+      } else {
+        // if we're not paused, there's a media element, that media element is
+        // paused, AND the corresponding clip is in the "currently playing" array,
+        // then play the media element
+        if (el.paused) el.play();
       }
     }
   };
@@ -165,39 +160,40 @@
   ) => {
     await tick();
 
-    const refs = type === "video" ? videoRefs : audioRefs;
-    const currClips = type === "video" ? currVideo : currAudio;
+    const refs = type === "video" ? $vRefs : $aRefs;
+    const curr = type === "video" ? currVideo : currAudio;
 
     if (!uuids) return;
+    for (const uuid of uuids) resetClipPlayback(refs, curr, uuid);
+  };
 
-    for (const uuid of uuids) {
-      const el = refs[uuid];
-      const clip = currClips.find((c) => c.uuid === uuid);
+  /**
+   * Resets the playback of a clip, given its UUID. This is run for every clip
+   * when the scrubber is moved or when the current video/audio UUIDs change.
+   * This is individually run for a given when when that clip's offset changes
+   * (by way of a clipMove event).
+   *
+   * @param refs the string/refs Record to use
+   * @param curr the current clip array to use
+   * @param uuid
+   */
+  const resetClipPlayback = (
+    refs: Record<string, HTMLMediaElement>,
+    curr: App.Clip[],
+    uuid: string
+  ) => {
+    const el = refs[uuid];
+    const clip = curr.find((c) => c.uuid === uuid);
 
-      if (!el || !clip) continue;
+    if (!el || !clip) return;
 
-      el.currentTime = Math.max(
-        0,
-        Math.min(
-          clip.media.duration - clip.end,
-          $time - clip.offset + clip.start
-        )
-      );
-    }
+    el.currentTime = Math.max(
+      0,
+      Math.min(clip.media.duration - clip.end, $time - clip.offset + clip.start)
+    );
   };
 
   onMount(() => requestAnimationFrame(frame));
-
-  const upload = async (fileList: FileList) => {
-    for (const file of fileList) {
-      // const hash = cyrb53((await file.arrayBuffer).toString());
-      // console.log("Uploading", file.name, "with hash", hash);
-      // if (uploadedHashes.includes(hash)) continue;
-      // else uploadedHashes = [...uploadedHashes, hash];
-
-      uploaded = [...uploaded, resolveMedia(file)];
-    }
-  };
 </script>
 
 <Region
@@ -247,43 +243,7 @@
 <div
   class="relative lg:row-start-2 lg:col-start-1 grid grid-cols-1 grid-rows-2 gap-2 overflow-scroll"
 >
-  <Region
-    class="flex-grow flex flex-col gap-1 row-start-1 {$selected
-      ? ''
-      : 'row-span-full'}"
-    on:drop={(e) => e.dataTransfer?.files && upload(e.dataTransfer.files)}
-  >
-    <label>
-      <p
-        class="w-fit bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
-      >
-        Upload
-      </p>
-      <input
-        class="hidden"
-        type="file"
-        accept="video/mp4,audio/mp3"
-        multiple
-        on:change={(e) =>
-          e.currentTarget.files && upload(e.currentTarget.files)}
-      />
-    </label>
-
-    {#if uploaded.length === 0}
-      <p style:color="rgba(0 0 0 / 0.75)">No media uploaded</p>
-    {/if}
-    <div class="flex-grow flex flex-col gap-1 overflow-scroll">
-      {#each uploaded as { uuid, title, media } (uuid)}
-        <Media
-          {title}
-          {media}
-          removeMedia={() => {
-            uploaded = uploaded.filter((m) => m.uuid !== uuid);
-          }}
-        />
-      {/each}
-    </div>
-  </Region>
+  <MediaBrowser />
   {#if $selected}
     {#key $selected}
       <Inspector uuid={$selected[0]} type={$selected[1]} />
@@ -301,24 +261,12 @@
     style:width="{playerRes[0]}px"
     style:height="{playerRes[1]}px"
   >
-    {#if $videoClips.length > 0}
-      {#each $videoClips as clip (clip.uuid)}
-        <video
-          class="absolute top-1/2 left-1/2"
-          src={clip.media.src}
-          title={clip.uuid}
-          bind:this={videoRefs[clip.uuid]}
-          style:transform="translate(-50%, -50%) matrix({clip.matrix
-            .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
-            .join(",")})"
-          style:z-index={clip.z}
-          class:hidden={currVideo.findIndex((c) => c.uuid === clip.uuid) === -1}
-          bind:volume={clip.volume}
-        >
-          <track kind="captions" />
-        </video>
-      {/each}
-    {/if}
+    {#each $videoClips as clip (clip.uuid)}
+      <TimelineMedia {clip} curr={currVideo} />
+    {/each}
+    {#each $audioClips as clip (clip.uuid)}
+      <TimelineMedia {clip} />
+    {/each}
   </div>
   <Region class="w-fit flex gap-2 mx-auto">
     <button
@@ -363,20 +311,9 @@
     resetPlayback("video", videoUUIDs);
     resetPlayback("audio", audioUUIDs);
   }}
-  on:clipMove={() => {
-    resetPlayback("video", videoUUIDs);
-    resetPlayback("audio", audioUUIDs);
+  on:clipMove={(e) => {
+    if (e.detail.type === "video")
+      resetClipPlayback($vRefs, currVideo, e.detail.uuid);
+    else resetClipPlayback($aRefs, currAudio, e.detail.uuid);
   }}
 />
-
-{#if currAudio.length > 0}
-  {#each currAudio as clip (clip.uuid)}
-    <audio
-      class="hidden"
-      src={clip.media.src}
-      title={clip.uuid}
-      bind:this={audioRefs[clip.uuid]}
-      bind:volume={clip.volume}
-    />
-  {/each}
-{/if}

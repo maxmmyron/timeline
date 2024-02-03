@@ -1,6 +1,6 @@
 <script lang="ts">
   import Region from "../Region.svelte";
-  import TimelineClip from "../TimelineClip.svelte";
+  import Clip from "./Clip.svelte";
   import Runtime from "../Runtime.svelte";
 
   import {
@@ -97,12 +97,12 @@
   <div class="relative flex flex-col h-full gap-0.5 bg-zinc-800">
     <div class="relative flex items-center w-full h-1/2 bg-zinc-950">
       {#each $videoClips as clip}
-        <TimelineClip {clip} on:clipMove />
+        <Clip {clip} on:clipMove />
       {/each}
     </div>
     <div class="relative flex items-center w-full h-1/2 bg-zinc-950">
       {#each $audioClips as clip}
-        <TimelineClip {clip} on:clipMove />
+        <Clip {clip} on:clipMove />
       {/each}
     </div>
   </div>

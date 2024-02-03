@@ -229,6 +229,7 @@
   const dispatcher = createEventDispatcher<{
     clipMove: {
       uuid: string;
+      type: "audio" | "video";
     };
   }>();
 
@@ -247,6 +248,7 @@
       lastOffset = clip.offset;
       dispatcher("clipMove", {
         uuid: clip.uuid,
+        type: clip.media.type,
       });
     })();
 </script>
