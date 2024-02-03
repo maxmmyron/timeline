@@ -62,3 +62,6 @@ export const exportStatus: Writable<"idle" | "setup" | "export" | "done" | "erro
 export const exportPercentage = writable(0);
 
 export const aCtx: Writable<AudioContext | null> = writable(null);
+
+export const vRefs: Writable<Record<string, HTMLVideoElement>> = writable({});
+export const aRefs: Writable<Record<string, HTMLAudioElement>> = writable({});

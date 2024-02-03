@@ -41,18 +41,18 @@
   );
 
   // Pause video/audio if able to
-  $: if ($paused === true) {
-    for (const { uuid } of $videoClips) $vRefs[uuid]?.pause();
-    $aCtx?.suspend();
-    // for (const { uuid } of $audioClips) aRefs[uuid]?.pause();
-  }
-
-  // Play video/audio if able to when player unpauses
-  $: if ($paused === false) {
-    if (videoUUIDs) for (const uuid of videoUUIDs) $vRefs[uuid]?.play();
-    $aCtx?.resume();
-    // if (audioUUIDs) for (const uuid of audioUUIDs) audioRefs[uuid]?.play();
-  }
+  $: if ($paused)
+    (async () => {
+      await $aCtx!.suspend();
+      for (const { uuid } of $videoClips) $vRefs[uuid]?.pause();
+      for (const { uuid } of $audioClips) $aRefs[uuid]?.pause();
+    })();
+  $: if (!$paused)
+    (async () => {
+      await $aCtx!.resume();
+      if (videoUUIDs) for (const uuid of videoUUIDs) $vRefs[uuid]?.play();
+      if (audioUUIDs) for (const uuid of audioUUIDs) $aRefs[uuid]?.play();
+    })();
 
   // update video/audio playback when video/audio/time changes
   $: $time, updatePlayback("video", currVideo);
@@ -111,22 +111,25 @@
     await tick();
 
     const clips = type === "video" ? $videoClips : $audioClips;
-    const refs = type === "video" ? videoRefs : audioRefs;
+    const refs = type === "video" ? $vRefs : $aRefs;
 
     // if there's no audio to play or no current clip, we can return early.
     if (!clips) return;
 
     for (const { uuid } of clips) {
       const el = refs[uuid];
-
       const clip = curr.find((c) => c.uuid === uuid);
 
-      // no clip = clip isn't currently playing
+      // if there's no el, continue
+      if (!el) continue;
+
+      // if there's no clip, pause the corresponding media element and continue
       if (!clip) {
-        if (!el.paused) el.pause();
+        el.pause();
         continue;
       }
 
+      // if we're paused, we can just set the current time of the media element
       if ($paused) {
         el.currentTime = Math.max(
           0,
@@ -135,10 +138,11 @@
             $time - clip.offset + clip.start
           )
         );
-      }
-
-      if (!$paused && el.paused) {
-        el.play();
+      } else {
+        // if we're not paused, there's a media element, that media element is
+        // paused, AND the corresponding clip is in the "currently playing" array,
+        // then play the media element
+        if (el.paused) el.play();
       }
     }
   };
@@ -156,25 +160,37 @@
   ) => {
     await tick();
 
-    const refs = type === "video" ? videoRefs : audioRefs;
-    const currClips = type === "video" ? currVideo : currAudio;
+    const refs = type === "video" ? $vRefs : $aRefs;
+    const curr = type === "video" ? currVideo : currAudio;
 
     if (!uuids) return;
+    for (const uuid of uuids) resetClipPlayback(refs, curr, uuid);
+  };
 
-    for (const uuid of uuids) {
-      const el = refs[uuid];
-      const clip = currClips.find((c) => c.uuid === uuid);
+  /**
+   * Resets the playback of a clip, given its UUID. This is run for every clip
+   * when the scrubber is moved or when the current video/audio UUIDs change.
+   * This is individually run for a given when when that clip's offset changes
+   * (by way of a clipMove event).
+   *
+   * @param refs the string/refs Record to use
+   * @param curr the current clip array to use
+   * @param uuid
+   */
+  const resetClipPlayback = (
+    refs: Record<string, HTMLMediaElement>,
+    curr: App.Clip[],
+    uuid: string
+  ) => {
+    const el = refs[uuid];
+    const clip = curr.find((c) => c.uuid === uuid);
 
-      if (!el || !clip) continue;
+    if (!el || !clip) return;
 
-      el.currentTime = Math.max(
-        0,
-        Math.min(
-          clip.media.duration - clip.end,
-          $time - clip.offset + clip.start
-        )
-      );
-    }
+    el.currentTime = Math.max(
+      0,
+      Math.min(clip.media.duration - clip.end, $time - clip.offset + clip.start)
+    );
   };
 
   onMount(() => requestAnimationFrame(frame));
@@ -245,11 +261,12 @@
     style:width="{playerRes[0]}px"
     style:height="{playerRes[1]}px"
   >
-    {#if $videoClips.length > 0}
-      {#each $videoClips as clip (clip.uuid)}
-        <TimelineMedia {clip} />
-      {/each}
-    {/if}
+    {#each $videoClips as clip (clip.uuid)}
+      <TimelineMedia {clip} curr={currVideo} />
+    {/each}
+    {#each $audioClips as clip (clip.uuid)}
+      <TimelineMedia {clip} />
+    {/each}
   </div>
   <Region class="w-fit flex gap-2 mx-auto">
     <button
@@ -294,14 +311,9 @@
     resetPlayback("video", videoUUIDs);
     resetPlayback("audio", audioUUIDs);
   }}
-  on:clipMove={() => {
-    resetPlayback("video", videoUUIDs);
-    resetPlayback("audio", audioUUIDs);
+  on:clipMove={(e) => {
+    if (e.detail.type === "video")
+      resetClipPlayback($vRefs, currVideo, e.detail.uuid);
+    else resetClipPlayback($aRefs, currAudio, e.detail.uuid);
   }}
 />
-
-{#if currAudio.length > 0}
-  {#each currAudio as clip (clip.uuid)}
-    <TimelineMedia {clip} />
-  {/each}
-{/if}
