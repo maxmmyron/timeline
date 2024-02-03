@@ -110,6 +110,11 @@ export const exportVideo = async () => {
     const d = (clip.offset * 1000).toFixed(0);
 
     /**
+     * An array containing the computed pan for the L and R audio channels.
+     */
+    const pan = [clip.pan < 0 ? 1 : 1 - clip.pan, clip.pan > 0 ? 1 : 1 + clip.pan];
+
+    /**
      * atrim=start:end: trim the audio
      *
      * adelay=delay: delay the audio by clip.offset so it starts playing
@@ -117,7 +122,7 @@ export const exportVideo = async () => {
      * seems like adelay doesn't work with decimal second notation (i.e "3.54s")
      * We use R|L to specify stereo channels.
      */
-    aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d},volume=${clip.volume}[${i}a];`
+    aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d},volume=${clip.volume},pan=stereo|c0=${pan[0]}*c0|c1=${pan[1]}*c1[${i}a];`;
 
     // if the clip is audio, we don't need to do any video processing
     if (clip.media.type === "audio") continue;
@@ -181,6 +186,10 @@ export const exportVideo = async () => {
     //overlay=<overlayW>:<overlayH>:<enabledPeriod>
     vFilter += `${inLink}[${i + 1}v]overlay=${overlayPos}:${enabledPeriod}${outLink};`
   }
+
+  // if there are no video clips, we need to add a null filter to the video filter chain
+  if (vClips.length === 0) vFilter += `[0:v]null[vout];`;
+
 
   // -----------------------
   // AUDIO FILTER COMPONENT

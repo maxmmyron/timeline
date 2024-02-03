@@ -11,6 +11,7 @@
   let panNode: StereoPannerNode = $aCtx!.createStereoPanner();
 
   $: gainNode.gain.value = clip.volume;
+  $: panNode.pan.value = clip.pan;
 
   onMount(() => {
     if (clip.media.type === "video") {

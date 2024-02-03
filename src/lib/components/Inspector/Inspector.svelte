@@ -11,9 +11,11 @@
 
   let matrix = clip.matrix;
   let volume = clip.volume;
+  let pan = clip.pan;
 
   $: updateProp("matrix", matrix);
   $: updateProp("volume", volume);
+  $: updateProp("pan", pan);
 
   const updateProp = <T extends keyof typeof clip>(
     prop: T,
@@ -90,7 +92,12 @@
   >
     <header class="flex justify-between">
       <h2 class="text-sm font-mono">Audio</h2>
-      <button on:click={() => (volume = 1)}>reset</button>
+      <button
+        on:click={() => {
+          volume = 1;
+          pan = 0;
+        }}>reset</button
+      >
     </header>
 
     <section class="space-y-2">
@@ -105,6 +112,18 @@
           bind:value={volume}
         />
         <output><p>{volume}</p></output>
+      </label>
+      <label class="flex items-center gap-1">
+        <p>Pan</p>
+        <input
+          class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
+          type="range"
+          min="-1"
+          max="1"
+          step="0.01"
+          bind:value={pan}
+        />
+        <output><p>{pan}</p></output>
       </label>
     </section>
   </section>
