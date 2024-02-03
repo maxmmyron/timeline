@@ -14,7 +14,7 @@ export const resolveMedia = (file: File): {uuid: string, title: string, media: P
       const type = fileType as App.MediaType
 
       const src = await assertMIME(file, type);
-      let duration = 0;
+      let duration = 7;
       if (type !== "image") duration = await resolveDuration(src, type);
 
       resolve({ uuid, src, duration, title: file.name, type });
