@@ -9,11 +9,9 @@ declare global {
 			end: number;
 			uuid: string;
 			z: number;
-			/**
-			 * The 2D transformation matrix of the clip.
-			 */
 			matrix: Matrix;
 			volume: number;
+			pan: number;
 		};
 
 		type Media = {
