@@ -19,10 +19,12 @@ declare global {
 			src: string;
 			duration: number;
 			title: string;
-			type: "video" | "audio";
+			type: MediaType;
 		};
 
 		type Matrix = [number, number, number, number, number, number];
+
+		type MediaType = "video" | "audio" | "image";
 	}
 }
 
