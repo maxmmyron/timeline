@@ -8,7 +8,7 @@ export const resolveMedia = (file: File): {uuid: string, title: string, media: P
     title: file.name,
     media: new Promise(async (resolve, reject) => {
       let fileType = file.type.split('/')[0];
-      if (fileType !== "video" && fileType !== "audio") {
+      if (fileType !== "video" && fileType !== "audio" && fileType !== "image") {
         reject(new Error("Unsupported file type."));
       }
       const type = fileType as App.MediaType
