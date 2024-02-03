@@ -12,7 +12,7 @@
     $scale = Math.min(5, $scale + 0.25);
   };
 
-  const slice = (type: "video" | "audio", clips: App.Clip[]) => {
+  const slice = (type: App.MediaType, clips: App.Clip[]) => {
     if (!$selected) return;
     if ($selected[1] !== type) return;
 
@@ -51,7 +51,7 @@
     clips = clips.filter((c) => c.uuid !== oldUUID);
 
     // update stores to reflect changes
-    if (type === "video") $videoClips = clips;
+    if (type !== "audio") $videoClips = clips;
     else $audioClips = clips;
   };
 </script>
@@ -78,7 +78,7 @@
   <div class="flex gap-2">
     <button
       class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700 disabled:brightness-50 disabled:cursor-not-allowed disabled:shadow-none"
-      disabled={!$selected || $selected[1] !== "video"}
+      disabled={!$selected || $selected[1] === "audio"}
       on:click={() => slice("video", $videoClips)}>slice vid</button
     >
     <button

@@ -3,7 +3,7 @@ import { derived, writable, type Writable } from "svelte/store";
 
 export const ffmpeg = writable(createFFmpeg({log:true}));
 
-export const selected: Writable<[string, "video" | "audio"] | null> = writable(null);
+export const selected: Writable<[string, App.MediaType] | null> = writable(null);
 
 export const scale = writable(1);
 

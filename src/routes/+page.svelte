@@ -107,11 +107,11 @@
    * @param type
    * @param clips This is included as a parameter to leverage reactive labeling
    */
-  const updatePlayback = async (type: "video" | "audio", curr: App.Clip[]) => {
+  const updatePlayback = async (type: App.MediaType, curr: App.Clip[]) => {
     await tick();
 
-    const clips = type === "video" ? $videoClips : $audioClips;
-    const refs = type === "video" ? $vRefs : $aRefs;
+    const clips = type !== "audio" ? $videoClips : $audioClips;
+    const refs = type !== "audio" ? $vRefs : $aRefs;
 
     // if there's no audio to play or no current clip, we can return early.
     if (!clips) return;
@@ -154,14 +154,11 @@
    * @param type
    * @param uuids This is included as a parameter to leverage reactive labeling
    */
-  const resetPlayback = async (
-    type: "video" | "audio",
-    uuids: string[] | null
-  ) => {
+  const resetPlayback = async (type: App.MediaType, uuids: string[] | null) => {
     await tick();
 
-    const refs = type === "video" ? $vRefs : $aRefs;
-    const curr = type === "video" ? currVideo : currAudio;
+    const refs = type !== "audio" ? $vRefs : $aRefs;
+    const curr = type !== "audio" ? currVideo : currAudio;
 
     if (!uuids) return;
     for (const uuid of uuids) resetClipPlayback(refs, curr, uuid);
