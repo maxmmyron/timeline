@@ -40,7 +40,7 @@
     <input
       class="hidden"
       type="file"
-      accept="video/mp4,audio/mp3"
+      accept="video/mp4,audio/mp3,image/png,image/jpeg"
       multiple
       on:change={(e) => e.currentTarget.files && upload(e.currentTarget.files)}
     />
@@ -68,9 +68,9 @@
           {#await media then media}
             <button
               on:click={() => {
-                if (media.type === "video")
-                  $videoClips = [...$videoClips, createClip(media)];
-                else $audioClips = [...$audioClips, createClip(media)];
+                if (media.type === "audio")
+                  $audioClips = [...$audioClips, createClip(media)];
+                else $videoClips = [...$videoClips, createClip(media)];
               }}
               class="bg-zinc-800 p-1 w-5 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
             >
