@@ -309,7 +309,7 @@
     resetPlayback("audio", audioUUIDs);
   }}
   on:clipMove={(e) => {
-    if (e.detail.type === "video")
+    if (e.detail.type === "video" || e.detail.type === "image")
       resetClipPlayback($vRefs, currVideo, e.detail.uuid);
     else resetClipPlayback($aRefs, currAudio, e.detail.uuid);
   }}

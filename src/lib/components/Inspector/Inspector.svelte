@@ -21,7 +21,7 @@
     prop: T,
     val: (typeof clip)[T]
   ) => {
-    if (type === "video") {
+    if (type === "video" || type === "image") {
       $videoClips[clipIdx][prop] = val;
     } else {
       $audioClips[clipIdx][prop] = val;
@@ -38,7 +38,7 @@
     <p class="text-zinc-500">{clip.uuid}</p>
   </header>
 
-  {#if type === "video"}
+  {#if type === "video" || type === "image"}
     <section
       class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 space-y-3"
     >

@@ -14,6 +14,10 @@
   $: panNode.pan.value = clip.pan;
 
   onMount(() => {
+    if (clip.media.type === "image") {
+      return;
+    }
+
     if (clip.media.type === "video") {
       sourceNode = $aCtx!.createMediaElementSource($vRefs[clip.uuid]);
     } else {
