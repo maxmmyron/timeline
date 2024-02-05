@@ -36,27 +36,27 @@ export const exportVideo = async () => {
    * Tracks the index of the input file with respect to the ffmpeg command.
    * "base.mp4" is always first, so this starts at 1.
    */
-  let inputIdx = 1;
   for (let i = 0; i < clips.length; i++) {
-    const {media} = clips[i];
+    const clip = clips[i];
+    const media = clip.media;
 
-    // build out the source file name
-    const type = media.type === "audio" ? "mp3" : "mp4";
+    // determine the file extension based on the media type
+    let type: string;
+    if (media.type === "audio") type = "mp3";
+    else if (media.type === "video") type = "mp4";
+    else type = media.title.split('.').pop() as string;
+
     const src = `${media.uuid}.${type}`;
 
+    // if the media hasn't been loaded yet, load it
     if(!loadedMedia.includes(src)) {
-      // if the media hasn't been loaded yet, load it
       ffmpegInstance.FS("writeFile", src, await fetchFile(media.src));
       loadedMedia.push(src);
 
-      // we've loaded a new media file, so we need to add a new split filter
-      aFilter += `[${inputIdx}:a]asplit=`;
-      if (media.type === "video") {
-        vFilter += `[${inputIdx}:v]split=`;
-      }
-
-      // increment the input index
-      inputIdx++;
+      // there may be multiple instances of the same media file in the timeline,
+      // so we split a given file into multiple inputs.
+      if (media.type !== "image") aFilter += `[${i+1}:a]asplit=`;
+      if (media.type !== "audio") vFilter += `[${i+1}:v]split=`;
 
       // splitCount tracks the number of clips in the timeline that use this
       // media file.
@@ -68,20 +68,17 @@ export const exportVideo = async () => {
       // media UUID.
       for (let j = i; j < clips.length; j++) {
         const clip = clips[j];
+        // if they match, we need to add this clip to the split filter.
         if (clip.media.uuid === media.uuid) {
-          // if they match, we need to add this clip to the split filter.
           splitCount++;
-          a_outs.push(`a_split${j+1}`);
-          // only add video outs if the media is a video
-          if (media.type === "video") v_outs.push(`v_split${j+1}`);
+          if (media.type !== "image") a_outs.push(`a_split${j+1}`);
+          if (media.type !== "audio") v_outs.push(`v_split${j+1}`);
         }
       }
 
       // join together the split filter
-      aFilter += `${splitCount}[${a_outs.join("][")}];`;
-      if (media.type === "video") {
-        vFilter += `${splitCount}[${v_outs.join("][")}];`;
-      }
+      if (media.type !== "image") aFilter += `${splitCount}[${a_outs.join("][")}];`;
+      if (media.type !== "audio") vFilter += `${splitCount}[${v_outs.join("][")}];`;
     }
   }
 
@@ -106,8 +103,22 @@ export const exportVideo = async () => {
     const start = clip.start;
     const end = (clip.media.duration - clip.end);
 
+    /**
+     * The portion of the ffmpeg filter that defines the scale of the clip.
+     * w/h represent the width and height of the clip, respectively; we multiply
+     * these by the clip's matrix[0] and matrix[3] values to get the scaled
+     * dimensions.
+     */
+    const scale = `(iw*${clip.matrix[0]}):(ih*${clip.matrix[3]})`;
+
+    // if the clip is an image, we can just calculate the scale and move on
+    if (clip.media.type === "image") {
+      vFilter += `[v_split${i}]scale=${scale}[${i}v];`;
+      continue;
+    }
+
     // define delay, since we need it twice
-    const d = (clip.offset * 1000).toFixed(0);
+      const d = (clip.offset * 1000).toFixed(0);
 
     /**
      * An array containing the computed pan for the L and R audio channels.
@@ -124,6 +135,7 @@ export const exportVideo = async () => {
      */
     aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d},volume=${clip.volume},pan=stereo|c0=${pan[0]}*c0|c1=${pan[1]}*c1[${i}a];`;
 
+
     // if the clip is audio, we don't need to do any video processing
     if (clip.media.type === "audio") continue;
 
@@ -133,14 +145,6 @@ export const exportVideo = async () => {
      * then add the clip's offset to it.
      */
     const setpts = `PTS-STARTPTS+${clip.offset}/TB`;
-
-    /**
-     * The portion of the ffmpeg filter that defines the scale of the clip.
-     * w/h represent the width and height of the clip, respectively; we multiply
-     * these by the clip's matrix[0] and matrix[3] values to get the scaled
-     * dimensions.
-     */
-    const scale = `(iw*${clip.matrix[0]}):(ih*${clip.matrix[3]})`;
 
     /**
      * trim=start:end: trim the video so it doesn't go past clip.end (otherwise,
@@ -194,9 +198,15 @@ export const exportVideo = async () => {
   // -----------------------
   // AUDIO FILTER COMPONENT
 
-  // we can map all audio tracks to the base audio track at the same time (thank god)
+  // map all video and audio tracks to the base audio track. we need to filter
+  // out images from this, since they don't have audio tracks.
+  const inputs = clips.map((clip, i) => clip.media.type !== "image" ? `[${i}a]` : "").filter((input) => input !== "");
+
+  aFilter += `[0:a]${inputs.join('')}amix=inputs=${inputs.length+1}:duration=first[aout]`;
+
   // keep in mind, no semicolon here!
-  aFilter += `[0:a]${clips.map((_,i)=>`[${i+1}a]`).join('')}amix=inputs=${clips.length+1}:duration=first[aout]`;
+  // aFilter += `[0:a]${filteredClips.map((_,i)=>`[${i+1}a]`).join('')}amix=inputs=${filteredClips.length+1}:duration=first[aout]`;
+  // aFilter += `[0:a]${clips.map((_,i)=>`[${i+1}a]`).join('')}amix=inputs=${clips.length+1}:duration=first[aout]`;
 
   // -----------------------
   // RUN FFMPEG
