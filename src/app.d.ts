@@ -16,8 +16,14 @@ declare global {
 
 		type Media = {
 			uuid: string;
+			/**
+			 * The Blob URL of the media
+			 */
 			src: string;
 			duration: number;
+			/**
+			 * The original file name of the media
+			 */
 			title: string;
 			type: MediaType;
 		};
