@@ -38,7 +38,7 @@
 
 {#if clip.media.type === "video"}
   <video
-    class="absolute top-1/2 left-1/2"
+    class="absolute top-1/2 left-1/2 max-w-none"
     src={clip.media.src}
     title={clip.uuid}
     bind:this={$vRefs[clip.uuid]}
@@ -53,7 +53,7 @@
   </video>
 {:else if clip.media.type === "image"}
   <img
-    class="absolute top-1/2 left-1/2"
+    class="absolute top-1/2 left-1/2 max-w-none"
     src={clip.media.src}
     title={clip.uuid}
     alt=""
