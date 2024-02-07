@@ -13,11 +13,6 @@
   // this is set to 9 as a dirty default
   export let timelineOffset = 9;
 
-  /**
-   * Whether or not the clip is an audio clip.
-   */
-  $: isAudio = clip.media.type === "audio";
-
   $: selectedUUID = $selected ? $selected[0] : null;
 
   let canMoveClip = false;
@@ -43,7 +38,7 @@
    * Initial values of clip when resizing, so resize calculates don't resize
    * based on recently updated start/end/offset values
    */
-  let initialTrimValues = { start: 0, end: 0, offset: 0 };
+  let initialTrimValues = { start: 0, end: 0, offset: 0, duration: 0 };
 
   let settingsOpen = false;
 
@@ -62,12 +57,25 @@
     else clip.offset = snapOnMove(newOffset);
 
     // reassign to trigger reactivity
-    if (isAudio) $audioClips = [...$audioClips];
+    if (clip.media.type === "audio") $audioClips = [...$audioClips];
     else $videoClips = [...$videoClips];
   };
 
   const resizeClip = (e: MouseEvent) => {
     const delta = e.clientX - initialResizeMousePos;
+
+    if (clip.media.type === "image") {
+      const dt = delta / $scaleFactor;
+      if (resizeMode === "left") {
+        clip.offset = Math.max(0, initialTrimValues.offset + dt);
+        // FIXME: if clip offset moved < 0, overall duration will begin to
+        // increase (i.e. end of clip moves)
+        clip.media.duration = Math.max(0, initialTrimValues.duration - dt);
+      } else if (resizeMode === "right") {
+        clip.media.duration = Math.max(0, initialTrimValues.duration + dt);
+      }
+      return;
+    }
 
     if (resizeMode === "left") {
       // if holding shift, keep offset stationary (reposition w.r.t left of clip)
@@ -95,7 +103,7 @@
     }
 
     // reassign to trigger reactivity
-    if (isAudio) $audioClips = [...$audioClips];
+    if (clip.media.type === "audio") $audioClips = [...$audioClips];
     else $videoClips = [...$videoClips];
   };
 
@@ -108,7 +116,7 @@
    * calculated offset before the clip is released from the mouse.
    */
   const snapOnMove = (eagerOffset: number) => {
-    const arr = isAudio ? $audioClips : $videoClips;
+    const arr = clip.media.type === "audio" ? $audioClips : $videoClips;
     const clips = arr
       .filter((c) => c.uuid !== clip.uuid)
       // calculate distance from end of clip to beginning of current clip
@@ -207,7 +215,7 @@
     let start = clip.offset;
     let end = clip.offset + clipLength;
 
-    let arr = isAudio ? $audioClips : $videoClips;
+    let arr = clip.media.type === "audio" ? $audioClips : $videoClips;
     return arr.filter((c) => {
       // break if z-index is lower
       if (c.z < clip.z) return false;
@@ -229,7 +237,7 @@
   const dispatcher = createEventDispatcher<{
     clipMove: {
       uuid: string;
-      type: "audio" | "video";
+      type: App.MediaType;
     };
   }>();
 
@@ -276,7 +284,7 @@
   bind:this={clipEl}
   on:mousedown|stopPropagation={(e) => {
     canMoveClip = true;
-    if (isAudio)
+    if (clip.media.type === "audio")
       clip.z = $audioClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1;
     else
       clip.z = $videoClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1;
@@ -292,7 +300,7 @@
   on:keydown|stopPropagation={(e) => {
     if (e.key === "Delete" && selectedUUID === clip.uuid) {
       $selected = null;
-      if (isAudio)
+      if (clip.media.type === "audio")
         $audioClips = $audioClips.filter((c) => c.uuid !== clip.uuid);
       else $videoClips = $videoClips.filter((c) => c.uuid !== clip.uuid);
     }
@@ -308,6 +316,7 @@
       initialResizeMousePos = e.clientX;
       initialTrimValues.start = clip.start;
       initialTrimValues.offset = clip.offset;
+      initialTrimValues.duration = clip.media.duration;
     }}
   ></button>
   <main class="w-full overflow-hidden select-none">
@@ -321,6 +330,7 @@
       initialResizeMousePos = e.clientX;
       initialTrimValues.end = clip.end;
       initialTrimValues.offset = clip.offset;
+      initialTrimValues.duration = clip.media.duration;
     }}
   ></button>
   {#if coverCount > 0}

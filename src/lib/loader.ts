@@ -8,21 +8,29 @@ export const resolveMedia = (file: File): {uuid: string, title: string, media: P
     title: file.name,
     media: new Promise(async (resolve, reject) => {
       let fileType = file.type.split('/')[0];
-      if (fileType !== "video" && fileType !== "audio") {
+      if (fileType !== "video" && fileType !== "audio" && fileType !== "image") {
         reject(new Error("Unsupported file type."));
       }
-      const type = fileType as "video" | "audio";
+      const type = fileType as App.MediaType
 
       const src = await assertMIME(file, type);
-      const duration = await resolveDuration(src, type);
+      let duration = 7;
+      if (type !== "image") duration = await resolveDuration(src, type);
 
       resolve({ uuid, src, duration, title: file.name, type });
     }),
   }
 }
 
-const assertMIME = async (file: File, type: 'video' | 'audio') => {
+const assertMIME = async (file: File, type: App.MediaType) => {
   let ext = file.type.split('/')[1];
+
+  if (type === "image") {
+    if (ext !== "jpeg" && ext !== "png") {
+      throw new Error(`Unsupported image type. (Got ${file.type})`);
+    }
+    return URL.createObjectURL(file);
+  }
 
   // create a template element to check if the browser can play the file
   const temp = document.createElement(type).canPlayType(file.type);
@@ -40,7 +48,7 @@ const assertMIME = async (file: File, type: 'video' | 'audio') => {
   else throw new Error('Your browser does not support this format.');
 };
 
-const resolveDuration = async (src: string, type: 'video' | 'audio') => new Promise<number>((resolve) => {
+const resolveDuration = async (src: string, type: Exclude<App.MediaType, "image">) => new Promise<number>((resolve) => {
   let temp: HTMLVideoElement | HTMLAudioElement = document.createElement(type);
 
   temp.src = src;

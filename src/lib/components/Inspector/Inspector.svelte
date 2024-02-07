@@ -3,7 +3,7 @@
   import { videoClips, audioClips } from "$lib/stores";
 
   export let uuid: string;
-  export let type: "video" | "audio";
+  export let type: App.MediaType;
 
   const clipArr = type === "audio" ? $audioClips : $videoClips;
   const clipIdx = clipArr.findIndex((c) => c.uuid === uuid);
@@ -21,7 +21,7 @@
     prop: T,
     val: (typeof clip)[T]
   ) => {
-    if (type === "video") {
+    if (type === "video" || type === "image") {
       $videoClips[clipIdx][prop] = val;
     } else {
       $audioClips[clipIdx][prop] = val;
@@ -38,7 +38,7 @@
     <p class="text-zinc-500">{clip.uuid}</p>
   </header>
 
-  {#if type === "video"}
+  {#if type === "video" || type === "image"}
     <section
       class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 space-y-3"
     >
@@ -87,44 +87,46 @@
       </section>
     </section>
   {/if}
-  <section
-    class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 space-y-3"
-  >
-    <header class="flex justify-between">
-      <h2 class="text-sm font-mono">Audio</h2>
-      <button
-        on:click={() => {
-          volume = 1;
-          pan = 0;
-        }}>reset</button
-      >
-    </header>
+  {#if type !== "image"}
+    <section
+      class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 space-y-3"
+    >
+      <header class="flex justify-between">
+        <h2 class="text-sm font-mono">Audio</h2>
+        <button
+          on:click={() => {
+            volume = 1;
+            pan = 0;
+          }}>reset</button
+        >
+      </header>
 
-    <section class="space-y-2">
-      <label class="flex items-center gap-1">
-        <p>Volume</p>
-        <input
-          class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          bind:value={volume}
-        />
-        <output><p>{volume}</p></output>
-      </label>
-      <label class="flex items-center gap-1">
-        <p>Pan</p>
-        <input
-          class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
-          type="range"
-          min="-1"
-          max="1"
-          step="0.01"
-          bind:value={pan}
-        />
-        <output><p>{pan}</p></output>
-      </label>
+      <section class="space-y-2">
+        <label class="flex items-center gap-1">
+          <p>Volume</p>
+          <input
+            class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            bind:value={volume}
+          />
+          <output><p>{volume}</p></output>
+        </label>
+        <label class="flex items-center gap-1">
+          <p>Pan</p>
+          <input
+            class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
+            type="range"
+            min="-1"
+            max="1"
+            step="0.01"
+            bind:value={pan}
+          />
+          <output><p>{pan}</p></output>
+        </label>
+      </section>
     </section>
-  </section>
+  {/if}
 </Region>

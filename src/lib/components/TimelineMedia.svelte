@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { aCtx, vRefs, aRefs, playerScale } from "$lib/stores";
+  import { aCtx, iRefs, vRefs, aRefs, playerScale } from "$lib/stores";
   import { onMount } from "svelte";
 
   export let clip: App.Clip;
@@ -14,6 +14,10 @@
   $: panNode.pan.value = clip.pan;
 
   onMount(() => {
+    if (clip.media.type === "image") {
+      return;
+    }
+
     if (clip.media.type === "video") {
       sourceNode = $aCtx!.createMediaElementSource($vRefs[clip.uuid]);
     } else {
@@ -34,7 +38,7 @@
 
 {#if clip.media.type === "video"}
   <video
-    class="absolute top-1/2 left-1/2"
+    class="absolute top-1/2 left-1/2 max-w-none"
     src={clip.media.src}
     title={clip.uuid}
     bind:this={$vRefs[clip.uuid]}
@@ -47,6 +51,19 @@
   >
     <track kind="captions" />
   </video>
+{:else if clip.media.type === "image"}
+  <img
+    class="absolute top-1/2 left-1/2 max-w-none"
+    src={clip.media.src}
+    title={clip.uuid}
+    alt=""
+    bind:this={$iRefs[clip.uuid]}
+    style:transform="translate(-50%, -50%) matrix({clip.matrix
+      .map((m, i) => (i === 0 || i == 3 ? m * $playerScale : m))
+      .join(",")})"
+    style:z-index={clip.z}
+    class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
+  />
 {:else if clip.media.type === "audio"}
   <audio
     class="hidden"
