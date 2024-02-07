@@ -1,13 +1,9 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from "svelte";
+  import { createEventDispatcher } from "svelte";
 
   export let name: string;
   export let scalar: number;
-  let defaultVal: number = 0;
-
-  onMount(() => {
-    defaultVal = scalar;
-  });
+  export let defaultVal: number = 0;
 
   /**
    * Whether or not the numerical override input can exceed the bounds defined

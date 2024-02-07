@@ -64,6 +64,7 @@
           bind:scalar={matrix[0]}
           props={{ min: 0, max: 6, step: 0.01 }}
           on:change={() => isScaleLinked && (matrix[3] = matrix[0])}
+          defaultVal={1}
         />
         <ScalarSetting
           class="col-start-1"
@@ -71,6 +72,7 @@
           bind:scalar={matrix[3]}
           props={{ min: 0, max: 6, step: 0.01 }}
           on:change={() => isScaleLinked && (matrix[0] = matrix[3])}
+          defaultVal={1}
         />
         <div
           class="col-start-2 row-start-2 row-span-2 flex flex-col justify-center gap-1"
@@ -158,6 +160,7 @@
           bind:scalar={volume}
           props={{ min: 0, max: 1, step: 0.01 }}
           strictBounds
+          defaultVal={1}
         />
         <ScalarSetting
           name="Pan"
