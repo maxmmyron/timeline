@@ -45,7 +45,10 @@
     >
       <header class="flex justify-between">
         <h2 class="text-sm font-mono">Transforms</h2>
-        <button on:click={() => (matrix = [1, 0, 0, 1, 0, 0])}> reset </button>
+        <button
+          class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex flex-col items-center justify-center border border-zinc-700"
+          on:click={() => (matrix = [1, 0, 0, 1, 0, 0])}>↻</button
+        >
       </header>
 
       <section class="space-y-2">
@@ -84,6 +87,7 @@
       <header class="flex justify-between">
         <h2 class="text-sm font-mono">Audio</h2>
         <button
+          class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex flex-col items-center justify-center border border-zinc-700"
           on:click={() => {
             volume = 1;
             pan = 0;
