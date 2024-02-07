@@ -63,12 +63,14 @@
           name="X"
           bind:scalar={matrix[0]}
           props={{ min: 0, max: 6, step: 0.01 }}
+          on:change={() => isScaleLinked && (matrix[3] = matrix[0])}
         />
         <ScalarSetting
           class="col-start-1"
           name="Y"
           bind:scalar={matrix[3]}
           props={{ min: 0, max: 6, step: 0.01 }}
+          on:change={() => isScaleLinked && (matrix[0] = matrix[3])}
         />
         <div
           class="col-start-2 row-start-2 row-span-2 flex flex-col justify-center gap-1"
@@ -100,12 +102,14 @@
           name="X"
           bind:scalar={matrix[4]}
           props={{ min: -$safeRes[0] / 2, max: $safeRes[0] / 2, step: 0.01 }}
+          on:change={() => isPositionLinked && (matrix[5] = matrix[4])}
         />
         <ScalarSetting
           name="Y"
           class="col-start-1"
           bind:scalar={matrix[5]}
           props={{ min: -$safeRes[1] / 2, max: $safeRes[1] / 2, step: 0.01 }}
+          on:change={() => isPositionLinked && (matrix[4] = matrix[5])}
         />
         <div
           class="col-start-2 row-start-2 row-span-2 flex flex-col justify-center gap-1"

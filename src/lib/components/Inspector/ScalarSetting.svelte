@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { createEventDispatcher, onMount } from "svelte";
 
   export let name: string;
   export let scalar: number;
@@ -25,6 +25,9 @@
   };
 
   let clazz = "";
+
+  const dispatcher = createEventDispatcher<{ change: number }>();
+  $: dispatcher("change", scalar);
 
   export { clazz as class };
 </script>
