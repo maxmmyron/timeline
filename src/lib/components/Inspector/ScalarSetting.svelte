@@ -23,13 +23,17 @@
     max: number;
     step: number;
   };
+
+  let clazz = "";
+
+  export { clazz as class };
 </script>
 
-<article class="flex items-center gap-1">
-  <label class="flex items-center gap-1">
+<article class="flex items-center gap-1 {clazz}">
+  <label class="flex items-center gap-1 flex-grow">
     <p class="w-11 text-ellipsis">{name}</p>
     <input
-      class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
+      class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800 max-w-28"
       type="range"
       {...props}
       bind:value={scalar}
