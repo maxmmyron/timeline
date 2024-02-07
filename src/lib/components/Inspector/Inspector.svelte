@@ -6,6 +6,9 @@
   export let uuid: string;
   export let type: App.MediaType;
 
+  let isScaleLinked = false;
+  let isPositionLinked = false;
+
   const clipArr = type === "audio" ? $audioClips : $videoClips;
   const clipIdx = clipArr.findIndex((c) => c.uuid === uuid);
   let clip = clipArr[clipIdx];
@@ -30,7 +33,7 @@
   };
 </script>
 
-<Region class="row-start-2 overflow-scroll">
+<Region class="row-start-2 overflow-scroll [scrollbar-width:thin]">
   <header
     class="flex justify-between pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 flex-wrap"
   >
@@ -71,15 +74,21 @@
           class="col-start-2 row-start-2 row-span-2 flex flex-col justify-center gap-1"
         >
           <div
-            class="w-1/2 h-2 rounded-tr-md border-t border-r border-dashed border-zinc-700"
+            class="w-1/2 h-2 rounded-tr-md border-t border-r {isScaleLinked
+              ? 'border-solid'
+              : 'border-dashed'} border-zinc-700"
           />
           <button
             class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex flex-col items-center justify-center border border-zinc-700"
+            class:bg-zinc-900={isScaleLinked}
+            on:click={() => (isScaleLinked = !isScaleLinked)}
           >
             🔗
           </button>
           <div
-            class="w-1/2 h-2 rounded-br-md border-b border-r border-dashed border-zinc-700"
+            class="w-1/2 h-2 rounded-br-md border-b border-r {isScaleLinked
+              ? 'border-solid'
+              : 'border-dashed'} border-zinc-700"
           />
         </div>
       </section>
@@ -102,15 +111,21 @@
           class="col-start-2 row-start-2 row-span-2 flex flex-col justify-center gap-1"
         >
           <div
-            class="w-1/2 h-2 rounded-tr-md border-t border-r border-dashed border-zinc-700"
+            class="w-1/2 h-2 rounded-tr-md border-t border-r {isPositionLinked
+              ? 'border-solid'
+              : 'border-dashed'} border-zinc-700"
           />
           <button
             class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex flex-col items-center justify-center border border-zinc-700"
+            class:bg-zinc-900={isPositionLinked}
+            on:click={() => (isPositionLinked = !isPositionLinked)}
           >
             🔗
           </button>
           <div
-            class="w-1/2 h-2 rounded-br-md border-b border-r border-dashed border-zinc-700"
+            class="w-1/2 h-2 rounded-br-md border-b border-r {isPositionLinked
+              ? 'border-solid'
+              : 'border-dashed'} border-zinc-700"
           />
         </div>
       </section>
