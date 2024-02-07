@@ -27,15 +27,16 @@
 
 <article class="flex items-center gap-1">
   <label class="flex items-center gap-1">
-    <p>{name}</p>
+    <p class="w-11 text-ellipsis">{name}</p>
     <input
       class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
-      type="number"
+      type="range"
       {...props}
       bind:value={scalar}
     />
   </label>
   <input
+    class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800 w-10"
     type="number"
     bind:value={scalar}
     alt="Manual {name} property entry"
@@ -46,8 +47,8 @@
       else scalar = parsed;
     }}
   />
-  <output>
-    <p>{scalar}</p>
-  </output>
-  <button on:click={() => (scalar = defaultVal)}>↻</button>
+  <button
+    class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex flex-col items-center justify-center border border-zinc-700"
+    on:click={() => (scalar = defaultVal)}>↻</button
+  >
 </article>
