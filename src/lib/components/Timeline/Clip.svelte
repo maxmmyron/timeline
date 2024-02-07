@@ -38,7 +38,7 @@
    * Initial values of clip when resizing, so resize calculates don't resize
    * based on recently updated start/end/offset values
    */
-  let initialTrimValues = { start: 0, end: 0, offset: 0 };
+  let initialTrimValues = { start: 0, end: 0, offset: 0, duration: 0 };
 
   let settingsOpen = false;
 
@@ -65,19 +65,16 @@
     const delta = e.clientX - initialResizeMousePos;
 
     if (clip.media.type === "image") {
+      const dt = delta / $scaleFactor;
       if (resizeMode === "left") {
-        let offset = initialTrimValues.offset;
-        if (!e.shiftKey) {
-          offset = Math.max(0, initialTrimValues.offset + delta / $scaleFactor);
-        }
-
-        clip.offset = offset;
+        clip.offset = Math.max(0, initialTrimValues.offset + dt);
+        // FIXME: if clip offset moved < 0, overall duration will begin to
+        // increase (i.e. end of clip moves)
+        clip.media.duration = Math.max(0, initialTrimValues.duration - dt);
       } else if (resizeMode === "right") {
-        clip.media.duration = Math.max(
-          0,
-          initialTrimValues.end - delta / $scaleFactor
-        );
+        clip.media.duration = Math.max(0, initialTrimValues.duration + dt);
       }
+      return;
     }
 
     if (resizeMode === "left") {
@@ -319,6 +316,7 @@
       initialResizeMousePos = e.clientX;
       initialTrimValues.start = clip.start;
       initialTrimValues.offset = clip.offset;
+      initialTrimValues.duration = clip.media.duration;
     }}
   ></button>
   <main class="w-full overflow-hidden select-none">
@@ -332,6 +330,7 @@
       initialResizeMousePos = e.clientX;
       initialTrimValues.end = clip.end;
       initialTrimValues.offset = clip.offset;
+      initialTrimValues.duration = clip.media.duration;
     }}
   ></button>
   {#if coverCount > 0}
