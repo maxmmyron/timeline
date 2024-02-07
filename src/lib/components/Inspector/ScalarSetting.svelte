@@ -20,11 +20,10 @@
     step: number;
   };
 
-  let clazz = "";
-
   const dispatcher = createEventDispatcher<{ change: number }>();
   $: dispatcher("change", scalar);
 
+  let clazz = "";
   export { clazz as class };
 </script>
 
