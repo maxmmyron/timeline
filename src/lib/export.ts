@@ -200,13 +200,10 @@ export const exportVideo = async () => {
 
   // map all video and audio tracks to the base audio track. we need to filter
   // out images from this, since they don't have audio tracks.
-  const inputs = clips.map((clip, i) => clip.media.type !== "image" ? `[${i}a]` : "").filter((input) => input !== "");
-
-  aFilter += `[0:a]${inputs.join('')}amix=inputs=${inputs.length+1}:duration=first[aout]`;
+  const inputs = clips.map((clip, i) => clip.media.type !== "image" ? `[${i+1}a]` : "").filter((input) => input !== "");
 
   // keep in mind, no semicolon here!
-  // aFilter += `[0:a]${filteredClips.map((_,i)=>`[${i+1}a]`).join('')}amix=inputs=${filteredClips.length+1}:duration=first[aout]`;
-  // aFilter += `[0:a]${clips.map((_,i)=>`[${i+1}a]`).join('')}amix=inputs=${clips.length+1}:duration=first[aout]`;
+  aFilter += `[0:a]${inputs.join('')}amix=inputs=${inputs.length+1}:duration=first[aout]`;
 
   // -----------------------
   // RUN FFMPEG
@@ -219,8 +216,6 @@ export const exportVideo = async () => {
     exportStatus.set("error");
     throw e;
   }
-
-  ffmpegInstance.setProgress(({ratio}) => {});
 
   // -----------------------
   // EXPORT VIDEO FILE
