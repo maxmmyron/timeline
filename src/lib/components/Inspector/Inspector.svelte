@@ -1,6 +1,7 @@
 <script lang="ts">
   import Region from "$lib/components/Region.svelte";
-  import { videoClips, audioClips } from "$lib/stores";
+  import { videoClips, audioClips, safeRes } from "$lib/stores";
+  import ScalarSetting from "./ScalarSetting.svelte";
 
   export let uuid: string;
   export let type: App.MediaType;
@@ -46,44 +47,33 @@
         <h2 class="text-sm font-mono">Transforms</h2>
         <button on:click={() => (matrix = [1, 0, 0, 1, 0, 0])}> reset </button>
       </header>
+
       <section class="space-y-2">
         <p>Scale</p>
-        <label class="flex items-center gap-1">
-          <p>X</p>
-          <input
-            class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
-            type="number"
-            bind:value={matrix[0]}
-          />
-        </label>
-        <label class="flex items-center gap-1">
-          <p>Y</p>
-          <input
-            class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
-            type="number"
-            bind:value={matrix[3]}
-          />
-        </label>
+        <ScalarSetting
+          name="X"
+          bind:scalar={matrix[0]}
+          props={{ min: 0, max: 6, step: 0.01 }}
+        />
+        <ScalarSetting
+          name="Y"
+          bind:scalar={matrix[3]}
+          props={{ min: 0, max: 6, step: 0.01 }}
+        />
       </section>
 
       <section class="space-y-2">
         <p>Translate</p>
-        <label class="flex items-center gap-1">
-          <p>X</p>
-          <input
-            class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
-            type="number"
-            bind:value={matrix[4]}
-          />
-        </label>
-        <label class="flex items-center gap-1">
-          <p>Y</p>
-          <input
-            class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
-            type="number"
-            bind:value={matrix[5]}
-          />
-        </label>
+        <ScalarSetting
+          name="X"
+          bind:scalar={matrix[4]}
+          props={{ min: -$safeRes[0] / 2, max: $safeRes[0] / 2, step: 0.01 }}
+        />
+        <ScalarSetting
+          name="Y"
+          bind:scalar={matrix[5]}
+          props={{ min: -$safeRes[1] / 2, max: $safeRes[1] / 2, step: 0.01 }}
+        />
       </section>
     </section>
   {/if}
@@ -97,35 +87,23 @@
           on:click={() => {
             volume = 1;
             pan = 0;
-          }}>reset</button
+          }}>↻</button
         >
       </header>
 
       <section class="space-y-2">
-        <label class="flex items-center gap-1">
-          <p>Volume</p>
-          <input
-            class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            bind:value={volume}
-          />
-          <output><p>{volume}</p></output>
-        </label>
-        <label class="flex items-center gap-1">
-          <p>Pan</p>
-          <input
-            class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800"
-            type="range"
-            min="-1"
-            max="1"
-            step="0.01"
-            bind:value={pan}
-          />
-          <output><p>{pan}</p></output>
-        </label>
+        <ScalarSetting
+          name="Volume"
+          bind:scalar={volume}
+          props={{ min: 0, max: 1, step: 0.01 }}
+          strictBounds
+        />
+        <ScalarSetting
+          name="Pan"
+          bind:scalar={pan}
+          props={{ min: -1, max: 1, step: 0.01 }}
+          strictBounds
+        />
       </section>
     </section>
   {/if}
