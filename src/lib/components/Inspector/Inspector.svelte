@@ -44,7 +44,7 @@
 
   {#if type === "video" || type === "image"}
     <section
-      class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 space-y-3 grid grid-cols-[1fr,24px] gap-y-2 w-full"
+      class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 space-y-3 grid grid-cols-[1fr,24px] gap-1 w-full"
     >
       <header class="col-start-1 grid grid-cols-subgrid">
         <div class="flex justify-between">
@@ -137,7 +137,7 @@
   {/if}
   {#if type !== "image"}
     <section
-      class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 space-y-3 grid grid-cols-[1fr,24px] gap-1"
+      class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 space-y-3 grid grid-cols-[1fr,24px] gap-1 w-full"
     >
       <header class="col-start-1 grid grid-cols-subgrid">
         <div class="flex justify-between">
