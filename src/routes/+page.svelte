@@ -15,6 +15,7 @@
     vRefs,
     aRefs,
     aCtx,
+    showPreferences,
   } from "$lib/stores";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
@@ -23,6 +24,8 @@
   import { cyrb53, frame, getCurrentClips } from "$lib/utils";
   import MediaBrowser from "$lib/components/MediaBrowser.svelte";
   import TimelineMedia from "$lib/components/TimelineMedia.svelte";
+  import Modal from "$lib/components/Preferences/Modal.svelte";
+  import Preferences from "$lib/components/Preferences/Preferences.svelte";
 
   // get the UUIDs of the current audio clips (we return this as a comma-sep
   // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS
@@ -196,24 +199,10 @@
 <Region
   class="flex justify-between items-center lg:row-start-1 lg:col-start-1 lg:col-span-full"
 >
-  <label class="flex gap-2">
-    <p>res X</p>
-    <input
-      class="w-16 px-2 rounded-md border border-zinc-300 font-mono text-sm dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300"
-      type="number"
-      bind:value={$res[0]}
-      step="2"
-    />
-  </label>
-  <label class="flex gap-2">
-    <p>res Y</p>
-    <input
-      class="w-16 px-2 rounded-md border border-zinc-300 font-mono text-sm dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300"
-      type="number"
-      bind:value={$res[1]}
-      step="2"
-    />
-  </label>
+  <button
+    class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
+    on:click={() => ($showPreferences = true)}>Preferences</button
+  >
   <div class="flex items-center gap-2">
     {#if $exportStatus !== "export" && $exportStatus !== "setup"}
       <div class="h-1 w-24 rounded-full"></div>
@@ -314,3 +303,5 @@
     else resetClipPlayback($aRefs, currAudio, e.detail.uuid);
   }}
 />
+
+<Preferences />
