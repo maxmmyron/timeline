@@ -6,7 +6,9 @@
     selected,
     scroll,
     audioClips,
+    scale,
   } from "$lib/stores";
+  import { getClipDuration, getClipEndPos } from "$lib/utils";
   import { createEventDispatcher } from "svelte";
 
   export let clip: App.Clip;
@@ -116,30 +118,51 @@
    * calculated offset before the clip is released from the mouse.
    */
   const snapOnMove = (eagerOffset: number) => {
-    const arr = clip.media.type === "audio" ? $audioClips : $videoClips;
-    const clips = arr
+    /**
+     * The snap threshold; dynamically calculated based on the scale factor.
+     */
+    const threshold = 0.1 - 0.01 * $scale;
+
+    // guard for scrubber snapping; this takes precedent
+    if (Math.abs(eagerOffset - $time) < threshold) return $time;
+    if (Math.abs(eagerOffset + getClipDuration(clip) - $time) < threshold)
+      return $time - getClipDuration(clip);
+
+    const clips = clip.media.type === "audio" ? $audioClips : $videoClips;
+
+    const valid = clips
       .filter((c) => c.uuid !== clip.uuid)
-      // calculate distance from end of clip to beginning of current clip
-      .map((c) => {
-        const end = c.offset + (c.media.duration - c.start - c.end);
-        const distance = Math.abs(eagerOffset - end);
-        return { clip: c, distance };
-      })
-      .filter((c) => c.distance < 0.05 + (0.2 - 0.01 * ($scaleFactor / 25)));
+      .map((c) => ({
+        clip: c,
+        /**
+         * The distance from the end of this clip to the front of the moving clip
+         *
+         *   - - ----------+                 +-----------+
+         * eager offset -> | |-- {front} --| | this clip |
+         *   - - ----------+                 +-----------+
+         */
+        front: Math.abs(c.offset - (eagerOffset + getClipDuration(clip))),
+        /**
+         * The distance from the back of this clip to the front of the moving clip
+         *
+         * +-----------+                +---------- - -
+         * | this clip | |-- {back} --| | <- eager offset
+         * +-----------+                +---------- - -
+         */
+        back: Math.abs(eagerOffset - getClipEndPos(c)),
+      }))
+      .filter((c) => c.front < threshold || c.back < threshold);
 
-    if (!clips.length) return eagerOffset;
+    // no valid clips? return self offset
+    if (!valid.length) return eagerOffset;
 
-    // reaching here means there is at least one clip within 0.1s threshold, so
-    // we reduce to find the nearest clip.
-    let nearest = clips.reduce((prev, curr) => {
-      if (prev.distance < curr.distance) return prev;
-      return curr;
-    }).clip;
+    let nearest = valid.reduce((prev, curr) =>
+      prev.front < prev.front || prev.back < curr.back ? prev : curr
+    );
 
-    eagerOffset =
-      nearest.offset + (nearest.media.duration - nearest.start - nearest.end);
-
-    return eagerOffset;
+    if (nearest.front < nearest.back)
+      return nearest.clip.offset - getClipDuration(clip);
+    else return getClipEndPos(nearest.clip);
   };
 
   /**
