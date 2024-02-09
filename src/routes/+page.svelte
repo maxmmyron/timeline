@@ -195,8 +195,6 @@
   };
 
   onMount(() => requestAnimationFrame(frame));
-
-  $: console.log(`time: ${$time}, scroll: ${$scroll}`);
 </script>
 
 <Region
