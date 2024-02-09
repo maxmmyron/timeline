@@ -16,6 +16,7 @@
     aRefs,
     aCtx,
     showPreferences,
+    scroll,
   } from "$lib/stores";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
@@ -194,6 +195,8 @@
   };
 
   onMount(() => requestAnimationFrame(frame));
+
+  $: console.log(`time: ${$time}, scroll: ${$scroll}`);
 </script>
 
 <Region

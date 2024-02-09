@@ -4,7 +4,7 @@
 
 import { get } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
-import { paused, time, videoClips } from "./stores";
+import { paused, scaleFactor, scroll, time, videoClips } from "./stores";
 
 /**
  * Gets the current clips at the given time. This returns a comma-
@@ -114,4 +114,23 @@ export const cyrb53 = (str: string, seed = 0) => {
   h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
 
   return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+};
+
+/**
+ * Moves the scrubber to the specified time, and updates the scroll position
+ * if necessary.
+ */
+export const updateScrubberAndScroll = (t:  number) => {
+  const tlScroll = get(scroll);
+
+  time.update($time => {
+    if (t < tlScroll) {
+      return t;
+    }
+    return $time;
+  });
+
+  if(get(time) * get(scaleFactor) < tlScroll || get(time) * get(scaleFactor) > tlScroll + window.innerWidth) {
+    scroll.update(() => t * get(scaleFactor) - window.innerWidth / 2);
+  }
 };

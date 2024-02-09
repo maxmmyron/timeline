@@ -1,6 +1,10 @@
 <script lang="ts">
   import { audioClips, videoClips, selected } from "$lib/stores";
-  import { createClip } from "$lib/utils";
+  import {
+    createClip,
+    getClipEndPos,
+    updateScrubberAndScroll,
+  } from "$lib/utils";
   import Region from "./Region.svelte";
   import { resolveMedia } from "$lib/loader";
 
@@ -68,9 +72,13 @@
           {#await media then media}
             <button
               on:click={() => {
-                if (media.type === "audio")
-                  $audioClips = [...$audioClips, createClip(media)];
-                else $videoClips = [...$videoClips, createClip(media)];
+                const clip = createClip(media);
+                const end = getClipEndPos(clip);
+                if (media.type === "audio") {
+                  $audioClips = [...$audioClips, clip];
+                } else $videoClips = [...$videoClips, clip];
+
+                updateScrubberAndScroll(end);
               }}
               class="bg-zinc-800 p-1 w-5 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
             >
