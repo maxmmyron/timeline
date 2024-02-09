@@ -64,9 +64,9 @@
 
   const resizeClip = (e: MouseEvent) => {
     const delta = e.clientX - initialResizeMousePos;
+    const dt = delta / $scaleFactor;
 
     if (clip.media.type === "image") {
-      const dt = delta / $scaleFactor;
       if (resizeMode === "left") {
         clip.offset = Math.max(0, initialTrimValues.offset + dt);
         // FIXME: if clip offset moved < 0, overall duration will begin to
@@ -79,28 +79,41 @@
     }
 
     if (resizeMode === "left") {
-      // if holding shift, keep offset stationary (reposition w.r.t left of clip)
-      let offset = initialTrimValues.offset;
-      // if *not* holding shift, move offset with clip
-      if (!e.shiftKey) {
-        offset = Math.max(
-          initialTrimValues.offset - initialTrimValues.start,
-          initialTrimValues.offset + delta / $scaleFactor
-        );
-      }
-
       let start = Math.min(
-        Math.max(0, initialTrimValues.start + delta / $scaleFactor),
+        Math.max(0, initialTrimValues.start + dt),
         clip.media.duration - clip.end
       );
 
-      clip.start = start;
-      clip.offset = offset;
+      // if we're holding shift, we don't need to perform resize snap.
+      if (e.shiftKey) {
+        clip.offset = initialTrimValues.offset;
+        clip.start = start;
+        return;
+      }
+
+      let offset = Math.max(
+        initialTrimValues.offset - initialTrimValues.start,
+        initialTrimValues.offset + dt
+      );
+
+      let [snapOffset, snapStart] = snapOnResize("left", offset, start);
+
+      clip.offset = snapOffset;
+      clip.start = snapStart;
     } else if (resizeMode === "right") {
-      clip.end = Math.min(
-        Math.max(0, initialTrimValues.end - delta / $scaleFactor),
+      let end = Math.min(
+        Math.max(0, initialTrimValues.end - dt),
         clip.media.duration - clip.start
       );
+
+      let [snapOffset, snapEnd] = snapOnResize(
+        "right",
+        initialTrimValues.offset,
+        end
+      );
+
+      clip.offset = snapOffset;
+      clip.end = snapEnd;
     }
 
     // reassign to trigger reactivity
@@ -155,6 +168,43 @@
     if (nearest.front < nearest.back)
       return nearest.clip.offset - getClipDuration(clip);
     else return getClipEndPos(nearest.clip);
+  };
+
+  const snapOnResize = (
+    mode: "left" | "right",
+    offset: number,
+    edge: number
+  ) => {
+    const threshold = 0.1 - 0.01 * $scale;
+
+    const duration =
+      clip.media.duration -
+      edge -
+      (mode === "left" ? initialTrimValues.end : initialTrimValues.start);
+
+    if (mode === "left") {
+      console.log("left", offset, edge, Math.abs(offset - $time), duration);
+    } else {
+      console.log(
+        "right",
+        offset,
+        edge,
+        Math.abs(offset + duration - $time),
+        duration
+      );
+    }
+
+    if (mode === "left" && Math.abs(offset - $time) < threshold) {
+      // calculate new start
+      let dt = $time - initialTrimValues.offset;
+      edge = initialTrimValues.start + dt;
+
+      return [$time, edge];
+    } else if (Math.abs(offset + duration - $time) < threshold) {
+      return [offset, offset + initialTrimValues.duration - $time];
+    }
+
+    return [offset, edge];
   };
 
   /**
