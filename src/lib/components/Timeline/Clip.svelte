@@ -6,7 +6,9 @@
     selected,
     scroll,
     audioClips,
+    scale,
   } from "$lib/stores";
+  import { getClipDuration, getClipEndPos } from "$lib/utils";
   import { createEventDispatcher } from "svelte";
 
   export let clip: App.Clip;
@@ -50,11 +52,10 @@
   const moveClip = (e: MouseEvent) => {
     // subtract timelineOffset to get clientX relative to timeline
     const offsetPos = e.clientX - timelineOffset - moveOffset + $scroll;
-    const newOffset = Math.max(0, offsetPos / $scaleFactor);
+    const offset = Math.max(0, offsetPos / $scaleFactor);
 
     // update offset of clip with new offset, snapping if possible
-    if (e.shiftKey) clip.offset = newOffset;
-    else clip.offset = snapOnMove(newOffset);
+    clip.offset = e.shiftKey ? offset : snapOnMove(offset);
 
     // reassign to trigger reactivity
     if (clip.media.type === "audio") $audioClips = [...$audioClips];
@@ -63,9 +64,9 @@
 
   const resizeClip = (e: MouseEvent) => {
     const delta = e.clientX - initialResizeMousePos;
+    const dt = delta / $scaleFactor;
 
     if (clip.media.type === "image") {
-      const dt = delta / $scaleFactor;
       if (resizeMode === "left") {
         clip.offset = Math.max(0, initialTrimValues.offset + dt);
         // FIXME: if clip offset moved < 0, overall duration will begin to
@@ -78,28 +79,41 @@
     }
 
     if (resizeMode === "left") {
-      // if holding shift, keep offset stationary (reposition w.r.t left of clip)
-      let offset = initialTrimValues.offset;
-      // if *not* holding shift, move offset with clip
-      if (!e.shiftKey) {
-        offset = Math.max(
-          initialTrimValues.offset - initialTrimValues.start,
-          initialTrimValues.offset + delta / $scaleFactor
-        );
-      }
-
       let start = Math.min(
-        Math.max(0, initialTrimValues.start + delta / $scaleFactor),
+        Math.max(0, initialTrimValues.start + dt),
         clip.media.duration - clip.end
       );
 
-      clip.start = start;
-      clip.offset = offset;
+      // if we're holding shift, we don't need to perform resize snap.
+      if (e.shiftKey) {
+        clip.offset = initialTrimValues.offset;
+        clip.start = start;
+        return;
+      }
+
+      let offset = Math.max(
+        initialTrimValues.offset - initialTrimValues.start,
+        initialTrimValues.offset + dt
+      );
+
+      let [snapOffset, snapStart] = snapOnResize("left", offset, start);
+
+      clip.offset = snapOffset;
+      clip.start = snapStart;
     } else if (resizeMode === "right") {
-      clip.end = Math.min(
-        Math.max(0, initialTrimValues.end - delta / $scaleFactor),
+      let end = Math.min(
+        Math.max(0, initialTrimValues.end - dt),
         clip.media.duration - clip.start
       );
+
+      let [snapOffset, snapEnd] = snapOnResize(
+        "right",
+        initialTrimValues.offset,
+        end
+      );
+
+      clip.offset = snapOffset;
+      clip.end = snapEnd;
     }
 
     // reassign to trigger reactivity
@@ -108,38 +122,91 @@
   };
 
   /**
-   * Checks if the given offset is within a 0.1s threshold of any other clip's
-   * end. If so, returns a new offset such that the clip is "snapped" to the end
-   * of the nearest clip. Otherwise, returns the original offset.
+   * Snaps this clip to the scrubber, or the nearest clip, if within threshold.
+   * Returns a new offset if a snap position is found.
    *
-   * @param eagerOffset - The predicted offset of the clip during move. I.e. the
-   * calculated offset before the clip is released from the mouse.
+   * @param offset - The offset of the clip.
    */
-  const snapOnMove = (eagerOffset: number) => {
-    const arr = clip.media.type === "audio" ? $audioClips : $videoClips;
-    const clips = arr
+  const snapOnMove = (offset: number) => {
+    const threshold = 0.1 - 0.01 * $scale;
+
+    if (Math.abs(offset - $time) < threshold) return $time;
+    if (Math.abs(offset + getClipDuration(clip) - $time) < threshold)
+      return $time - getClipDuration(clip);
+
+    const clips = clip.media.type === "audio" ? $audioClips : $videoClips;
+
+    const valid = clips
       .filter((c) => c.uuid !== clip.uuid)
-      // calculate distance from end of clip to beginning of current clip
-      .map((c) => {
-        const end = c.offset + (c.media.duration - c.start - c.end);
-        const distance = Math.abs(eagerOffset - end);
-        return { clip: c, distance };
-      })
-      .filter((c) => c.distance < 0.05 + (0.2 - 0.01 * ($scaleFactor / 25)));
+      .map((c) => ({
+        clip: c,
+        /**
+         * The distance from the front of this clip to the back of the moving clip
+         *
+         *   - - ----------+                 +-----------+
+         * eager offset -> | |-- {front} --| | this clip |
+         *   - - ----------+                 +-----------+
+         */
+        front: Math.abs(c.offset - (offset + getClipDuration(clip))),
+        /**
+         * The distance from the back of this clip to the front of the moving clip
+         *
+         * +-----------+                +---------- - -
+         * | this clip | |-- {back} --| | <- eager offset
+         * +-----------+                +---------- - -
+         */
+        back: Math.abs(offset - getClipEndPos(c)),
+      }))
+      .filter((c) => c.front < threshold || c.back < threshold);
 
-    if (!clips.length) return eagerOffset;
+    if (!valid.length) return offset;
 
-    // reaching here means there is at least one clip within 0.1s threshold, so
-    // we reduce to find the nearest clip.
-    let nearest = clips.reduce((prev, curr) => {
-      if (prev.distance < curr.distance) return prev;
-      return curr;
-    }).clip;
+    let nearest = valid.reduce((prev, curr) =>
+      prev.front < prev.front || prev.back < curr.back ? prev : curr
+    );
 
-    eagerOffset =
-      nearest.offset + (nearest.media.duration - nearest.start - nearest.end);
+    if (nearest.front < nearest.back)
+      return nearest.clip.offset - getClipDuration(clip);
+    else return getClipEndPos(nearest.clip);
+  };
 
-    return eagerOffset;
+  const snapOnResize = (
+    mode: "left" | "right",
+    offset: number,
+    edge: number
+  ) => {
+    return [offset, edge];
+
+    const threshold = 0.1 - 0.01 * $scale;
+
+    const duration =
+      clip.media.duration -
+      edge -
+      (mode === "left" ? initialTrimValues.end : initialTrimValues.start);
+
+    if (mode === "left") {
+      console.log("left", offset, edge, Math.abs(offset - $time), duration);
+    } else {
+      console.log(
+        "right",
+        offset,
+        edge,
+        Math.abs(offset + duration - $time),
+        duration
+      );
+    }
+
+    if (mode === "left" && Math.abs(offset - $time) < threshold) {
+      // calculate new start
+      let dt = $time - initialTrimValues.offset;
+      edge = initialTrimValues.start + dt;
+
+      return [$time, edge];
+    } else if (Math.abs(offset + duration - $time) < threshold) {
+      return [offset, offset + initialTrimValues.duration - $time];
+    }
+
+    return [offset, edge];
   };
 
   /**
@@ -200,7 +267,7 @@
   //     //   // calculate distance from end of clip to beginning of current clip
   //     //   .map((c) => {
   //     //     const start = c.offset;
-  //     //     const distance = Math.abs(eagerOffset - end);
+  //     //     const distance = Math.abs(offset - end);
   //     //     return { clip: c, distance };
   //     //   })
   //     //   .filter((c) => c.distance < 0.1);

@@ -5,7 +5,6 @@
     time,
     videoClips,
     playerScale,
-    res,
     safeRes,
     selected,
     paused,
@@ -21,10 +20,9 @@
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
-  import { cyrb53, frame, getCurrentClips } from "$lib/utils";
+  import { frame, getCurrentClips } from "$lib/utils";
   import MediaBrowser from "$lib/components/MediaBrowser.svelte";
   import TimelineMedia from "$lib/components/TimelineMedia.svelte";
-  import Modal from "$lib/components/Preferences/Modal.svelte";
   import Preferences from "$lib/components/Preferences/Preferences.svelte";
 
   // get the UUIDs of the current audio clips (we return this as a comma-sep
