@@ -175,6 +175,8 @@
     offset: number,
     edge: number
   ) => {
+    return [offset, edge];
+
     const threshold = 0.1 - 0.01 * $scale;
 
     const duration =
