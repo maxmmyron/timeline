@@ -42,7 +42,6 @@
     src={clip.media.src}
     title={clip.uuid}
     bind:this={$vRefs[clip.uuid]}
-    style:scale={$playerScale}
     style:transform="translate(-50%, -50%) matrix({clip.matrix.join(",")})"
     style:transform-origin="{clip.origin[0] * 100}% {clip.origin[1] * 100}%"
     style:z-index={clip.z}
@@ -58,7 +57,6 @@
     title={clip.uuid}
     alt=""
     bind:this={$iRefs[clip.uuid]}
-    style:scale={$playerScale}
     style:transform="translate(-50%, -50%) matrix({clip.matrix.join(",")})"
     style:transform-origin="{clip.origin[0] * 100}% {clip.origin[1] * 100}%"
     style:z-index={clip.z}
