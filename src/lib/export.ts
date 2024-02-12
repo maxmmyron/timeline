@@ -1,5 +1,5 @@
 import { get } from "svelte/store";
-import { ffmpeg, safeRes, videoClips, audioClips, exportStatus, exportPercentage } from "./stores";
+import { ffmpeg, safeRes, videoClips, audioClips, exportStatus, exportPercentage, playerScale } from "./stores";
 import { fetchFile } from "@ffmpeg/ffmpeg";
 
 export const exportVideo = async () => {
@@ -173,12 +173,21 @@ export const exportVideo = async () => {
 
     const clip = vClips[i];
 
+    const originOffsetX = clip.media.dimensions[0] * get(playerScale) * (clip.origin[0] - 0.5);
+    const originOffsetY = clip.media.dimensions[1] * get(playerScale) * (clip.origin[1] - 0.5);
+
     /**
      * The portion of the ffmpeg filter that defines the position of the clip.
-     * (W-w)/2 and (H-h)/2 are used to center the video; we offset these by the
-     * clip's matrix[4] and matrix[5] values.
+     * (W-w)/2 and (H-h)/2 are used to center the video; we then offset by two
+     * values:
+     * 1. the x and y values of the clip's transformation matrix
+     * 2. the offset of the clip based on the transform origin and scaling
      */
-    const overlayPos = `(W-w)/2+${clip.matrix[4]}:(H-h)/2+${clip.matrix[5]}`;
+    const overlayPos  = `(W-w)/2+${clip.matrix[4] + originOffsetX}:(H-h)/2+${clip.matrix[5] + originOffsetY}`;
+
+    console.log(overlayPos, clip.matrix[4], clip.matrix[5], originOffsetX, originOffsetY, clip.media.dimensions[0], clip.media.dimensions[1]);
+
+    // const overlayPos = `(W-w)/2+${clip.matrix[4]}:(H-h)/2+${clip.matrix[5]}`;
 
     /**
      * The portion of the ffmpeg filter that defines the period over which the
@@ -190,6 +199,7 @@ export const exportVideo = async () => {
     //overlay=<overlayW>:<overlayH>:<enabledPeriod>
     vFilter += `${inLink}[${i + 1}v]overlay=${overlayPos}:${enabledPeriod}${outLink};`
   }
+  return;
 
   // if there are no video clips, we need to add a null filter to the video filter chain
   if (vClips.length === 0) vFilter += `[0:v]null[vout];`;

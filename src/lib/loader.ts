@@ -21,13 +21,17 @@ export const resolveMedia = (file: File): {uuid: string, title: string, media: P
       if (type === "image") {
         const img = new Image();
         img.src = src;
+        await img.decode();
         dimensions = [img.width, img.height];
       } else if (type === "video") {
         const video = document.createElement("video");
         video.src = src;
         video.preload = "metadata";
         video.load();
-        dimensions = [video.videoWidth, video.videoHeight];
+        await new Promise((resolve) => video.addEventListener("loadedmetadata", () => {
+          dimensions = [video.videoWidth, video.videoHeight];
+          resolve(null);
+        }));
       }
 
       resolve({ uuid, src, duration, title: file.name, type, dimensions });
