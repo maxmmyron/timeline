@@ -51,6 +51,7 @@
   >
     <p>{clip.media.title}</p>
     <p>{clip.media.duration.toPrecision(3)}s</p>
+    <p>{clip.media.dimensions[0]}px x {clip.media.dimensions[1]}px</p>
     <p class="text-zinc-500">{clip.uuid}</p>
   </header>
 
