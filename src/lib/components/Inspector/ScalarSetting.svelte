@@ -21,6 +21,8 @@
     step: number;
   };
 
+  export let useSubgrid: boolean = false;
+
   const dispatcher = createEventDispatcher<{ change: number }>();
   $: dispatcher("change", scalar);
 
@@ -28,19 +30,16 @@
   export { clazz as class };
 </script>
 
-<article class="flex items-center gap-1 {clazz}">
-  <label class="flex items-center gap-1 flex-grow">
-    <p class="w-11 text-ellipsis">{name}</p>
-    <input
-      class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800 max-w-28"
-      type="range"
-      {...props}
-      bind:value={scalar}
-    />
-  </label>
+<label
+  class="{useSubgrid
+    ? 'grid grid-cols-subgrid col-start-1 col-span-full'
+    : 'flex gap-2'} items-center {clazz}"
+>
+  <p class="text-ellipsis">{name}</p>
   <input
     class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800 w-10"
     type="number"
+    {...props}
     bind:value={scalar}
     alt="Manual {name} property entry"
     on:change={(e) => {
@@ -54,4 +53,4 @@
     class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex flex-col items-center justify-center border border-zinc-700"
     on:click={() => (scalar = defaultVal)}>↻</button
   >
-</article>
+</label>
