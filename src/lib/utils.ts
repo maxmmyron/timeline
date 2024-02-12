@@ -121,16 +121,10 @@ export const cyrb53 = (str: string, seed = 0) => {
  * if necessary.
  */
 export const updateScrubberAndScroll = (t:  number) => {
+  time.set(t);
+
   const tlScroll = get(scroll);
-
-  time.update($time => {
-    if (t < tlScroll) {
-      return t;
-    }
-    return $time;
-  });
-
   if(get(time) * get(scaleFactor) < tlScroll || get(time) * get(scaleFactor) > tlScroll + window.innerWidth) {
-    scroll.update(() => t * get(scaleFactor) - window.innerWidth / 2);
+    scroll.set(t * get(scaleFactor) - window.innerWidth / 2);
   }
 };
