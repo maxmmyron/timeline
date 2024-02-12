@@ -279,7 +279,7 @@
 />
 
 <button
-  class="absolute h-12 border border-zinc-800 rounded-md bg-zinc-300 min-w-2 shadow-sm dark:bg-zinc-800"
+  class="absolute h-12 border border-zinc-800 rounded-md bg-zinc-300 min-w-2 shadow-md dark:bg-zinc-800"
   class:bg-zinc-400={selectedUUID === clip.uuid}
   class:dark:bg-zinc-900={selectedUUID === clip.uuid}
   class:shadow-lg={selectedUUID === clip.uuid}

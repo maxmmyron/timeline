@@ -78,7 +78,7 @@
                   $audioClips = [...$audioClips, clip];
                 } else $videoClips = [...$videoClips, clip];
 
-                updateScrubberAndScroll(end);
+                // updateScrubberAndScroll(end);
               }}
               class="bg-zinc-800 p-1 w-5 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
             >
