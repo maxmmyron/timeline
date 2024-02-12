@@ -26,6 +26,7 @@ declare global {
 			 * The original file name of the media
 			 */
 			title: string;
+			dimensions: [number, number];
 			type: MediaType;
 		};
 
