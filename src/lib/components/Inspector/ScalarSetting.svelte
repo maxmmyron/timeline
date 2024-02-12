@@ -11,6 +11,7 @@
    */
   export let strictBounds: boolean = false;
 
+  // TODO: could change to restProps? how?
   export let props: svelteHTML.HTMLProps<
     "input",
     svelteHTML.HTMLAttributes<any>
