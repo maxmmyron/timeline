@@ -69,7 +69,4 @@
       }
     }}
   />
-  <IconButton alt="Reset value" on:click={() => (scalar = defaultVal)}>
-    <Reset />
-  </IconButton>
 </label>
