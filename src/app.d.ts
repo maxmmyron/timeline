@@ -10,6 +10,7 @@ declare global {
 			uuid: string;
 			z: number;
 			matrix: Matrix;
+			origin: [number, number];
 			volume: number;
 			pan: number;
 		};
