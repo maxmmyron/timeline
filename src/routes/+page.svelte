@@ -242,8 +242,9 @@
 >
   <div
     class="relative overflow-hidden left-1/2 -translate-x-1/2 bg-black center"
-    style:width="{playerRes[0]}px"
-    style:height="{playerRes[1]}px"
+    style:width="{$safeRes[0]}px"
+    style:height="{$safeRes[1]}px"
+    style:scale={$playerScale}
   >
     {#each $videoClips as clip (clip.uuid)}
       <TimelineMedia {clip} curr={currVideo} />

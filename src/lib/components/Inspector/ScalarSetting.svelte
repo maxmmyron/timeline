@@ -11,6 +11,7 @@
    */
   export let strictBounds: boolean = false;
 
+  // TODO: could change to restProps? how?
   export let props: svelteHTML.HTMLProps<
     "input",
     svelteHTML.HTMLAttributes<any>
@@ -18,28 +19,35 @@
     min: number;
     max: number;
     step: number;
-  };
+  } = { min: -Infinity, max: Infinity, step: 0.01 };
+
+  export let useSubgrid: boolean = false;
+
+  /**
+   * The magnitude of the change in the scalar value when the mouse wheel is
+   * scrolled.
+   */
+  export let mag: number = props.step;
 
   const dispatcher = createEventDispatcher<{ change: number }>();
   $: dispatcher("change", scalar);
+
+  let isHovered = false;
 
   let clazz = "";
   export { clazz as class };
 </script>
 
-<article class="flex items-center gap-1 {clazz}">
-  <label class="flex items-center gap-1 flex-grow">
-    <p class="w-11 text-ellipsis">{name}</p>
-    <input
-      class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800 max-w-28"
-      type="range"
-      {...props}
-      bind:value={scalar}
-    />
-  </label>
+<label
+  class="{useSubgrid
+    ? 'grid grid-cols-subgrid col-start-1 col-span-full'
+    : 'flex gap-2'} items-center {clazz}"
+>
+  <p class="text-ellipsis">{name}</p>
   <input
     class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800 w-10"
     type="number"
+    {...props}
     bind:value={scalar}
     alt="Manual {name} property entry"
     on:change={(e) => {
@@ -48,9 +56,21 @@
         scalar = Math.min(props.max, Math.max(props.min, parsed));
       else scalar = parsed;
     }}
+    on:mouseenter={() => (isHovered = true)}
+    on:mouseleave={() => (isHovered = false)}
+    on:auxclick={(e) => {
+      if (e.button === 1) scalar = defaultVal;
+    }}
+    on:wheel={(e) => {
+      let mult = e.shiftKey ? 10 : 1;
+      if (isHovered) {
+        e.preventDefault();
+        scalar = Math.min(
+          props.max,
+          Math.max(props.min, scalar - Math.sign(e.deltaY) * mag * mult)
+        );
+      }
+    }}
+    on:change
   />
-  <button
-    class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex flex-col items-center justify-center border border-zinc-700"
-    on:click={() => (scalar = defaultVal)}>↻</button
-  >
-</article>
+</label>

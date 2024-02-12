@@ -173,12 +173,18 @@ export const exportVideo = async () => {
 
     const clip = vClips[i];
 
+    // calculate the offset of the clip based on the transform origin and scaling.
+    const originOffsetX = ((clip.matrix[0] - 1) * clip.media.dimensions[0] / 2) * (2 * clip.origin[0] - 1);
+    const originOffsetY = ((clip.matrix[3] - 1) * clip.media.dimensions[1] / 2) * (2 * clip.origin[1] - 1);
+
     /**
      * The portion of the ffmpeg filter that defines the position of the clip.
-     * (W-w)/2 and (H-h)/2 are used to center the video; we offset these by the
-     * clip's matrix[4] and matrix[5] values.
+     * (W-w)/2 and (H-h)/2 are used to center the video; we then offset by two
+     * values:
+     * 1. the x and y values of the clip's transformation matrix
+     * 2. the offset of the clip based on the transform origin and scaling
      */
-    const overlayPos = `(W-w)/2+${clip.matrix[4]}:(H-h)/2+${clip.matrix[5]}`;
+    const overlayPos  = `(W-w)/2+${clip.matrix[4] - originOffsetX}:(H-h)/2+${clip.matrix[5] - originOffsetY}`;
 
     /**
      * The portion of the ffmpeg filter that defines the period over which the

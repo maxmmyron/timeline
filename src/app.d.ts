@@ -10,6 +10,7 @@ declare global {
 			uuid: string;
 			z: number;
 			matrix: Matrix;
+			origin: [number, number];
 			volume: number;
 			pan: number;
 		};
@@ -25,6 +26,7 @@ declare global {
 			 * The original file name of the media
 			 */
 			title: string;
+			dimensions: [number, number];
 			type: MediaType;
 		};
 
