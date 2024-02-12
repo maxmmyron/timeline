@@ -26,12 +26,12 @@
   let matrix = clip.matrix;
   let volume = clip.volume;
   let pan = clip.pan;
-
-  let origin: [number, number] = [0.6, 0.8];
+  let origin = clip.origin;
 
   $: updateProp("matrix", matrix);
   $: updateProp("volume", volume);
   $: updateProp("pan", pan);
+  $: updateProp("origin", origin);
 
   const updateProp = <T extends keyof typeof clip>(
     prop: T,
@@ -76,7 +76,7 @@
       <section class="w-full col-start-1 flex flex-wrap gap-2 pb-2 mb-2">
         <h3 class="w-full">Transform Origin</h3>
         <div
-          class="relative grid grid-cols-3 grid-rows-3 p-0.5 w-16 h-16 rounded-md bg-zinc-950/15 dark:bg-zinc-100/40"
+          class="relative grid grid-cols-3 grid-rows-3 p-0.5 w-16 h-16 rounded-md bg-zinc-100 dark:bg-zinc-800/15"
         >
           <TransformButton bind:origin value={[0, 0]} />
           <TransformButton bind:origin value={[0.5, 0]}>
@@ -129,29 +129,29 @@
             class="col-start-1"
             name="X"
             bind:scalar={matrix[4]}
-            props={{ min: -$safeRes[0] / 2, max: $safeRes[0] / 2, step: 0.01 }}
             on:change={() => isPositionLinked && (matrix[5] = matrix[4])}
+            mag={1}
           />
           <ScalarSetting
             name="Y"
             class="col-start-1"
             bind:scalar={matrix[5]}
-            props={{ min: -$safeRes[1] / 2, max: $safeRes[1] / 2, step: 0.01 }}
             on:change={() => isPositionLinked && (matrix[4] = matrix[5])}
+            mag={1}
           />
           <div
             class="col-start-2 row-start-1 row-span-2 flex flex-col justify-center gap-1"
           >
             <div
-              class="w-1/2 h-2 rounded-tr-md border-t border-r {isScaleLinked
+              class="w-1/2 h-2 rounded-tr-md border-t border-r {isPositionLinked
                 ? 'border-solid'
                 : 'border-dashed'} border-zinc-700"
             />
             <IconButton
               alt="Link position"
-              on:click={() => (isScaleLinked = !isScaleLinked)}
+              on:click={() => (isPositionLinked = !isPositionLinked)}
             >
-              {#if isScaleLinked}
+              {#if isPositionLinked}
                 <UnlinkIcon />
               {:else}
                 <LinkIcon />
@@ -159,7 +159,7 @@
             </IconButton>
 
             <div
-              class="w-1/2 h-2 rounded-br-md border-b border-r {isScaleLinked
+              class="w-1/2 h-2 rounded-br-md border-b border-r {isPositionLinked
                 ? 'border-solid'
                 : 'border-dashed'} border-zinc-700"
             />
@@ -186,22 +186,22 @@
             class="col-start-2 row-start-1 row-span-2 flex flex-col justify-center gap-1"
           >
             <div
-              class="w-1/2 h-2 rounded-tr-md border-t border-r {isPositionLinked
+              class="w-1/2 h-2 rounded-tr-md border-t border-r {isScaleLinked
                 ? 'border-solid'
                 : 'border-dashed'} border-zinc-700"
             />
             <IconButton
               alt="Link position"
-              on:click={() => (isPositionLinked = !isPositionLinked)}
+              on:click={() => (isScaleLinked = !isScaleLinked)}
             >
-              {#if isPositionLinked}
+              {#if isScaleLinked}
                 <UnlinkIcon />
               {:else}
                 <LinkIcon />
               {/if}
             </IconButton>
             <div
-              class="w-1/2 h-2 rounded-br-md border-b border-r {isPositionLinked
+              class="w-1/2 h-2 rounded-br-md border-b border-r {isScaleLinked
                 ? 'border-solid'
                 : 'border-dashed'} border-zinc-700"
             />

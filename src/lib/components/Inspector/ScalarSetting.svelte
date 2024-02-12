@@ -1,7 +1,5 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
-  import IconButton from "../IconButton.svelte";
-  import Reset from "$lib/icon/Reset.svelte";
 
   export let name: string;
   export let scalar: number;
@@ -21,9 +19,15 @@
     min: number;
     max: number;
     step: number;
-  };
+  } = { min: -Infinity, max: Infinity, step: 0.01 };
 
   export let useSubgrid: boolean = false;
+
+  /**
+   * The magnitude of the change in the scalar value when the mouse wheel is
+   * scrolled.
+   */
+  export let mag: number = props.step;
 
   const dispatcher = createEventDispatcher<{ change: number }>();
   $: dispatcher("change", scalar);
@@ -52,21 +56,21 @@
         scalar = Math.min(props.max, Math.max(props.min, parsed));
       else scalar = parsed;
     }}
+    on:mouseenter={() => (isHovered = true)}
+    on:mouseleave={() => (isHovered = false)}
     on:auxclick={(e) => {
       if (e.button === 1) scalar = defaultVal;
     }}
-    on:mouseenter={() => (isHovered = true)}
-    on:mouseleave={() => (isHovered = false)}
     on:wheel={(e) => {
-      let mag = 1;
-      if (e.shiftKey) mag = 10;
+      let mult = e.shiftKey ? 10 : 1;
       if (isHovered) {
         e.preventDefault();
         scalar = Math.min(
           props.max,
-          Math.max(props.min, scalar - Math.sign(e.deltaY) * props.step * mag)
+          Math.max(props.min, scalar - Math.sign(e.deltaY) * mag * mult)
         );
       }
     }}
+    on:change
   />
 </label>
