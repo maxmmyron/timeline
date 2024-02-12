@@ -1,5 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
+  import IconButton from "../IconButton.svelte";
+  import Reset from "$lib/icon/Reset.svelte";
 
   export let name: string;
   export let scalar: number;
@@ -26,6 +28,8 @@
   const dispatcher = createEventDispatcher<{ change: number }>();
   $: dispatcher("change", scalar);
 
+  let isHovered = false;
+
   let clazz = "";
   export { clazz as class };
 </script>
@@ -48,9 +52,24 @@
         scalar = Math.min(props.max, Math.max(props.min, parsed));
       else scalar = parsed;
     }}
+    on:auxclick={(e) => {
+      if (e.button === 1) scalar = defaultVal;
+    }}
+    on:mouseenter={() => (isHovered = true)}
+    on:mouseleave={() => (isHovered = false)}
+    on:wheel={(e) => {
+      let mag = 1;
+      if (e.shiftKey) mag = 10;
+      if (isHovered) {
+        e.preventDefault();
+        scalar = Math.min(
+          props.max,
+          Math.max(props.min, scalar - Math.sign(e.deltaY) * props.step * mag)
+        );
+      }
+    }}
   />
-  <button
-    class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex flex-col items-center justify-center border border-zinc-700"
-    on:click={() => (scalar = defaultVal)}>↻</button
-  >
+  <IconButton alt="Reset value" on:click={() => (scalar = defaultVal)}>
+    <Reset />
+  </IconButton>
 </label>
