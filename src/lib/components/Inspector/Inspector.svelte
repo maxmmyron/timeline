@@ -221,7 +221,8 @@
           <IconButton
             alt="Reset audio settings"
             on:click={() => {
-              volume = 1;
+              volume.staticVal = 1;
+              volume.curves = [];
               pan = 0;
             }}
           >
@@ -231,16 +232,20 @@
       </header>
 
       <section
-        class="col-start-1 grid grid-cols-[min-content,1fr] gap-2 h-fit w-fit"
+        class="col-start-1 grid grid-cols-[min-content,min-content,24px] gap-2 h-fit w-full"
       >
         <ScalarSetting
           useSubgrid
+          supportsAutomation
           name="Volume"
-          bind:scalar={volume}
+          disabled={volume.curves.length > 0}
+          bind:scalar={volume.staticVal}
           props={{ min: 0, max: 1, step: 0.01 }}
           strictBounds
           defaultVal={1}
+          bind:automation={volume}
         />
+
         <ScalarSetting
           useSubgrid
           name="Pan"

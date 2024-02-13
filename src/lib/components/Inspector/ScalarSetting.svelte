@@ -1,9 +1,16 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
+  import IconButton from "$lib/components/IconButton.svelte";
+  import AutomationIcon from "$lib/icon/AutomationIcon.svelte";
+  import AutomationPanel from "./AutomationPanel.svelte";
 
   export let name: string;
   export let scalar: number;
+  export let automation: App.Automation | null = null;
   export let defaultVal: number = 0;
+
+  export let useSubgrid: boolean = false;
+  export let supportsAutomation: boolean = false;
 
   /**
    * Whether or not the numerical override input can exceed the bounds defined
@@ -21,8 +28,6 @@
     step: number;
   } = { min: -Infinity, max: Infinity, step: 0.01 };
 
-  export let useSubgrid: boolean = false;
-
   /**
    * The magnitude of the change in the scalar value when the mouse wheel is
    * scrolled.
@@ -33,6 +38,7 @@
   $: dispatcher("change", scalar);
 
   let isHovered = false;
+  let isAutomationVisible = false;
 
   let clazz = "";
   export { clazz as class };
@@ -47,7 +53,9 @@
   <input
     class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800 w-10"
     type="number"
+    disabled={automation && automation.curves.length > 0}
     {...props}
+    {...$$restProps}
     bind:value={scalar}
     alt="Manual {name} property entry"
     on:change={(e) => {
@@ -73,4 +81,19 @@
     }}
     on:change
   />
+  {#if supportsAutomation && automation}
+    <IconButton
+      alt="Edit automation"
+      on:click={() => {
+        isAutomationVisible = true;
+      }}
+    >
+      <AutomationIcon />
+    </IconButton>
+  {/if}
 </label>
+{#if isAutomationVisible && automation}
+  <div class="{useSubgrid ? 'col-start-1 col-end-5' : ''} w-full">
+    <AutomationPanel bind:automation bind:isAutomationVisible />
+  </div>
+{/if}
