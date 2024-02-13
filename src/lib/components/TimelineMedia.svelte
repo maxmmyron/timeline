@@ -10,7 +10,8 @@
   let gainNode: GainNode = $aCtx!.createGain();
   let panNode: StereoPannerNode = $aCtx!.createStereoPanner();
 
-  $: gainNode.gain.value = clip.volume;
+  // TODO: add support for automation
+  $: gainNode.gain.value = clip.volume.staticVal;
   $: panNode.pan.value = clip.pan;
 
   onMount(() => {

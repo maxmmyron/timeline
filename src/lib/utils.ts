@@ -89,12 +89,8 @@ export const createClip = (resolved: App.Media, opts?: Partial<App.Clip>): App.C
   z: get(videoClips).reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1,
   matrix: opts?.matrix ?? [1, 0, 0, 1, 0, 0],
   origin: [0.5, 0.5],
-  volume: 1,
+  volume: createAutomation("volume", resolved.duration),
   pan: 0,
-  automation: {
-    volume: null,
-    pan: null
-  },
 });
 
 /**
@@ -133,3 +129,13 @@ export const updateScrubberAndScroll = (t:  number) => {
     scroll.set(t * get(scaleFactor) - window.innerWidth / 2);
   }
 };
+
+export const createAutomation = <T = App.AutomationType>(type: T, duration: number): App.Automation<T> => ({
+  uuid: uuidv4(),
+  type: type,
+  anchor: "start",
+  offset: 0,
+  duration,
+  curves: [],
+  staticVal: 1,
+});

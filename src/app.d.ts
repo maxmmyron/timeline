@@ -11,12 +11,8 @@ declare global {
 			z: number;
 			matrix: Matrix;
 			origin: [number, number];
-			volume: number;
+			volume: Automation<"volume">;
 			pan: number;
-			automation: {
-				volume: Array<Automation<"volume">> | null;
-				pan: Array<Automation<"pan">> | null;
-			}
 		};
 
 		type Media = {
@@ -52,6 +48,10 @@ declare global {
 			 * types as defined by App.CurveType.
 			 */
 			curves: Array<[[number, number], [number, number], CurveType]>;
+			/**
+			 * A static value to use if the automation is not defined.
+			 */
+			staticVal: number;
 		}
 
 		type AutomationType = "volume" | "pan";
