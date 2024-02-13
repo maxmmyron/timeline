@@ -13,6 +13,10 @@ declare global {
 			origin: [number, number];
 			volume: number;
 			pan: number;
+			automation: {
+				volume: Array<Automation<"volume">> | null;
+				pan: Array<Automation<"pan">> | null;
+			}
 		};
 
 		type Media = {
@@ -33,6 +37,25 @@ declare global {
 		type Matrix = [number, number, number, number, number, number];
 
 		type MediaType = "video" | "audio" | "image";
+
+		type Automation<T = AutomationType> = {
+			uuid: string;
+			type: T;
+			anchor: "start" | "end";
+			offset: number;
+			duration: number;
+			/**
+			 * The curves that make up the automation graph. Each curve is defined by:
+			 * 1. The start point, defined as [time, value]
+			 * 2. The end point, defined as [time, value]
+			 * 3. The type of curve, defined as a string. This can be one of several
+			 * types as defined by App.CurveType.
+			 */
+			curves: Array<[[number, number], [number, number], CurveType]>;
+		}
+
+		type AutomationType = "volume" | "pan";
+		type CurveType = "linear" | "quadratic" | "cubic";
 	}
 }
 
