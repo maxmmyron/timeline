@@ -18,6 +18,9 @@
   let selectedIdx = -1;
   let activeIdx = -1;
 
+  let initialMousePos: [number, number] = [0, 0];
+  let initialNodePos: [number, number] = [0, 0];
+
   onMount(() => {
     if (automation.curves.length == 0) {
       automation.curves = [
@@ -98,11 +101,17 @@
     let newX = Math.min(Math.max(x, 0), editContainerWidth);
     let adjustedX = (newX / editContainerWidth) * automation.duration;
 
+    // bound adjustedX to the previous and next point's X values
     let prevX = automation.curves[activeIdx - 1][0];
     let nextX = automation.curves[activeIdx + 1][0];
-
-    // bound adjustedX to the previous and next point's X values
     let boundedX = Math.min(Math.max(adjustedX, prevX), nextX);
+
+    // if shift is held, constrain movement to the axis with the greatest delta
+    if (e.shiftKey) {
+      if (Math.abs(x - initialMousePos[0]) > Math.abs(y - initialMousePos[1]))
+        adjustedY = initialNodePos[1];
+      else boundedX = initialNodePos[0];
+    }
 
     automation.curves[activeIdx] = [boundedX, adjustedY];
   };
@@ -186,6 +195,11 @@
             class="absolute w-3 h-3 flex justify-center items-center transform -translate-x-1/2 -translate-y-1/2"
             style="left:{x}px; top:{y}px"
             on:mousedown={(e) => {
+              initialMousePos = [
+                e.clientX - canvas.getBoundingClientRect().left,
+                e.clientY - canvas.getBoundingClientRect().top,
+              ];
+              initialNodePos = [curve[0], curve[1]];
               activeIdx = i;
               selectedIdx = i;
             }}
