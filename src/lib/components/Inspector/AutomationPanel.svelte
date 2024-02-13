@@ -15,20 +15,14 @@
   let editContainerWidth = 0;
   let editContainerHeight = 0;
 
-  /**
-   * The curve and point index that is being moved.
-   * if [0] === -1 || [1] === -1, no point is being moved.
-   */
-  let moveIndex = [-1, -1];
+  let selectedIdx = -1;
+  let activeIdx = -1;
 
   onMount(() => {
     if (automation.curves.length == 0) {
       automation.curves = [
-        [
-          [0, automation.staticVal],
-          [automation.duration, automation.staticVal],
-          "linear",
-        ],
+        [0, automation.staticVal],
+        [automation.duration, automation.staticVal],
       ];
     }
 
@@ -45,10 +39,10 @@
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     for (let i = 0; i < automation.curves.length; i++) {
-      const curve = automation.curves[i];
-
-      const [x1, y1] = curve[0];
-      const [x2, y2] = curve[1];
+      const [x1, y1] = automation.curves[i];
+      // if we're at the last point, use the previous point's Y value
+      // (i.e. self)
+      const [x2, y2] = automation.curves[i + 1] || [automation.duration, y1];
 
       const [startX, startY] = [
         (x1 / automation.duration) * canvas.width,
@@ -72,47 +66,45 @@
   /**
    * Moves the point specified by the move index struct, based on the following
    * rules:
-   * 1. if [0] === 0 && [1] === 0, OR if [0] === (len - 1) && [1] === 1, then
-   *    we're moving the first/last point respectively; special case applies:
+   * 1. if idx === 0 OR if idx === (len - 1) then we're moving the first/last
+   *    point respectively; special case applies:
    *    - X value is static.
-   *    - does not change any other point in the curve.
    *
    * 2. otherwise, we're moving a point along the curve:
-   *    - X and Y are both dynamic
-   *    - if moving [0] point of a curve, also move the [1] point of the
-   *      previous curve.
-   *    - if moving [1] point of a curve, also move the [0] point of the next
-   *      curve.
+   *    - X is dynamic, however is bounded by the previous and next point's X
    */
   const move = (e: MouseEvent) => {
-    if (moveIndex[0] === -1 || moveIndex[1] === -1) return;
+    if (activeIdx === -1) return;
 
-    let x = e.clientX - canvas.getBoundingClientRect().left;
     let y = e.clientY - canvas.getBoundingClientRect().top;
-    let newX = Math.min(Math.max(x, 0), editContainerWidth);
     let newY = Math.min(Math.max(y, 0), editContainerHeight);
-
-    let adjustedX = (newX / editContainerWidth) * automation.duration;
     let adjustedY = 1 - newY / editContainerHeight;
 
     // special case: first/last point
-    if (moveIndex[0] === 0 && moveIndex[1] === 0) {
-      automation.curves[moveIndex[0]][0][1] = adjustedY;
+    if (activeIdx === 0) {
+      automation.curves[activeIdx][1] = adjustedY;
       return;
     }
-    if (moveIndex[0] === automation.curves.length - 1 && moveIndex[1] === 1) {
-      automation.curves[moveIndex[0]][1][1] = adjustedY;
+    if (activeIdx === automation.curves.length - 1) {
+      automation.curves[activeIdx][1] = adjustedY;
       return;
     }
 
-    // moving a point along the curve. we can make a few assumptions:
-    // 1. assume the moveIndex[1] value is 0 (as the only point with
-    //    moveIndex[1] === 1 is the last point of a curve, which is handled
-    //    above).
-    // 2. assume the previous curve exists, as the first curve is handled
-    //    above.
-    automation.curves[moveIndex[0]][0] = [adjustedX, adjustedY];
-    automation.curves[moveIndex[0] - 1][1] = [adjustedX, adjustedY];
+    // general case: move point along curve. we know we have at least one point
+    // before and after the current point, so we can safely access them.
+
+    let x = e.clientX - canvas.getBoundingClientRect().left;
+
+    let newX = Math.min(Math.max(x, 0), editContainerWidth);
+    let adjustedX = (newX / editContainerWidth) * automation.duration;
+
+    let prevX = automation.curves[activeIdx - 1][0];
+    let nextX = automation.curves[activeIdx + 1][0];
+
+    // bound adjustedX to the previous and next point's X values
+    let boundedX = Math.min(Math.max(adjustedX, prevX), nextX);
+
+    automation.curves[activeIdx] = [boundedX, adjustedY];
   };
 </script>
 
@@ -121,7 +113,17 @@
     move(e);
     rerender();
   }}
-  on:mouseup={() => (moveIndex = [-1, -1])}
+  on:mouseup={() => (activeIdx = -1)}
+  on:keydown={(e) => {
+    if (e.key === "Delete" && selectedIdx !== -1) {
+      if (selectedIdx === 0 || selectedIdx === automation.curves.length - 1)
+        return;
+      automation.curves.splice(selectedIdx, 1);
+      automation.curves = [...automation.curves];
+      selectedIdx = -1;
+      rerender();
+    }
+  }}
 />
 
 <section
@@ -146,42 +148,54 @@
         {/each}
       </div>
       <canvas bind:this={canvas} class="w-full h-full" />
+      <!-- svelte-ignore a11y-click-events-have-key-events -->
       <div
         class="absolute top-0 left-0 w-full h-full"
         bind:clientWidth={editContainerWidth}
         bind:clientHeight={editContainerHeight}
+        on:click={(e) => {
+          if (!e.ctrlKey) return;
+          let x = Math.min(
+            Math.max(e.clientX - canvas.getBoundingClientRect().left, 0),
+            editContainerWidth
+          );
+
+          let y = Math.min(
+            Math.max(e.clientY - canvas.getBoundingClientRect().top, 0),
+            editContainerHeight
+          );
+          x = (x / editContainerWidth) * automation.duration;
+          y = 1 - y / editContainerHeight;
+          for (let i = 0; i < automation.curves.length; i++) {
+            if (automation.curves[i][0] > x) {
+              automation.curves.splice(i, 0, [x, y]);
+              automation.curves = [...automation.curves];
+              rerender();
+              break;
+            }
+          }
+        }}
+        on:click|self={() => (activeIdx = -1)}
       >
         {#each automation.curves as curve, i (curve)}
           {@const [x, y] = [
-            (curve[0][0] / automation.duration) * editContainerWidth,
-            (1 - curve[0][1]) * editContainerHeight,
+            (curve[0] / automation.duration) * editContainerWidth,
+            (1 - curve[1]) * editContainerHeight,
           ]}
           <button
             class="absolute w-3 h-3 flex justify-center items-center transform -translate-x-1/2 -translate-y-1/2"
             style="left:{x}px; top:{y}px"
             on:mousedown={(e) => {
-              moveIndex = [i, 0];
+              activeIdx = i;
+              selectedIdx = i;
             }}
           >
-            <div class="bg-zinc-600 dark:bg-zinc-500 rounded-full w-1 h-1" />
-            {i}
+            <div
+              class="rounded-full w-1 h-1 {selectedIdx === i
+                ? 'bg-blue-300 dark:bg-blue-600'
+                : 'bg-zinc-600 dark:bg-zinc-500'}"
+            />
           </button>
-          {#if i === automation.curves.length - 1}
-            {@const [x, y] = [
-              (curve[1][0] / automation.duration) * editContainerWidth,
-              (1 - curve[1][1]) * editContainerHeight,
-            ]}
-            <button
-              class="absolute w-3 h-3 flex justify-center items-center transform -translate-x-1/2 -translate-y-1/2"
-              style="left:{x}px; top:{y}px"
-              on:mousedown={(e) => {
-                moveIndex = [i, 1];
-              }}
-            >
-              <div class="bg-zinc-600 dark:bg-zinc-500 rounded-full w-1 h-1" />
-              {i + 1}
-            </button>
-          {/if}
         {/each}
       </div>
     </div>
