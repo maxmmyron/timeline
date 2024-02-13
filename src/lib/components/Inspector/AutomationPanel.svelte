@@ -60,7 +60,7 @@
       ctx.beginPath();
       ctx.moveTo(startX, startY);
       ctx.lineTo(endX, endY);
-      ctx.strokeStyle = "hsl(200, 50%, 25%)";
+      ctx.strokeStyle = "hsl(200, 0%, 25%)";
       ctx.lineWidth = 2;
       ctx.stroke();
     }
