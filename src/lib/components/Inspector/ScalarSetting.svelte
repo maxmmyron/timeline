@@ -84,9 +84,7 @@
   {#if supportsAutomation && automation}
     <IconButton
       alt="Edit automation"
-      on:click={() => {
-        isAutomationVisible = true;
-      }}
+      on:click={() => (isAutomationVisible = !isAutomationVisible)}
     >
       <AutomationIcon />
     </IconButton>
