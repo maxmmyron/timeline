@@ -41,13 +41,10 @@ declare global {
 			offset: number;
 			duration: number;
 			/**
-			 * The curves that make up the automation graph. Each curve is defined by:
-			 * 1. The start point, defined as [time, value]
-			 * 2. The end point, defined as [time, value]
-			 * 3. The type of curve, defined as a string. This can be one of several
-			 * types as defined by App.CurveType.
+			 * The points that make up the automation graph. Each point is connected
+			 * to the next point by a curve of the same type.
 			 */
-			curves: Array<[[number, number], [number, number], CurveType]>;
+			curves: Array<[number,number]>;
 			/**
 			 * A static value to use if the automation is not defined.
 			 */
@@ -55,7 +52,6 @@ declare global {
 		}
 
 		type AutomationType = "volume" | "pan";
-		type CurveType = "linear" | "quadratic" | "cubic";
 	}
 }
 
