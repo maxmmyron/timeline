@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { aCtx, iRefs, vRefs, aRefs, playerScale } from "$lib/stores";
+  import { aCtx, iRefs, vRefs, aRefs, playerScale, time } from "$lib/stores";
+  import { lerpAutomation } from "$lib/utils";
   import { onMount } from "svelte";
 
   export let clip: App.Clip;
@@ -10,8 +11,7 @@
   let gainNode: GainNode = $aCtx!.createGain();
   let panNode: StereoPannerNode = $aCtx!.createStereoPanner();
 
-  // TODO: add support for automation
-  $: gainNode.gain.value = clip.volume.staticVal;
+  $: gainNode.gain.value = lerpAutomation(clip.volume, clip.offset, $time);
   $: panNode.pan.value = clip.pan;
 
   onMount(() => {
@@ -51,6 +51,14 @@
   >
     <track kind="captions" />
   </video>
+  <div class="absolute top-1/2 left-1/2 w-4 h-4 bg-red-500 z-10" />
+  <div
+    class="absolute top-1/2 left-1/2 w-4 h-4 bg-blue-400 z-20"
+    style="transform: translateX({gainNode.gain.value * 250}px);"
+  />
+  <div
+    class="absolute top-1/2 left-1/2 w-4 h-4 bg-green-400 transform translate-x-[250px] z-10"
+  />
 {:else if clip.media.type === "image"}
   <img
     class="absolute top-1/2 left-1/2 max-w-none"
