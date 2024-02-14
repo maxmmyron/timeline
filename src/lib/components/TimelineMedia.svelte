@@ -51,14 +51,14 @@
   >
     <track kind="captions" />
   </video>
-  <div class="absolute top-1/2 left-1/2 w-4 h-4 bg-red-500 z-10" />
+  <!-- <div class="absolute top-1/2 left-1/2 w-4 h-4 bg-red-500 z-10" />
   <div
     class="absolute top-1/2 left-1/2 w-4 h-4 bg-blue-400 z-20"
     style="transform: translateX({gainNode.gain.value * 250}px);"
   />
   <div
     class="absolute top-1/2 left-1/2 w-4 h-4 bg-green-400 transform translate-x-[250px] z-10"
-  />
+  /> -->
 {:else if clip.media.type === "image"}
   <img
     class="absolute top-1/2 left-1/2 max-w-none"
