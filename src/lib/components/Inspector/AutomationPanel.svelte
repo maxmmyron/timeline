@@ -26,7 +26,7 @@
     if (automation.curves.length == 0) {
       automation.curves = [
         [0, automation.staticVal],
-        [automation.duration, automation.staticVal],
+        [1, automation.staticVal],
       ];
     }
 
@@ -42,7 +42,6 @@
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const dur = automation.duration;
     for (let i = 0; i < automation.curves.length; i++) {
       const [x1, y1] = automation.curves[i];
       // if we're at the last point, use the previous point's Y value
@@ -50,8 +49,8 @@
       const [x2, y2] = automation.curves[i + 1] || [automation.duration, y1];
 
       ctx.beginPath();
-      ctx.moveTo((x1 / dur) * canvas.width, (1 - y1) * canvas.height);
-      ctx.lineTo((x2 / dur) * canvas.width, (1 - y2) * canvas.height);
+      ctx.moveTo(x1 * canvas.width, (1 - y1) * canvas.height);
+      ctx.lineTo(x2 * canvas.width, (1 - y2) * canvas.height);
       ctx.strokeStyle = "hsl(200, 0%, 25%)";
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -205,8 +204,7 @@
           {#each automation.curves as curve, i (curve)}
             <!-- Convert x and y scalar values back to pixels -->
             {@const [x, y] = [
-              // TODO: is this worky?
-              (curve[0] / 1) * editContainerWidth,
+              curve[0] * editContainerWidth,
               (1 - curve[1]) * editContainerHeight,
             ]}
             <button
