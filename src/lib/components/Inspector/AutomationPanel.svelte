@@ -10,6 +10,8 @@
   $: type = automation.type;
   $: uuid = automation.uuid;
 
+  let [min, max] = automation.valueBounds || [0, 1];
+
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
 
@@ -60,8 +62,8 @@
       const [x2, y2] = automation.curves[i + 1] || [automation.duration, y1];
 
       ctx.beginPath();
-      ctx.moveTo(x1 * canvas.width, (1 - y1) * canvas.height);
-      ctx.lineTo(x2 * canvas.width, (1 - y2) * canvas.height);
+      ctx.moveTo(x1 * canvas.width, unnormY(y1, canvas.height));
+      ctx.lineTo(x2 * canvas.width, unnormY(y2, canvas.height));
       ctx.strokeStyle = "hsl(200, 0%, 25%)";
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -118,7 +120,13 @@
   };
 
   const normX = (px: number) => px / editContainerWidth;
-  const normY = (px: number) => 1 - px / editContainerHeight;
+  const unnormX = (x: number, w: number) => x * w;
+
+  // norm 0-1 to to min-max range
+  const normY = (px: number) =>
+    (1 - px / editContainerHeight) * (max - min) + min;
+
+  const unnormY = (y: number, h: number) => (1 - (y - min) / (max - min)) * h;
 </script>
 
 <svelte:window
@@ -216,7 +224,7 @@
             <!-- Convert x and y scalar values back to pixels -->
             {@const [x, y] = [
               curve[0] * editContainerWidth,
-              (1 - curve[1]) * editContainerHeight,
+              (1 - (curve[1] - min) / (max - min)) * editContainerHeight,
             ]}
             <button
               class="absolute w-3 h-3 flex justify-center items-center transform -translate-x-1/2 -translate-y-1/2"
@@ -260,12 +268,12 @@
     </div>
 
     {#if selectedIdx !== -1}
-      {@const min =
+      {@const minX =
         selectedIdx === 0
           ? automation.offset
           : automation.curves[selectedIdx - 1][0] * automation.duration +
             automation.offset}
-      {@const max =
+      {@const maxX =
         selectedIdx === automation.curves.length - 1
           ? automation.duration + automation.offset
           : automation.curves[selectedIdx + 1][0] * automation.duration +
@@ -277,7 +285,7 @@
           class="w-1/2"
           name="X"
           bind:scalar={scalarTime}
-          props={{ min, max, step: 0.01 }}
+          props={{ min: minX, max: maxX, step: 0.01 }}
           on:change={() => {
             automation.curves[selectedIdx][0] =
               (scalarTime - automation.offset) / automation.duration;
@@ -291,8 +299,8 @@
           name="Y"
           bind:scalar={automation.curves[selectedIdx][1]}
           props={{
-            min: 0,
-            max: 1,
+            min: min,
+            max: max,
             step: 0.01,
           }}
           on:change={rerender}

@@ -12,7 +12,7 @@ declare global {
 			matrix: Matrix;
 			origin: [number, number];
 			volume: Automation<"volume">;
-			pan: number;
+			pan: Automation<"pan">;
 		};
 
 		type Media = {
@@ -49,6 +49,7 @@ declare global {
 			 * A static value to use if the automation is not defined.
 			 */
 			staticVal: number;
+			valueBounds?: [number, number];
 		}
 
 		type AutomationType = "volume" | "pan";

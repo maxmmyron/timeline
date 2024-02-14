@@ -12,7 +12,7 @@
   let panNode: StereoPannerNode = $aCtx!.createStereoPanner();
 
   $: gainNode.gain.value = lerpAutomation(clip.volume, clip.offset, $time);
-  $: panNode.pan.value = clip.pan;
+  $: panNode.pan.value = lerpAutomation(clip.pan, clip.offset, $time);
 
   onMount(() => {
     if (clip.media.type === "image") {

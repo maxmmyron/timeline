@@ -90,7 +90,7 @@ export const createClip = (resolved: App.Media, opts?: Partial<App.Clip>): App.C
   matrix: opts?.matrix ?? [1, 0, 0, 1, 0, 0],
   origin: [0.5, 0.5],
   volume: createAutomation("volume", resolved.duration),
-  pan: 0,
+  pan: createAutomation("pan", resolved.duration, [-1, 1]),
 });
 
 /**
@@ -130,7 +130,7 @@ export const updateScrubberAndScroll = (t:  number) => {
   }
 };
 
-export const createAutomation = <T = App.AutomationType>(type: T, duration: number): App.Automation<T> => ({
+export const createAutomation = <T = App.AutomationType>(type: T, duration: number, bounds: [number, number] = [0,1]): App.Automation<T> => ({
   uuid: uuidv4(),
   type: type,
   anchor: "start",
@@ -138,6 +138,7 @@ export const createAutomation = <T = App.AutomationType>(type: T, duration: numb
   duration,
   curves: [],
   staticVal: 1,
+  valueBounds: bounds,
 });
 
 export const lerpAutomation = (a: App.Automation, offset: number, time: number): number => {
