@@ -41,25 +41,16 @@
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const dur = automation.duration;
     for (let i = 0; i < automation.curves.length; i++) {
       const [x1, y1] = automation.curves[i];
       // if we're at the last point, use the previous point's Y value
       // (i.e. self)
       const [x2, y2] = automation.curves[i + 1] || [automation.duration, y1];
 
-      const [startX, startY] = [
-        (x1 / automation.duration) * canvas.width,
-        (1 - y1) * canvas.height,
-      ];
-
-      const [endX, endY] = [
-        (x2 / automation.duration) * canvas.width,
-        (1 - y2) * canvas.height,
-      ];
-
       ctx.beginPath();
-      ctx.moveTo(startX, startY);
-      ctx.lineTo(endX, endY);
+      ctx.moveTo((x1 / dur) * canvas.width, (1 - y1) * canvas.height);
+      ctx.lineTo((x2 / dur) * canvas.width, (1 - y2) * canvas.height);
       ctx.strokeStyle = "hsl(200, 0%, 25%)";
       ctx.lineWidth = 2;
       ctx.stroke();
