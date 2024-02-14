@@ -38,7 +38,7 @@
   $: dispatcher("change", scalar);
 
   let isHovered = false;
-  let isAutomationVisible = false;
+  export let isAutomationVisible = false;
 
   let clazz = "";
   export { clazz as class };
@@ -51,7 +51,7 @@
 >
   <p class="text-ellipsis">{name}</p>
   <input
-    class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800 w-10"
+    class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800 w-10 disabled:opacity-50 disabled:cursor-not-allowed text-center"
     type="number"
     disabled={automation && automation.curves.length > 0}
     {...props}

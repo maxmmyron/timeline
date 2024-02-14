@@ -43,6 +43,8 @@
       $audioClips[clipIdx][prop] = val;
     }
   };
+
+  let isVolumeAutomationVisible = false;
 </script>
 
 <Region class="row-start-2 overflow-scroll [scrollbar-width:thin]">
@@ -223,6 +225,7 @@
             on:click={() => {
               volume.staticVal = 1;
               volume.curves = [];
+              isVolumeAutomationVisible = false;
               pan = 0;
             }}
           >
@@ -244,6 +247,7 @@
           strictBounds
           defaultVal={1}
           bind:automation={volume}
+          bind:isAutomationVisible={isVolumeAutomationVisible}
         />
 
         <ScalarSetting
