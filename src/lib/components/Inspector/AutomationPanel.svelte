@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import CloseIcon from "$lib/icon/CloseIcon.svelte";
   import IconButton from "../IconButton.svelte";
+  import ScalarSetting from "./ScalarSetting.svelte";
 
   export let isAutomationVisible: boolean;
   export let automation: App.Automation;
@@ -71,16 +72,15 @@
     if (activeIdx === -1) return;
 
     let y = e.clientY - canvas.getBoundingClientRect().top;
-    let newY = Math.min(Math.max(y, 0), editContainerHeight);
-    let adjustedY = 1 - newY / editContainerHeight;
+    let normedY = normY(Math.min(Math.max(y, 0), editContainerHeight));
 
     // special case: first/last point
     if (activeIdx === 0) {
-      automation.curves[activeIdx][1] = adjustedY;
+      automation.curves[activeIdx][1] = normedY;
       return;
     }
     if (activeIdx === automation.curves.length - 1) {
-      automation.curves[activeIdx][1] = adjustedY;
+      automation.curves[activeIdx][1] = normedY;
       return;
     }
 
@@ -89,23 +89,25 @@
 
     let x = e.clientX - canvas.getBoundingClientRect().left;
 
-    let newX = Math.min(Math.max(x, 0), editContainerWidth);
-    let adjustedX = (newX / editContainerWidth) * automation.duration;
+    let normedX = normX(Math.min(Math.max(x, 0), editContainerWidth));
 
     // bound adjustedX to the previous and next point's X values
     let prevX = automation.curves[activeIdx - 1][0];
     let nextX = automation.curves[activeIdx + 1][0];
-    let boundedX = Math.min(Math.max(adjustedX, prevX), nextX);
+    let boundedX = Math.min(Math.max(normedX, prevX), nextX);
 
     // if shift is held, constrain movement to the axis with the greatest delta
     if (e.shiftKey) {
       if (Math.abs(x - initialMousePos[0]) > Math.abs(y - initialMousePos[1]))
-        adjustedY = initialNodePos[1];
+        normedY = initialNodePos[1];
       else boundedX = initialNodePos[0];
     }
 
-    automation.curves[activeIdx] = [boundedX, adjustedY];
+    automation.curves[activeIdx] = [boundedX, normedY];
   };
+
+  const normX = (px: number) => px / editContainerWidth;
+  const normY = (px: number) => 1 - px / editContainerHeight;
 </script>
 
 <svelte:window
@@ -135,73 +137,99 @@
       <CloseIcon />
     </IconButton>
   </header>
-  <main class="p-1 rounded-md bg-zinc-100 dark:bg-zinc-800/15">
-    <div class="relative h-20 w-full">
-      <!-- Visual spacers -->
-      <div
-        class="absolute flex justify-between w-full h-full pointer-events-none"
-      >
-        {#each { length: 5 } as _}
-          <div
-            class="h-full w-[1px] bg-gradient-to-t from-zinc-200 dark:from-zinc-900 to-transparent"
-          />
-        {/each}
-      </div>
-      <canvas bind:this={canvas} class="w-full h-full" />
-      <!-- svelte-ignore a11y-click-events-have-key-events -->
-      <div
-        class="absolute top-0 left-0 w-full h-full"
-        bind:clientWidth={editContainerWidth}
-        bind:clientHeight={editContainerHeight}
-        on:click={(e) => {
-          if (!e.ctrlKey) return;
-          let x = Math.min(
-            Math.max(e.clientX - canvas.getBoundingClientRect().left, 0),
-            editContainerWidth
-          );
+  <main class="space-y-2">
+    <div class="flex gap-2 h-fit">
+      <ScalarSetting
+        class="w-1/2"
+        name="Duration"
+        bind:scalar={automation.duration}
+        props={{ min: 0, max: Infinity, step: 0.01 }}
+        on:change={rerender}
+        strictBounds
+      />
+      <ScalarSetting
+        class="w-1/2"
+        name="Offset"
+        bind:scalar={automation.staticVal}
+        defaultVal={0}
+        props={{ min: 0, max: automation.duration, step: 0.01 }}
+        strictBounds
+      />
+    </div>
 
-          let y = Math.min(
-            Math.max(e.clientY - canvas.getBoundingClientRect().top, 0),
-            editContainerHeight
-          );
-          x = (x / editContainerWidth) * automation.duration;
-          y = 1 - y / editContainerHeight;
-          for (let i = 0; i < automation.curves.length; i++) {
-            if (automation.curves[i][0] > x) {
-              automation.curves.splice(i, 0, [x, y]);
-              automation.curves = [...automation.curves];
-              rerender();
-              break;
-            }
-          }
-        }}
-        on:click|self={() => (activeIdx = -1)}
-      >
-        {#each automation.curves as curve, i (curve)}
-          {@const [x, y] = [
-            (curve[0] / automation.duration) * editContainerWidth,
-            (1 - curve[1]) * editContainerHeight,
-          ]}
-          <button
-            class="absolute w-3 h-3 flex justify-center items-center transform -translate-x-1/2 -translate-y-1/2"
-            style="left:{x}px; top:{y}px"
-            on:mousedown={(e) => {
-              initialMousePos = [
-                e.clientX - canvas.getBoundingClientRect().left,
-                e.clientY - canvas.getBoundingClientRect().top,
-              ];
-              initialNodePos = [curve[0], curve[1]];
-              activeIdx = i;
-              selectedIdx = i;
-            }}
-          >
+    <div class="p-1 rounded-md bg-zinc-100 dark:bg-zinc-800/15">
+      <div class="relative h-20 w-full">
+        <!-- Visual spacers -->
+        <div
+          class="absolute flex justify-between w-full h-full pointer-events-none"
+        >
+          {#each { length: 5 } as _}
             <div
-              class="rounded-full w-1 h-1 {selectedIdx === i
-                ? 'bg-blue-300 dark:bg-blue-600'
-                : 'bg-zinc-600 dark:bg-zinc-500'}"
+              class="h-full w-[1px] bg-gradient-to-t from-zinc-200 dark:from-zinc-900 to-transparent"
             />
-          </button>
-        {/each}
+          {/each}
+        </div>
+        <canvas bind:this={canvas} class="w-full h-full" />
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <div
+          class="absolute top-0 left-0 w-full h-full"
+          bind:clientWidth={editContainerWidth}
+          bind:clientHeight={editContainerHeight}
+          on:click={(e) => {
+            if (!e.ctrlKey) return;
+            let x = normX(
+              Math.min(
+                Math.max(e.clientX - canvas.getBoundingClientRect().left, 0),
+                editContainerWidth
+              )
+            );
+
+            let y = normY(
+              Math.min(
+                Math.max(e.clientY - canvas.getBoundingClientRect().top, 0),
+                editContainerHeight
+              )
+            );
+
+            for (let i = 0; i < automation.curves.length; i++) {
+              if (automation.curves[i][0] > x) {
+                automation.curves.splice(i, 0, [x, y]);
+                automation.curves = [...automation.curves];
+                rerender();
+                break;
+              }
+            }
+          }}
+          on:click|self={() => (activeIdx = -1)}
+        >
+          {#each automation.curves as curve, i (curve)}
+            <!-- Convert x and y scalar values back to pixels -->
+            {@const [x, y] = [
+              // TODO: is this worky?
+              (curve[0] / 1) * editContainerWidth,
+              (1 - curve[1]) * editContainerHeight,
+            ]}
+            <button
+              class="absolute w-3 h-3 flex justify-center items-center transform -translate-x-1/2 -translate-y-1/2"
+              style="left:{x}px; top:{y}px"
+              on:mousedown={(e) => {
+                initialMousePos = [
+                  e.clientX - canvas.getBoundingClientRect().left,
+                  e.clientY - canvas.getBoundingClientRect().top,
+                ];
+                initialNodePos = [curve[0], curve[1]];
+                activeIdx = i;
+                selectedIdx = i;
+              }}
+            >
+              <div
+                class="rounded-full w-1 h-1 {selectedIdx === i
+                  ? 'bg-blue-300 dark:bg-blue-600'
+                  : 'bg-zinc-600 dark:bg-zinc-500'}"
+              />
+            </button>
+          {/each}
+        </div>
       </div>
     </div>
 
