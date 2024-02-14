@@ -229,7 +229,7 @@
 >
   <MediaBrowser />
   {#if $selected}
-    {#key $selected}
+    {#key $selected[0]}
       <Inspector uuid={$selected[0]} type={$selected[1]} />
     {/key}
   {/if}
