@@ -145,8 +145,6 @@ export const lerpAutomation = (a: App.Automation, offset: number, time: number):
 
   const t = time - offset;
 
-  console.log(`offset time: ${t}`);
-
   if (t < a.offset) {
     // if the current time is before the first curve, return the first value
     return a.curves[0][0];
