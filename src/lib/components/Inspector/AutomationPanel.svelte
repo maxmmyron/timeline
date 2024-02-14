@@ -22,6 +22,17 @@
   let initialMousePos: [number, number] = [0, 0];
   let initialNodePos: [number, number] = [0, 0];
 
+  let scalarTime = 0;
+  /**
+   * We need to manually track and update scalarTime to prevent reactivity
+   * circularity from messing with the bound scalar value when the X value is
+   * changed.
+   */
+  const setScalarTime = () =>
+    (scalarTime =
+      automation.curves[selectedIdx][0] * automation.duration +
+      automation.offset);
+
   onMount(() => {
     if (automation.curves.length == 0) {
       automation.curves = [
@@ -103,6 +114,7 @@
     }
 
     automation.curves[activeIdx] = [boundedX, normedY];
+    setScalarTime();
   };
 
   const normX = (px: number) => px / editContainerWidth;
@@ -143,13 +155,12 @@
         name="Duration"
         bind:scalar={automation.duration}
         props={{ min: 0, max: Infinity, step: 0.01 }}
-        on:change={rerender}
         strictBounds
       />
       <ScalarSetting
         class="w-1/2"
         name="Offset"
-        bind:scalar={automation.staticVal}
+        bind:scalar={automation.offset}
         defaultVal={0}
         props={{ min: 0, max: automation.duration, step: 0.01 }}
         strictBounds
@@ -218,6 +229,11 @@
                 initialNodePos = [curve[0], curve[1]];
                 activeIdx = i;
                 selectedIdx = i;
+                setScalarTime();
+              }}
+              on:click={(e) => {
+                if (e.ctrlKey) return;
+                selectedIdx = i;
               }}
             >
               <div
@@ -235,10 +251,54 @@
     <div
       class="border-t border-zinc-200 dark:border-zinc-900 flex justify-between"
     >
-      <p class="text-zinc-600 dark:text-zinc-500">0s</p>
       <p class="text-zinc-600 dark:text-zinc-500">
-        {automation.duration.toFixed(2)}s
+        {(0 + automation.offset).toFixed(2)}s
+      </p>
+      <p class="text-zinc-600 dark:text-zinc-500">
+        {(automation.duration + automation.offset).toFixed(2)}s
       </p>
     </div>
+
+    {#if selectedIdx !== -1}
+      {@const min =
+        selectedIdx === 0
+          ? automation.offset
+          : automation.curves[selectedIdx - 1][0] * automation.duration +
+            automation.offset}
+      {@const max =
+        selectedIdx === automation.curves.length - 1
+          ? automation.duration + automation.offset
+          : automation.curves[selectedIdx + 1][0] * automation.duration +
+            automation.offset}
+      <div class="flex justify-between">
+        <ScalarSetting
+          disabled={selectedIdx === 0 ||
+            selectedIdx === automation.curves.length - 1}
+          class="w-1/2"
+          name="X"
+          bind:scalar={scalarTime}
+          props={{ min, max, step: 0.01 }}
+          on:change={() => {
+            automation.curves[selectedIdx][0] =
+              (scalarTime - automation.offset) / automation.duration;
+
+            rerender();
+          }}
+          strictBounds
+        />
+        <ScalarSetting
+          class="w-1/2"
+          name="Y"
+          bind:scalar={automation.curves[selectedIdx][1]}
+          props={{
+            min: 0,
+            max: 1,
+            step: 0.01,
+          }}
+          on:change={rerender}
+          strictBounds
+        />
+      </div>
+    {/if}
   </main>
 </section>
