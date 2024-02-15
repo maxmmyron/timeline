@@ -130,22 +130,26 @@ export const exportVideo = async () => {
     aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d},`;
 
     // create a series of volume filters for each point in the automation curve
-    for (let j = 0; j < clip.volume.curves.length - 1; j++) {
-      const [fromX, fromY] = clip.volume.curves[j];
-      const [toX, toY] = clip.volume.curves[j + 1];
+    if (clip.volume.curves.length === 0) {
+      aFilter += `volume=${clip.volume.staticVal},`;
+    } else {
+      for (let j = 0; j < clip.volume.curves.length - 1; j++) {
+        const [fromX, fromY] = clip.volume.curves[j];
+        const [toX, toY] = clip.volume.curves[j + 1];
 
-      const fromXTime = fromX * clip.media.duration + clip.volume.offset;
-      const toXTime = toX * clip.media.duration + clip.volume.offset;
+        const fromXTime = fromX * clip.media.duration + clip.volume.offset;
+        const toXTime = toX * clip.media.duration + clip.volume.offset;
 
-      /**
-       * Add a volume filter for the current curve segment. This
-       * 1. enables the volume filter between the start and end of the curve
-       * 2. defines a function for the volume that is linearly interpolated
-       *    between the start and end of the curve
-       * 3. evaluates the volume at each frame (i.e. each point in the curve)
-       *    so that the volume changes smoothly over time
-       */
-      aFilter += `volume=enable='between(t,${fromXTime},${toXTime})':volume=${fromY}+((${toY}-${fromY})*(t-${fromXTime})/(${toXTime}-${fromXTime})):eval=frame,`;
+        /**
+         * Add a volume filter for the current curve segment. This
+         * 1. enables the volume filter between the start and end of the curve
+         * 2. defines a function for the volume that is linearly interpolated
+         *    between the start and end of the curve
+         * 3. evaluates the volume at each frame (i.e. each point in the curve)
+         *    so that the volume changes smoothly over time
+         */
+        aFilter += `volume=enable='between(t,${fromXTime},${toXTime})':volume=${fromY}+((${toY}-${fromY})*(t-${fromXTime})/(${toXTime}-${fromXTime})):eval=frame,`;
+      }
     }
 
     /**
