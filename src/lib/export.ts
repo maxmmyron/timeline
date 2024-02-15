@@ -145,7 +145,7 @@ export const exportVideo = async () => {
       }
     }
 
-    const pan = [clip.pan.staticVal < 0 ? 1 : 1 - clip.pan.staticVal, clip.pan.staticVal > 0 ? 1 : 1 + clip.pan.staticVal];
+    const pan = [clip.pan < 0 ? 1 : 1 - clip.pan, clip.pan > 0 ? 1 : 1 + clip.pan];
     aFilter+=`pan=stereo|c0=${pan[0]}*c0|c1=${pan[1]}*c1[${i}a];`;
 
 
