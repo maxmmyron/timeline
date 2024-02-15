@@ -122,8 +122,31 @@ export const exportVideo = async () => {
 
     /**
      * An array containing the computed pan for the L and R audio channels.
+     *
+     * TODO: implement panning for stereo audio tracks
      */
-    const pan = [clip.pan < 0 ? 1 : 1 - clip.pan, clip.pan > 0 ? 1 : 1 + clip.pan];
+    const pan = [clip.pan.staticVal < 0 ? 1 : 1 - clip.pan.staticVal, clip.pan.staticVal > 0 ? 1 : 1 + clip.pan.staticVal];
+
+    aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d},`;
+
+    // create a series of volume filters for each point in the automation curve
+    for (let j = 0; j < clip.volume.curves.length - 1; j++) {
+      const [fromX, fromY] = clip.volume.curves[j];
+      const [toX, toY] = clip.volume.curves[j + 1];
+
+      const fromXTime = fromX * clip.media.duration + clip.volume.offset;
+      const toXTime = toX * clip.media.duration + clip.volume.offset;
+
+      /**
+       * Add a volume filter for the current curve segment. This
+       * 1. enables the volume filter between the start and end of the curve
+       * 2. defines a function for the volume that is linearly interpolated
+       *    between the start and end of the curve
+       * 3. evaluates the volume at each frame (i.e. each point in the curve)
+       *    so that the volume changes smoothly over time
+       */
+      aFilter += `volume=enable='between(t,${fromXTime},${toXTime})':volume=${fromY}+((${toY}-${fromY})*(t-${fromXTime})/(${toXTime}-${fromXTime})):eval=frame,`;
+    }
 
     /**
      * atrim=start:end: trim the audio
@@ -133,7 +156,7 @@ export const exportVideo = async () => {
      * seems like adelay doesn't work with decimal second notation (i.e "3.54s")
      * We use R|L to specify stereo channels.
      */
-    aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d},volume=${clip.volume},pan=stereo|c0=${pan[0]}*c0|c1=${pan[1]}*c1[${i}a];`;
+    aFilter+=`pan=stereo|c0=${pan[0]}*c0|c1=${pan[1]}*c1[${i}a];`;
 
 
     // if the clip is audio, we don't need to do any video processing
