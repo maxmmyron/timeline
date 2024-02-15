@@ -118,14 +118,7 @@ export const exportVideo = async () => {
     }
 
     // define delay, since we need it twice
-      const d = (clip.offset * 1000).toFixed(0);
-
-    /**
-     * An array containing the computed pan for the L and R audio channels.
-     *
-     * TODO: implement panning for stereo audio tracks
-     */
-    const pan = [clip.pan.staticVal < 0 ? 1 : 1 - clip.pan.staticVal, clip.pan.staticVal > 0 ? 1 : 1 + clip.pan.staticVal];
+    const d = (clip.offset * 1000).toFixed(0);
 
     aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d},`;
 
@@ -152,14 +145,7 @@ export const exportVideo = async () => {
       }
     }
 
-    /**
-     * atrim=start:end: trim the audio
-     *
-     * adelay=delay: delay the audio by clip.offset so it starts playing
-     * at the same time as the video. NOTE: we use offset * 1000 since it
-     * seems like adelay doesn't work with decimal second notation (i.e "3.54s")
-     * We use R|L to specify stereo channels.
-     */
+    const pan = [clip.pan.staticVal < 0 ? 1 : 1 - clip.pan.staticVal, clip.pan.staticVal > 0 ? 1 : 1 + clip.pan.staticVal];
     aFilter+=`pan=stereo|c0=${pan[0]}*c0|c1=${pan[1]}*c1[${i}a];`;
 
 
