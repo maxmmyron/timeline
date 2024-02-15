@@ -45,7 +45,6 @@
   };
 
   let isVolumeAutomationVisible = false;
-  let isPanAutomationVisible = false;
 </script>
 
 <Region class="row-start-2 overflow-scroll [scrollbar-width:thin]">
@@ -226,10 +225,7 @@
             on:click={() => {
               volume.staticVal = 1;
               volume.curves = [];
-              pan.staticVal = 0;
-              pan.curves = [];
               isVolumeAutomationVisible = false;
-              isPanAutomationVisible = false;
             }}
           >
             <ResetIcon />
@@ -255,14 +251,10 @@
 
         <ScalarSetting
           useSubgrid
-          supportsAutomation
           name="Pan"
-          disabled={pan.curves.length > 0}
-          bind:scalar={pan.staticVal}
+          bind:scalar={pan}
           props={{ min: -1, max: 1, step: 0.01 }}
           strictBounds
-          bind:automation={pan}
-          bind:isAutomationVisible={isPanAutomationVisible}
         />
       </section>
     </section>

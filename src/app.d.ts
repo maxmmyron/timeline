@@ -12,7 +12,7 @@ declare global {
 			matrix: Matrix;
 			origin: [number, number];
 			volume: Automation<"volume">;
-			pan: Automation<"pan">;
+			pan: number,
 		};
 
 		type Media = {
@@ -52,7 +52,7 @@ declare global {
 			valueBounds?: [number, number];
 		}
 
-		type AutomationType = "volume" | "pan";
+		type AutomationType = "volume";
 	}
 }
 
