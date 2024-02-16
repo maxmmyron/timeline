@@ -45,6 +45,10 @@
   };
 
   let isVolumeAutomationVisible = false;
+  let xAutomationVisible = false;
+  let yAutomationVisible = false;
+  let wAutomationVisible = false;
+  let hAutomationVisible = false;
 </script>
 
 <Region class="row-start-2 overflow-scroll [scrollbar-width:thin]">
@@ -149,6 +153,13 @@
           mag={1}
           automationClass="row-start-3 col-start-1 col-span-4"
           dynamicBounds
+          bind:isAutomationVisible={xAutomationVisible}
+          on:automationEditorOpen={(e) => {
+            yAutomationVisible =
+              wAutomationVisible =
+              hAutomationVisible =
+                false;
+          }}
         />
         <ScalarSetting
           supportsAutomation
@@ -168,6 +179,13 @@
           mag={1}
           automationClass="row-start-3 col-start-1 col-span-4"
           dynamicBounds
+          bind:isAutomationVisible={yAutomationVisible}
+          on:automationEditorOpen={(e) => {
+            xAutomationVisible =
+              wAutomationVisible =
+              hAutomationVisible =
+                false;
+          }}
         />
         <div
           class="col-start-2 row-start-1 row-span-2 flex flex-col justify-center gap-1"
@@ -213,6 +231,13 @@
           defaultVal={1}
           automationClass="row-start-3 col-start-1 col-span-4"
           dynamicBounds
+          bind:isAutomationVisible={wAutomationVisible}
+          on:automationEditorOpen={(e) => {
+            xAutomationVisible =
+              yAutomationVisible =
+              hAutomationVisible =
+                false;
+          }}
         />
         <ScalarSetting
           supportsAutomation
@@ -233,6 +258,13 @@
           defaultVal={1}
           automationClass="row-start-3 col-start-1 col-span-4"
           dynamicBounds
+          bind:isAutomationVisible={hAutomationVisible}
+          on:automationEditorOpen={(e) => {
+            xAutomationVisible =
+              yAutomationVisible =
+              wAutomationVisible =
+                false;
+          }}
         />
         <div
           class="col-start-4 row-start-1 row-span-2 flex flex-col justify-center gap-1"
