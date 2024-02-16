@@ -45,10 +45,12 @@
   };
 
   let isVolumeAutomationVisible = false;
-  let xAutomationVisible = false;
-  let yAutomationVisible = false;
-  let wAutomationVisible = false;
-  let hAutomationVisible = false;
+
+  /**
+   * An array containing the visibility state of the automation editor for each
+   * scalar setting.
+   */
+  let visibleMatrixAutomation = [false, false, false, false, false, false];
 </script>
 
 <Region class="row-start-2 overflow-scroll [scrollbar-width:thin]">
@@ -153,12 +155,9 @@
           mag={1}
           automationClass="row-start-3 col-start-1 col-span-4"
           dynamicBounds
-          bind:isAutomationVisible={xAutomationVisible}
+          bind:isAutomationVisible={visibleMatrixAutomation[4]}
           on:automationEditorOpen={(e) => {
-            yAutomationVisible =
-              wAutomationVisible =
-              hAutomationVisible =
-                false;
+            visibleMatrixAutomation = [false, false, false, false, true, false];
           }}
         />
         <ScalarSetting
@@ -179,12 +178,9 @@
           mag={1}
           automationClass="row-start-3 col-start-1 col-span-4"
           dynamicBounds
-          bind:isAutomationVisible={yAutomationVisible}
+          bind:isAutomationVisible={visibleMatrixAutomation[5]}
           on:automationEditorOpen={(e) => {
-            xAutomationVisible =
-              wAutomationVisible =
-              hAutomationVisible =
-                false;
+            visibleMatrixAutomation = [false, false, false, false, false, true];
           }}
         />
         <div
@@ -231,12 +227,9 @@
           defaultVal={1}
           automationClass="row-start-3 col-start-1 col-span-4"
           dynamicBounds
-          bind:isAutomationVisible={wAutomationVisible}
+          bind:isAutomationVisible={visibleMatrixAutomation[0]}
           on:automationEditorOpen={(e) => {
-            xAutomationVisible =
-              yAutomationVisible =
-              hAutomationVisible =
-                false;
+            visibleMatrixAutomation = [true, false, false, false, false, false];
           }}
         />
         <ScalarSetting
@@ -258,12 +251,9 @@
           defaultVal={1}
           automationClass="row-start-3 col-start-1 col-span-4"
           dynamicBounds
-          bind:isAutomationVisible={hAutomationVisible}
+          bind:isAutomationVisible={visibleMatrixAutomation[3]}
           on:automationEditorOpen={(e) => {
-            xAutomationVisible =
-              yAutomationVisible =
-              wAutomationVisible =
-                false;
+            visibleMatrixAutomation = [false, false, false, true, false, false];
           }}
         />
         <div
