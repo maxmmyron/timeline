@@ -30,7 +30,7 @@ declare global {
 			type: MediaType;
 		};
 
-		type Matrix = [number, number, number, number, number, number];
+		type Matrix = [Automation<"scale">, number, number, Automation<"scale">, Automation<"position">, Automation<"position">];
 
 		type MediaType = "video" | "audio" | "image";
 
@@ -49,10 +49,10 @@ declare global {
 			 * A static value to use if the automation is not defined.
 			 */
 			staticVal: number;
-			valueBounds?: [number, number];
+			valueBounds: [number, number] | null;
 		}
 
-		type AutomationType = "volume";
+		type AutomationType = "volume" | "position" | "scale";
 	}
 }
 

@@ -87,7 +87,13 @@ export const createClip = (resolved: App.Media, opts?: Partial<App.Clip>): App.C
   end: opts?.end ?? 0,
   uuid: uuidv4(),
   z: get(videoClips).reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1,
-  matrix: opts?.matrix ?? [1, 0, 0, 1, 0, 0],
+  matrix: opts?.matrix ?? [
+    createAutomation("scale", resolved.duration),
+    1, 1,
+    createAutomation("scale", resolved.duration),
+    createAutomation("position", resolved.duration, { initial: 0, }),
+    createAutomation("position", resolved.duration, { initial: 0, })
+  ],
   origin: [0.5, 0.5],
   volume: createAutomation("volume", resolved.duration),
   pan: 0,
@@ -130,12 +136,9 @@ export const updateScrubberAndScroll = (t:  number) => {
   }
 };
 
-export const createAutomation = <T = App.AutomationType>(type: T, duration: number, opts: {
-  initial: number,
-  bounds: [number, number],
-} = {
-  initial: 1,
-  bounds: [0, 1],
+export const createAutomation = <T = App.AutomationType>(type: T, duration: number, opts?: {
+  initial?: number,
+  bounds?: [number, number] | null,
 }): App.Automation<T> => ({
   uuid: uuidv4(),
   type: type,
@@ -143,8 +146,8 @@ export const createAutomation = <T = App.AutomationType>(type: T, duration: numb
   offset: 0,
   duration,
   curves: [],
-  staticVal: opts.initial,
-  valueBounds: opts.bounds,
+  staticVal: opts?.initial ?? 1,
+  valueBounds: opts?.bounds ?? null,
 });
 
 export const lerpAutomation = (a: App.Automation, offset: number, time: number): number => {

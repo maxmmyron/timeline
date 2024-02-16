@@ -66,7 +66,9 @@
     title={clip.uuid}
     alt=""
     bind:this={$iRefs[clip.uuid]}
-    style:transform="translate(-50%, -50%) matrix({clip.matrix.join(",")})"
+    style:transform="translate(-50%, -50%) matrix({clip.matrix
+      .map((m) => (typeof m === "number" ? m : m.staticVal))
+      .join(",")})"
     style:transform-origin="{clip.origin[0] * 100}% {clip.origin[1] * 100}%"
     style:z-index={clip.z}
     class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}

@@ -67,7 +67,11 @@
           <IconButton
             alt="Reset clip positioning"
             on:click={() => {
-              matrix = [1, 0, 0, 1, 0, 0];
+              matrix[0].staticVal = matrix[3].staticVal = 1;
+              matrix[4].staticVal = matrix[5].staticVal = 0;
+              matrix[1] = matrix[2] = 0;
+              matrix[0].curves = matrix[3].curves = [];
+              matrix[4].curves = matrix[5].curves = [];
               origin = [0.5, 0.5];
             }}
           >
@@ -126,90 +130,134 @@
         </div>
       </section>
 
-      <div class="col-start-1 grid grid-cols-2 gap-2">
-        <section class="grid gap-2 w-fit">
-          <ScalarSetting
-            class="col-start-1"
-            name="X"
-            bind:scalar={matrix[4]}
-            on:change={() => isPositionLinked && (matrix[5] = matrix[4])}
-            mag={1}
-          />
-          <ScalarSetting
-            name="Y"
-            class="col-start-1"
-            bind:scalar={matrix[5]}
-            on:change={() => isPositionLinked && (matrix[4] = matrix[5])}
-            mag={1}
-          />
+      <div class="col-start-1 grid grid-cols-[1fr,32px,1fr,32px] gap-2">
+        <ScalarSetting
+          supportsAutomation
+          class="col-start-1 row-start-1"
+          name="X"
+          bind:scalar={matrix[4].staticVal}
+          on:change={() => {
+            if (
+              !isPositionLinked ||
+              matrix[4].curves.length !== 0 ||
+              matrix[5].curves.length !== 0
+            )
+              return;
+            matrix[5].staticVal = matrix[4].staticVal;
+          }}
+          bind:automation={matrix[4]}
+          mag={1}
+          automationClass="row-start-3 col-start-1 col-span-4"
+          dynamicBounds
+        />
+        <ScalarSetting
+          supportsAutomation
+          name="Y"
+          class="col-start-1 row-start-2"
+          bind:scalar={matrix[5].staticVal}
+          on:change={() => {
+            if (
+              !isPositionLinked ||
+              matrix[4].curves.length !== 0 ||
+              matrix[5].curves.length !== 0
+            )
+              return;
+            matrix[4].staticVal = matrix[5].staticVal;
+          }}
+          bind:automation={matrix[5]}
+          mag={1}
+          automationClass="row-start-3 col-start-1 col-span-4"
+          dynamicBounds
+        />
+        <div
+          class="col-start-2 row-start-1 row-span-2 flex flex-col justify-center gap-1"
+        >
           <div
-            class="col-start-2 row-start-1 row-span-2 flex flex-col justify-center gap-1"
+            class="w-1/2 h-2 rounded-tr-md border-t border-r {isPositionLinked
+              ? 'border-solid'
+              : 'border-dashed'} border-zinc-700"
+          />
+          <IconButton
+            alt="Link position"
+            on:click={() => (isPositionLinked = !isPositionLinked)}
           >
-            <div
-              class="w-1/2 h-2 rounded-tr-md border-t border-r {isPositionLinked
-                ? 'border-solid'
-                : 'border-dashed'} border-zinc-700"
-            />
-            <IconButton
-              alt="Link position"
-              on:click={() => (isPositionLinked = !isPositionLinked)}
-            >
-              {#if isPositionLinked}
-                <UnlinkIcon />
-              {:else}
-                <LinkIcon />
-              {/if}
-            </IconButton>
+            {#if isPositionLinked}
+              <UnlinkIcon />
+            {:else}
+              <LinkIcon />
+            {/if}
+          </IconButton>
 
-            <div
-              class="w-1/2 h-2 rounded-br-md border-b border-r {isPositionLinked
-                ? 'border-solid'
-                : 'border-dashed'} border-zinc-700"
-            />
-          </div>
-        </section>
-        <section class="grid gap-2 w-fit">
-          <ScalarSetting
-            class="col-start-1"
-            name="W"
-            bind:scalar={matrix[0]}
-            props={{ min: 0, max: 6, step: 0.01 }}
-            on:change={() => isScaleLinked && (matrix[3] = matrix[0])}
-            defaultVal={1}
-          />
-          <ScalarSetting
-            class="col-start-1"
-            name="H"
-            bind:scalar={matrix[3]}
-            props={{ min: 0, max: 6, step: 0.01 }}
-            on:change={() => isScaleLinked && (matrix[0] = matrix[3])}
-            defaultVal={1}
-          />
           <div
-            class="col-start-2 row-start-1 row-span-2 flex flex-col justify-center gap-1"
+            class="w-1/2 h-2 rounded-br-md border-b border-r {isPositionLinked
+              ? 'border-solid'
+              : 'border-dashed'} border-zinc-700"
+          />
+        </div>
+        <ScalarSetting
+          supportsAutomation
+          class="col-start-3 row-start-1"
+          name="W"
+          bind:scalar={matrix[0].staticVal}
+          props={{ min: 0, max: 6, step: 0.01 }}
+          on:change={() => {
+            if (
+              !isScaleLinked ||
+              matrix[0].curves.length !== 0 ||
+              matrix[3].curves.length !== 0
+            )
+              return;
+            matrix[3].staticVal = matrix[0].staticVal;
+          }}
+          bind:automation={matrix[0]}
+          defaultVal={1}
+          automationClass="row-start-3 col-start-1 col-span-4"
+          dynamicBounds
+        />
+        <ScalarSetting
+          supportsAutomation
+          class="col-start-3 row-start-2"
+          name="H"
+          bind:scalar={matrix[3].staticVal}
+          props={{ min: 0, max: 6, step: 0.01 }}
+          on:change={() => {
+            if (
+              !isScaleLinked ||
+              matrix[0].curves.length !== 0 ||
+              matrix[3].curves.length !== 0
+            )
+              return;
+            matrix[0].staticVal = matrix[3].staticVal;
+          }}
+          bind:automation={matrix[3]}
+          defaultVal={1}
+          automationClass="row-start-3 col-start-1 col-span-4"
+          dynamicBounds
+        />
+        <div
+          class="col-start-4 row-start-1 row-span-2 flex flex-col justify-center gap-1"
+        >
+          <div
+            class="w-1/2 h-2 rounded-tr-md border-t border-r {isScaleLinked
+              ? 'border-solid'
+              : 'border-dashed'} border-zinc-700"
+          />
+          <IconButton
+            alt="Link position"
+            on:click={() => (isScaleLinked = !isScaleLinked)}
           >
-            <div
-              class="w-1/2 h-2 rounded-tr-md border-t border-r {isScaleLinked
-                ? 'border-solid'
-                : 'border-dashed'} border-zinc-700"
-            />
-            <IconButton
-              alt="Link position"
-              on:click={() => (isScaleLinked = !isScaleLinked)}
-            >
-              {#if isScaleLinked}
-                <UnlinkIcon />
-              {:else}
-                <LinkIcon />
-              {/if}
-            </IconButton>
-            <div
-              class="w-1/2 h-2 rounded-br-md border-b border-r {isScaleLinked
-                ? 'border-solid'
-                : 'border-dashed'} border-zinc-700"
-            />
-          </div>
-        </section>
+            {#if isScaleLinked}
+              <UnlinkIcon />
+            {:else}
+              <LinkIcon />
+            {/if}
+          </IconButton>
+          <div
+            class="w-1/2 h-2 rounded-br-md border-b border-r {isScaleLinked
+              ? 'border-solid'
+              : 'border-dashed'} border-zinc-700"
+          />
+        </div>
       </div>
     </section>
   {/if}

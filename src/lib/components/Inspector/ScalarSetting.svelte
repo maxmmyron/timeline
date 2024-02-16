@@ -4,13 +4,14 @@
   import AutomationIcon from "$lib/icon/AutomationIcon.svelte";
   import AutomationPanel from "./AutomationPanel.svelte";
 
-  export let name: string;
+  export let name: string | null = "";
   export let scalar: number;
   export let automation: App.Automation | null = null;
   export let defaultVal: number = 0;
 
   export let useSubgrid: boolean = false;
   export let supportsAutomation: boolean = false;
+  export let dynamicBounds: boolean = false;
 
   /**
    * Whether or not the numerical override input can exceed the bounds defined
@@ -34,14 +35,16 @@
    */
   export let mag: number = props.step;
 
-  const dispatcher = createEventDispatcher<{ change: number }>();
-  $: dispatcher("change", scalar);
+  // const dispatcher = createEventDispatcher<{ change: number,  }>();
+  // $: dispatcher("change", scalar);
 
   let isHovered = false;
   export let isAutomationVisible = false;
 
   let clazz = "";
   export { clazz as class };
+
+  export let automationClass = "";
 </script>
 
 <label
@@ -49,15 +52,17 @@
     ? 'grid grid-cols-subgrid col-start-1 col-span-full'
     : 'flex gap-2'} items-center {clazz}"
 >
-  <p class="text-ellipsis">{name}</p>
+  {#if name}
+    <p class="text-ellipsis">{name}</p>
+  {/if}
   <input
-    class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800 w-10 disabled:opacity-50 disabled:cursor-not-allowed text-center"
+    class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800 max-w-[2rem] w-max disabled:opacity-50 disabled:cursor-not-allowed text-center"
     type="number"
     disabled={automation && automation.curves.length > 0}
     {...props}
     {...$$restProps}
     bind:value={scalar}
-    alt="Manual {name} property entry"
+    alt="Manual property entry"
     on:change={(e) => {
       let parsed = parseFloat(e.currentTarget.value);
       if (strictBounds)
@@ -91,7 +96,9 @@
   {/if}
 </label>
 {#if isAutomationVisible && automation}
-  <div class="{useSubgrid ? 'col-start-1 col-end-5' : ''} w-full">
-    <AutomationPanel bind:automation bind:isAutomationVisible />
+  <div
+    class="{useSubgrid ? 'col-start-1 col-end-5' : ''} w-full {automationClass}"
+  >
+    <AutomationPanel bind:automation bind:isAutomationVisible {dynamicBounds} />
   </div>
 {/if}

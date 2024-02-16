@@ -6,17 +6,21 @@
 
   export let isAutomationVisible: boolean;
   export let automation: App.Automation;
+  export let dynamicBounds: boolean = false;
 
-  $: type = automation.type;
-  $: uuid = automation.uuid;
+  let [min, max] = automation.valueBounds || [
+    automation.staticVal - 1,
+    automation.staticVal + 1,
+  ];
 
-  let [min, max] = automation.valueBounds || [0, 1];
+  // if dynamic bounds are enabled, we need to update the value bounds whenever
+  // the user changes the bounds properties
+  $: if (dynamicBounds) automation.valueBounds = [min, max];
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null = null;
 
-  let editContainerWidth = 0;
-  let editContainerHeight = 0;
+  let [editW, editH] = [0, 0];
 
   let selectedIdx = -1;
   let activeIdx = -1;
@@ -25,6 +29,7 @@
   let initialNodePos: [number, number] = [0, 0];
 
   let scalarTime = 0;
+
   /**
    * We need to manually track and update scalarTime to prevent reactivity
    * circularity from messing with the bound scalar value when the X value is
@@ -83,8 +88,11 @@
   const move = (e: MouseEvent) => {
     if (activeIdx === -1) return;
 
-    let y = e.clientY - canvas.getBoundingClientRect().top;
-    let normedY = normY(Math.min(Math.max(y, 0), editContainerHeight));
+    let y = Math.max(
+      0,
+      Math.min(e.clientY - canvas.getBoundingClientRect().top, editH)
+    );
+    let normedY = normY(Math.min(Math.max(y, 0), editH));
 
     // special case: first/last point
     if (activeIdx === 0) {
@@ -101,7 +109,7 @@
 
     let x = e.clientX - canvas.getBoundingClientRect().left;
 
-    let normedX = normX(Math.min(Math.max(x, 0), editContainerWidth));
+    let normedX = Math.min(Math.max(x, 0), editW) / editW;
 
     // bound adjustedX to the previous and next point's X values
     let prevX = automation.curves[activeIdx - 1][0];
@@ -119,13 +127,7 @@
     setScalarTime();
   };
 
-  const normX = (px: number) => px / editContainerWidth;
-  const unnormX = (x: number, w: number) => x * w;
-
-  // norm 0-1 to to min-max range
-  const normY = (px: number) =>
-    (1 - px / editContainerHeight) * (max - min) + min;
-
+  const normY = (px: number) => (1 - px / editH) * (max - min) + min;
   const unnormY = (y: number, h: number) => (1 - (y - min) / (max - min)) * h;
 </script>
 
@@ -151,13 +153,16 @@
   class="space-y-2 pb-2 border-b border-zinc-300 dark:border-zinc-800 border-dashed"
 >
   <header class="flex justify-between items-center">
-    <h4 class="text-zinc-600 dark:text-zinc-400">Edit {type} automation</h4>
+    <h4 class="text-zinc-600 dark:text-zinc-400">
+      Edit {automation.type} automation
+    </h4>
     <IconButton alt="Close" on:click={() => (isAutomationVisible = false)}>
       <CloseIcon />
     </IconButton>
   </header>
-  <main class="space-y-2">
-    <div class="flex gap-2 h-fit">
+  <main class="grid grid-cols-[2rem,1fr,1fr] gap-1">
+    <!-- Duration & Automation -->
+    <div class="row-start-1 col-span-full flex gap-2 h-fit">
       <ScalarSetting
         class="w-1/2"
         name="Duration"
@@ -175,7 +180,10 @@
       />
     </div>
 
-    <div class="p-1 rounded-md bg-zinc-100 dark:bg-zinc-800/15">
+    <!-- Graph Editor -->
+    <div
+      class="row-start-2 col-start-2 col-span-2 p-1 rounded-md bg-zinc-100 dark:bg-zinc-800/15"
+    >
       <div class="relative h-20 w-full">
         <!-- Visual spacers -->
         <div
@@ -187,25 +195,26 @@
             />
           {/each}
         </div>
+        <!-- Lines -->
         <canvas bind:this={canvas} class="w-full h-full" />
+        <!-- Nodes -->
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <div
           class="absolute top-0 left-0 w-full h-full"
-          bind:clientWidth={editContainerWidth}
-          bind:clientHeight={editContainerHeight}
+          bind:clientWidth={editW}
+          bind:clientHeight={editH}
           on:click={(e) => {
             if (!e.ctrlKey) return;
-            let x = normX(
+            let x =
               Math.min(
                 Math.max(e.clientX - canvas.getBoundingClientRect().left, 0),
-                editContainerWidth
-              )
-            );
+                editW
+              ) / editW;
 
             let y = normY(
               Math.min(
                 Math.max(e.clientY - canvas.getBoundingClientRect().top, 0),
-                editContainerHeight
+                editH
               )
             );
 
@@ -223,8 +232,8 @@
           {#each automation.curves as curve, i (curve)}
             <!-- Convert x and y scalar values back to pixels -->
             {@const [x, y] = [
-              curve[0] * editContainerWidth,
-              (1 - (curve[1] - min) / (max - min)) * editContainerHeight,
+              curve[0] * editW,
+              (1 - (curve[1] - min) / (max - min)) * editH,
             ]}
             <button
               class="absolute w-3 h-3 flex justify-center items-center transform -translate-x-1/2 -translate-y-1/2"
@@ -255,10 +264,32 @@
       </div>
     </div>
 
+    <!-- Bounds Editor -->
+    <div class="col-start-1 row-start-2 flex flex-col justify-between">
+      <ScalarSetting
+        name=""
+        disabled={!dynamicBounds}
+        bind:scalar={max}
+        props={{ min, max: Infinity, step: 0.01 }}
+        on:change={() => {
+          rerender();
+        }}
+        strictBounds
+      />
+      <ScalarSetting
+        name=""
+        disabled={!dynamicBounds}
+        bind:scalar={min}
+        props={{ min: -Infinity, max, step: 0.01 }}
+        on:change={() => {
+          rerender();
+        }}
+        strictBounds
+      />
+    </div>
+
     <!-- Timings -->
-    <div
-      class="border-t border-zinc-200 dark:border-zinc-900 flex justify-between"
-    >
+    <div class="col-start-2 col-span-2 row-start-3 flex justify-between">
       <p class="text-zinc-600 dark:text-zinc-500">
         {(0 + automation.offset).toFixed(2)}s
       </p>
@@ -278,7 +309,7 @@
           ? automation.duration + automation.offset
           : automation.curves[selectedIdx + 1][0] * automation.duration +
             automation.offset}
-      <div class="flex justify-between">
+      <div class="flex justify-between col-start-2 col-span-2 row-start-4">
         <ScalarSetting
           disabled={selectedIdx === 0 ||
             selectedIdx === automation.curves.length - 1}
@@ -298,12 +329,8 @@
           class="w-1/2"
           name="Y"
           bind:scalar={automation.curves[selectedIdx][1]}
-          props={{
-            min: min,
-            max: max,
-            step: 0.01,
-          }}
-          on:change={rerender}
+          props={{ min, max, step: 0.01 }}
+          on:change={() => rerender()}
           strictBounds
         />
       </div>
