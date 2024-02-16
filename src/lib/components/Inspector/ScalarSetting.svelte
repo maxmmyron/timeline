@@ -35,8 +35,7 @@
    */
   export let mag: number = props.step;
 
-  // const dispatcher = createEventDispatcher<{ change: number,  }>();
-  // $: dispatcher("change", scalar);
+  const dispatcher = createEventDispatcher<{ automationEditorOpen: boolean }>();
 
   let isHovered = false;
   export let isAutomationVisible = false;
@@ -89,7 +88,12 @@
   {#if supportsAutomation && automation}
     <IconButton
       alt="Edit automation"
-      on:click={() => (isAutomationVisible = !isAutomationVisible)}
+      toggles
+      on:click={() => {
+        isAutomationVisible = !isAutomationVisible;
+        if (isAutomationVisible)
+          dispatcher("automationEditorOpen", isAutomationVisible);
+      }}
     >
       <AutomationIcon />
     </IconButton>
