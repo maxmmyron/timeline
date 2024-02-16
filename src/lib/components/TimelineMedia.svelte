@@ -14,6 +14,13 @@
   $: gainNode.gain.value = lerpAutomation(clip.volume, clip.offset, $time);
   $: panNode.pan.value = clip.pan;
 
+  $: scaleX = lerpAutomation(clip.matrix[0], clip.offset, $time);
+  $: scaleY = lerpAutomation(clip.matrix[3], clip.offset, $time);
+  $: translateX = lerpAutomation(clip.matrix[4], clip.offset, $time);
+  $: translateY = lerpAutomation(clip.matrix[5], clip.offset, $time);
+
+  $: lerpedMatrix = [scaleX, 0, 0, scaleY, translateX, translateY];
+
   onMount(() => {
     if (clip.media.type === "image") {
       return;
@@ -43,7 +50,7 @@
     src={clip.media.src}
     title={clip.uuid}
     bind:this={$vRefs[clip.uuid]}
-    style:transform="translate(-50%, -50%) matrix({clip.matrix.join(",")})"
+    style:transform="translate(-50%, -50%) matrix({lerpedMatrix.join(",")})"
     style:transform-origin="{clip.origin[0] * 100}% {clip.origin[1] * 100}%"
     style:z-index={clip.z}
     class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
@@ -66,9 +73,7 @@
     title={clip.uuid}
     alt=""
     bind:this={$iRefs[clip.uuid]}
-    style:transform="translate(-50%, -50%) matrix({clip.matrix
-      .map((m) => (typeof m === "number" ? m : m.staticVal))
-      .join(",")})"
+    style:transform="translate(-50%, -50%) matrix({lerpedMatrix.join(",")})"
     style:transform-origin="{clip.origin[0] * 100}% {clip.origin[1] * 100}%"
     style:z-index={clip.z}
     class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
