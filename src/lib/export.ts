@@ -153,8 +153,6 @@ export const exportVideo = async () => {
     // filter for the clip, which may be composed of two separate automation
     // clips (one for scale X, one for scale Y).
     if (clip.media.type === "image" || clip.media.type === "video") {
-      const [equalizedAutomation, uniqueNodeTimes] = equalizeAutomation(clip.media.duration, ["sx", "sy"], [clip.matrix[0], clip.matrix[3]]);
-
       // if there are no extra nodes on any matrix automation curve, then we can
       // just handle the edge case
       if (clip.matrix[0].curves.length === 0 && clip.matrix[3].curves.length === 0) {
@@ -167,6 +165,8 @@ export const exportVideo = async () => {
           continue;
         }
       } else {
+        const [equalizedAutomation, uniqueNodeTimes] = equalizeAutomation(["sx", "sy"], [clip.matrix[0], clip.matrix[3]]);
+
         // after adding nodes, we can now build out the filtergraph for this
         // clip's scale component by interpolating between the nodes of each
         // curve.
@@ -197,16 +197,16 @@ export const exportVideo = async () => {
 
           switch (j) {
             case uniqueNodeTimes.length:
-              xClause += `lte(t\\,${toTime})\\,${sxLerpString}*iw`;
-              yClause += `lte(t\\,${toTime})\\,${syLerpString}*ih`;
+              xClause += `lte(t\\,${toTime}),${sxLerpString}*iw`;
+              yClause += `lte(t\\,${toTime}),${syLerpString}*ih`;
               break;
             case 0:
-              xClause += `lte(t\\,${fromTime})\\,${sxLerpString}*iw,`;
-              yClause += `lte(t\\,${fromTime})\\,${syLerpString}*ih,`;
+              xClause += `lte(t\\,${fromTime}),${sxLerpString}*iw,`;
+              yClause += `lte(t\\,${fromTime}),${syLerpString}*ih,`;
               break;
             default:
-              xClause += `between(t\\,${fromTime}\\,${toTime})\\,${sxLerpString}*iw,`;
-              yClause += `between(t\\,${fromTime}\\,${toTime})\\,${syLerpString}*ih,`;
+              xClause += `between(t\\,${fromTime},${toTime}),${sxLerpString}*iw,`;
+              yClause += `between(t\\,${fromTime},${toTime}),${syLerpString}*ih,`;
               break;
           }
         }
@@ -218,9 +218,6 @@ export const exportVideo = async () => {
         }
 
         scale = `w=(${xClause}):h=(${yClause}):eval=frame`;
-
-        console.log(`scale for clip ${i}`);
-        console.log(scale);
       }
     }
 
@@ -261,27 +258,10 @@ export const exportVideo = async () => {
 
     vFilter += `${inLink}[${i + 1}v]`;
 
-    // Here, we need to interpolate the video's matrix automation curves. There's
-    // a lot of complexity here, but it boils down to a lot of repetitive logic.
-    //
-    // If there are no nodes on any of the matrix curves, we can just use a
-    // single overlay/enable filter for the entire clip.
-    //
-    // Otherwise, we need to interpolate between the nodes of each curve. This
-    // presents a few issues:
-    // 1. It isn't guaranteed that each curve will have the same number of nodes
-    // 2. besides the first and last nodes, there's no guarantee that the nodes
-    //    of each curve will be at the same time
-    // We can solve these issues by equalizing the automation curves of the
-    // matrix, such that each curve has the same number of nodes (all at the
-    // same times).
-
-    const [equalizedAutomation, uniqueNodeTimes] = equalizeAutomation(clip.media.duration, ["sx", "sy", "tx", "ty"], [clip.matrix[0], clip.matrix[3], clip.matrix[4], clip.matrix[5]]);
-
     // if there are no extra nodes on any matrix automation curve, then this is
     // edge case 1. we can use a single overlay/enable filter for the entire
     // clip.
-    if (uniqueNodeTimes.length === 0) {
+    if (clip.matrix[0].curves.length === 0 && clip.matrix[3].curves.length === 0 && clip.matrix[4].curves.length === 0 && clip.matrix[5].curves.length === 0) {
       const originOffsetX = ((clip.matrix[0].staticVal - 1) * clip.media.dimensions[0] / 2) * (2 * clip.origin[0] - 1);
       const originOffsetY = ((clip.matrix[3].staticVal - 1) * clip.media.dimensions[1] / 2) * (2 * clip.origin[1] - 1);
 
@@ -304,6 +284,23 @@ export const exportVideo = async () => {
       vFilter += `overlay=${overlayPos}:${enabledPeriod}${outLink};`
       continue;
     }
+
+    // Here, we need to interpolate the video's matrix automation curves. There's
+    // a lot of complexity here, but it boils down to a lot of repetitive logic.
+    //
+    // If there are no nodes on any of the matrix curves, we can just use a
+    // single overlay/enable filter for the entire clip.
+    //
+    // Otherwise, we need to interpolate between the nodes of each curve. This
+    // presents a few issues:
+    // 1. It isn't guaranteed that each curve will have the same number of nodes
+    // 2. besides the first and last nodes, there's no guarantee that the nodes
+    //    of each curve will be at the same time
+    // We can solve these issues by equalizing the automation curves of the
+    // matrix, such that each curve has the same number of nodes (all at the
+    // same times).
+
+    const [equalizedAutomation, uniqueNodeTimes] = equalizeAutomation(["sx", "sy", "tx", "ty"], [clip.matrix[0], clip.matrix[3], clip.matrix[4], clip.matrix[5]]);
 
     // after adding nodes, we can now build out the filtergraph for this clip by
     // interpolating between the nodes of each curve.
@@ -336,7 +333,8 @@ export const exportVideo = async () => {
       const originOffsetXString = `(((${sxLerpString}-1)*${clip.media.dimensions[0]}/2)*(2*${clip.origin[0]}-1))`;
       const originOffsetYString = `(((${syLerpString}-1)*${clip.media.dimensions[1]}/2)*(2*${clip.origin[1]}-1))`;
 
-      vFilter += `overlay=enable='between(t\\,${fromTime},${toTime})':x=(W-w)/2+${txLerpString}-${originOffsetXString}:y=(H-h)/2+${tyLerpString}-${originOffsetYString}:eval=frame,`;
+      vFilter += `overlay=enable='between(t\\,${fromTime},${toTime})':x='(W-w)/2+(${txLerpString})-(${originOffsetXString})':y='(H-h)/2+(${tyLerpString})-(${originOffsetYString})':eval=frame`;
+      if (j !== uniqueNodeTimes.length) vFilter += `,`;
     }
     vFilter += `${outLink};`;
   }
@@ -383,7 +381,6 @@ export const exportVideo = async () => {
   document.body.removeChild(link);
   setTimeout(() => URL.revokeObjectURL(link.href), 7000);
 
-  console.log(`Downloaded export.mp4 (${duration}s)`);
   console.log(["-i", "base.mp4", ...[...loadedMedia.map((src) =>  ["-i", src])].flat(), "-filter_complex", `${vFilter}${aFilter}`, "-map", "[vout]", "-map", "[aout]", "export.mp4"].join(" "));
 };
 
@@ -414,8 +411,11 @@ const buildLerpString = (fromX: number, fromY: number, toX: number, toY: number,
  * @returns a map of equalized automation clips, and an array of all unique
  * node times across all automation clips
  */
-const equalizeAutomation = (duration: number, keys: string[], automation: App.Automation[]): [Map<string, App.Automation>, number[]] => {
+const equalizeAutomation = (keys: string[], automation: App.Automation[]): [Map<string, App.Automation>, number[]] => {
   if(keys.length !== automation.length) throw new Error("Error equalizing automation: keys and automation arrays are not the same length.");
+
+  // clone the automation array so we don't modify the original
+  automation = structuredClone(automation);
 
   const map = new Map<string, App.Automation>();
 
