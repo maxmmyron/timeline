@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import { ffmpeg, safeRes, videoClips, audioClips, exportStatus, exportPercentage } from "./stores";
 import { fetchFile } from "@ffmpeg/ffmpeg";
+import { createAutomation } from "./utils";
 
 export const exportVideo = async () => {
   exportStatus.set("setup");
@@ -104,53 +105,125 @@ export const exportVideo = async () => {
     const end = (clip.media.duration - clip.end);
 
     /**
-     * The portion of the ffmpeg filter that defines the scale of the clip.
-     * w/h represent the width and height of the clip, respectively; we multiply
-     * these by the clip's matrix[0] and matrix[3] values to get the scaled
-     * dimensions.
+     * The portion of the ffmpeg audio filter that scales the video's clip.
      */
-    const scale = `(iw*${clip.matrix[0]}):(ih*${clip.matrix[3]})`;
+    let scale: string = "";
 
-    // if the clip is an image, we can just calculate the scale and move on
-    if (clip.media.type === "image") {
-      vFilter += `[v_split${i}]scale=${scale}[${i}v];`;
-      continue;
+    // perform audio processing if the clip contains audio (i.e. it's not an image)
+    if(clip.media.type === "audio" || clip.media.type === "video") {
+      // define delay, since we need it twice
+      const d = (clip.offset * 1000).toFixed(0);
+
+      aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d},`;
+
+      // create a series of volume filters for each point in the automation curve
+      if (clip.volume.curves.length === 0) {
+        aFilter += `volume=${clip.volume.staticVal},`;
+      } else {
+        for (let j = 0; j < clip.volume.curves.length - 1; j++) {
+          const [fromX, fromY] = clip.volume.curves[j];
+          const [toX, toY] = clip.volume.curves[j + 1];
+
+          const fromXTime = fromX * clip.media.duration + clip.volume.offset;
+          const toXTime = toX * clip.media.duration + clip.volume.offset;
+
+          const volumeLerpString = buildLerpString(fromX, fromY, toX, toY, clip.media.duration, clip.volume.offset);
+
+          /**
+           * Add a volume filter for the current curve segment. This
+           * 1. enables the volume filter between the start and end of the curve
+           * 2. defines a function for the volume that is linearly interpolated
+           *    between the start and end of the curve
+           * 3. evaluates the volume at each frame (i.e. each point in the curve)
+           *    so that the volume changes smoothly over time
+           */
+          aFilter += `volume=enable='between(t,${fromXTime},${toXTime})':volume=${volumeLerpString},eval:frame,`;
+        }
+      }
+
+      const pan = [clip.pan < 0 ? 1 : 1 - clip.pan, clip.pan > 0 ? 1 : 1 + clip.pan];
+      aFilter+=`pan=stereo|c0=${pan[0]}*c0|c1=${pan[1]}*c1[${i}a];`;
+
+      // if this is an audio clip, we don't need to do any extra processing,
+      // so we can just skip to the next clip
+      if (clip.media.type === "audio") continue;
     }
 
-    // define delay, since we need it twice
-    const d = (clip.offset * 1000).toFixed(0);
+    // if we're *not* dealing with an audio clip, we need to build out the scale
+    // filter for the clip, which may be composed of two separate automation
+    // clips (one for scale X, one for scale Y).
+    if (clip.media.type === "image" || clip.media.type === "video") {
+      const [equalizedAutomation, uniqueNodeTimes] = equalizeAutomation(clip.media.duration, ["sx", "sy"], [clip.matrix[0], clip.matrix[3]]);
 
-    aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d},`;
+      // if there are no extra nodes on any matrix automation curve, then we can
+      // just handle the edge case
+      if (clip.matrix[0].curves.length === 0 && clip.matrix[3].curves.length === 0) {
+        scale = `(iw*${clip.matrix[0].staticVal}):(ih*${clip.matrix[3].staticVal})`;
 
-    // create a series of volume filters for each point in the automation curve
-    if (clip.volume.curves.length === 0) {
-      aFilter += `volume=${clip.volume.staticVal},`;
-    } else {
-      for (let j = 0; j < clip.volume.curves.length - 1; j++) {
-        const [fromX, fromY] = clip.volume.curves[j];
-        const [toX, toY] = clip.volume.curves[j + 1];
+        // if this is an image, we don't need to do any extra processing,
+        // so we can just skip to the next clip
+        if (clip.media.type === "image") {
+          vFilter += `[v_split${i}]scale=${scale}[${i}v];`;
+          continue;
+        }
+      } else {
+        // after adding nodes, we can now build out the filtergraph for this
+        // clip's scale component by interpolating between the nodes of each
+        // curve.
+        //
+        // unfortunately, ffmpeg's scale component does not support the enable
+        // filter, so we need to use a series of ffmpeg `if` statements to
+        // interpolate between the nodes of each curve. to achieve this, we'll
+        // actually work from the end of the clip to the start, so that we can
+        // easily nest the `if` statements.
 
-        const fromXTime = fromX * clip.media.duration + clip.volume.offset;
-        const toXTime = toX * clip.media.duration + clip.volume.offset;
+        let xClause = "";
+        let yClause = "";
 
-        /**
-         * Add a volume filter for the current curve segment. This
-         * 1. enables the volume filter between the start and end of the curve
-         * 2. defines a function for the volume that is linearly interpolated
-         *    between the start and end of the curve
-         * 3. evaluates the volume at each frame (i.e. each point in the curve)
-         *    so that the volume changes smoothly over time
-         */
-        aFilter += `volume=enable='between(t,${fromXTime},${toXTime})':volume=${fromY}+((${toY}-${fromY})*(t-${fromXTime})/(${toXTime}-${fromXTime})):eval=frame,`;
+        for (let j = 0; j < uniqueNodeTimes.length+1; j++) {
+          // add a new `if` statement for each matrix value
+          xClause += `if(`;
+          yClause += `if(`;
+
+          const [fromSxScalar, fromSxVal, toSxScalar, toSxVal] = [...equalizedAutomation.get("sx")!.curves[j], ...equalizedAutomation.get("sx")!.curves[j+1]];
+          const [fromSyScalar, fromSyVal, toSyScalar, toSyVal] = [...equalizedAutomation.get("sy")!.curves[j], ...equalizedAutomation.get("sy")!.curves[j+1]];
+
+          const fromTime = fromSxScalar * clip.media.duration + equalizedAutomation.get("sx")!.offset;
+          const toTime = toSxScalar * clip.media.duration + equalizedAutomation.get("sx")!.offset;
+
+          // generate ffmpeg lerp strings for each matrix value
+          const sxLerpString = buildLerpString(fromSxScalar, fromSxVal, toSxScalar, toSxVal, clip.media.duration, equalizedAutomation.get("sx")!.offset);
+          const syLerpString = buildLerpString(fromSyScalar, fromSyVal, toSyScalar, toSyVal, clip.media.duration, equalizedAutomation.get("sy")!.offset);
+
+          switch (j) {
+            case uniqueNodeTimes.length:
+              xClause += `lte(t\\,${toTime})\\,${sxLerpString}*iw`;
+              yClause += `lte(t\\,${toTime})\\,${syLerpString}*ih`;
+              break;
+            case 0:
+              xClause += `lte(t\\,${fromTime})\\,${sxLerpString}*iw,`;
+              yClause += `lte(t\\,${fromTime})\\,${syLerpString}*ih,`;
+              break;
+            default:
+              xClause += `between(t\\,${fromTime}\\,${toTime})\\,${sxLerpString}*iw,`;
+              yClause += `between(t\\,${fromTime}\\,${toTime})\\,${syLerpString}*ih,`;
+              break;
+          }
+        }
+
+        // close the `if` statements
+        for (let j = 0; j < uniqueNodeTimes.length + 1; j++) {
+          xClause += ")";
+          yClause += ")";
+        }
+
+        scale = `w=(${xClause}):h=(${yClause}):eval=frame`;
+
+        console.log(`scale for clip ${i}`);
+        console.log(scale);
       }
     }
 
-    const pan = [clip.pan < 0 ? 1 : 1 - clip.pan, clip.pan > 0 ? 1 : 1 + clip.pan];
-    aFilter+=`pan=stereo|c0=${pan[0]}*c0|c1=${pan[1]}*c1[${i}a];`;
-
-
-    // if the clip is audio, we don't need to do any video processing
-    if (clip.media.type === "audio") continue;
 
     /**
      * The portion of the ffmpeg video filter that determines when in the final
@@ -186,31 +259,90 @@ export const exportVideo = async () => {
 
     const clip = vClips[i];
 
-    // calculate the offset of the clip based on the transform origin and scaling.
-    const originOffsetX = ((clip.matrix[0] - 1) * clip.media.dimensions[0] / 2) * (2 * clip.origin[0] - 1);
-    const originOffsetY = ((clip.matrix[3] - 1) * clip.media.dimensions[1] / 2) * (2 * clip.origin[1] - 1);
+    vFilter += `${inLink}[${i + 1}v]`;
 
-    /**
-     * The portion of the ffmpeg filter that defines the position of the clip.
-     * (W-w)/2 and (H-h)/2 are used to center the video; we then offset by two
-     * values:
-     * 1. the x and y values of the clip's transformation matrix
-     * 2. the offset of the clip based on the transform origin and scaling
-     */
-    const overlayPos  = `(W-w)/2+${clip.matrix[4] - originOffsetX}:(H-h)/2+${clip.matrix[5] - originOffsetY}`;
+    // Here, we need to interpolate the video's matrix automation curves. There's
+    // a lot of complexity here, but it boils down to a lot of repetitive logic.
+    //
+    // If there are no nodes on any of the matrix curves, we can just use a
+    // single overlay/enable filter for the entire clip.
+    //
+    // Otherwise, we need to interpolate between the nodes of each curve. This
+    // presents a few issues:
+    // 1. It isn't guaranteed that each curve will have the same number of nodes
+    // 2. besides the first and last nodes, there's no guarantee that the nodes
+    //    of each curve will be at the same time
+    // We can solve these issues by equalizing the automation curves of the
+    // matrix, such that each curve has the same number of nodes (all at the
+    // same times).
 
-    /**
-     * The portion of the ffmpeg filter that defines the period over which the
-     * clip is enabled. This starts at clip.offset, and lasts until the the end
-     * of the clip (in absolute positioning: offset + calculated duration).
-     */
-    const enabledPeriod = `enable='between(t\\,${clip.offset},${clip.offset + (clip.media.duration - clip.end - clip.start)})'`;
+    const [equalizedAutomation, uniqueNodeTimes] = equalizeAutomation(clip.media.duration, ["sx", "sy", "tx", "ty"], [clip.matrix[0], clip.matrix[3], clip.matrix[4], clip.matrix[5]]);
 
-    //overlay=<overlayW>:<overlayH>:<enabledPeriod>
-    vFilter += `${inLink}[${i + 1}v]overlay=${overlayPos}:${enabledPeriod}${outLink};`
+    // if there are no extra nodes on any matrix automation curve, then this is
+    // edge case 1. we can use a single overlay/enable filter for the entire
+    // clip.
+    if (uniqueNodeTimes.length === 0) {
+      const originOffsetX = ((clip.matrix[0].staticVal - 1) * clip.media.dimensions[0] / 2) * (2 * clip.origin[0] - 1);
+      const originOffsetY = ((clip.matrix[3].staticVal - 1) * clip.media.dimensions[1] / 2) * (2 * clip.origin[1] - 1);
+
+      /**
+       * The portion of the ffmpeg filter that defines the position of the clip.
+       * (W-w)/2 and (H-h)/2 are used to center the video; we then offset by two
+       * values:
+       * 1. the x and y values of the clip's transformation matrix
+       * 2. the offset of the clip based on the transform origin and scaling
+       */
+      const overlayPos  = `(W-w)/2+${clip.matrix[4].staticVal - originOffsetX}:(H-h)/2+${clip.matrix[5].staticVal - originOffsetY}`;
+
+      /**
+       * The portion of the ffmpeg filter that defines the period over which the
+       * clip is enabled. This starts at clip.offset, and lasts until the the end
+       * of the clip (in absolute positioning: offset + calculated duration).
+       */
+      const enabledPeriod = `enable='between(t\\,${clip.offset},${clip.offset + (clip.media.duration - clip.end - clip.start)})'`;
+
+      vFilter += `overlay=${overlayPos}:${enabledPeriod}${outLink};`
+      continue;
+    }
+
+    // after adding nodes, we can now build out the filtergraph for this clip by
+    // interpolating between the nodes of each curve.
+    //
+    // we go through each time in nodeTimes, and add a filter for each matrix
+    // value at that time. Note that because nodeTimes *doesn't* include the
+    // first and last points, we iterate from 0 - nodeTimes.length + 1.
+
+    for (let j = 0; j < uniqueNodeTimes.length + 1; j++) {
+      // retrieve the X and Y values of each matrix for the given node index
+      const [fromSxScalar, fromSxVal, toSxScalar, toSxVal] = [...equalizedAutomation.get("sx")!.curves[j], ...equalizedAutomation.get("sx")!.curves[j+1]];
+      const [fromSyScalar, fromSyVal, toSyScalar, toSyVal] = [...equalizedAutomation.get("sy")!.curves[j], ...equalizedAutomation.get("sy")!.curves[j+1]];
+      const [fromTxScalar, fromTxVal, toTxScalar, toTxVal] = [...equalizedAutomation.get("tx")!.curves[j], ...equalizedAutomation.get("tx")!.curves[j+1]];
+      const [fromTyScalar, fromTyVal, toTyScalar, toTyVal] = [...equalizedAutomation.get("ty")!.curves[j], ...equalizedAutomation.get("ty")!.curves[j+1]];
+
+      // determine the start and end times for the current node. this is used to
+      // fill in the filter's enable parameter.
+      // FIXME: user can change individual matrix automation clip duration/
+      // offsets, which throws off the calculation here
+      const fromTime = fromSxScalar * clip.media.duration + equalizedAutomation.get("sx")!.offset;
+      const toTime = toSxScalar * clip.media.duration + equalizedAutomation.get("sx")!.offset;
+
+      // generate ffmpeg lerp strings for each matrix value
+      const sxLerpString = buildLerpString(fromSxScalar, fromSxVal, toSxScalar, toSxVal, clip.media.duration, equalizedAutomation.get("sx")!.offset);
+      const syLerpString = buildLerpString(fromSyScalar, fromSyVal, toSyScalar, toSyVal, clip.media.duration, equalizedAutomation.get("sy")!.offset);
+      const txLerpString = buildLerpString(fromTxScalar, fromTxVal, toTxScalar, toTxVal, clip.media.duration, equalizedAutomation.get("tx")!.offset);
+      const tyLerpString = buildLerpString(fromTyScalar, fromTyVal, toTyScalar, toTyVal, clip.media.duration, equalizedAutomation.get("ty")!.offset);
+
+      // build out the scaling and translation strings
+      const originOffsetXString = `(((${sxLerpString}-1)*${clip.media.dimensions[0]}/2)*(2*${clip.origin[0]}-1))`;
+      const originOffsetYString = `(((${syLerpString}-1)*${clip.media.dimensions[1]}/2)*(2*${clip.origin[1]}-1))`;
+
+      vFilter += `overlay=enable='between(t\\,${fromTime},${toTime})':x=(W-w)/2+${txLerpString}-${originOffsetXString}:y=(H-h)/2+${tyLerpString}-${originOffsetYString}:eval=frame,`;
+    }
+    vFilter += `${outLink};`;
   }
 
-  // if there are no video clips, we need to add a null filter to the video filter chain
+  // if there are no video clips, we need to add a null filter to the video
+  // filter chain
   if (vClips.length === 0) vFilter += `[0:v]null[vout];`;
 
 
@@ -254,3 +386,85 @@ export const exportVideo = async () => {
   console.log(`Downloaded export.mp4 (${duration}s)`);
   console.log(["-i", "base.mp4", ...[...loadedMedia.map((src) =>  ["-i", src])].flat(), "-filter_complex", `${vFilter}${aFilter}`, "-map", "[vout]", "-map", "[aout]", "export.mp4"].join(" "));
 };
+
+/**
+ * Returns a string that can be used in an ffmpeg filtergraph to lerp between
+ * two values.
+ *
+ * @param fromX The start time of the first keyframe, from 0 to 1
+ * @param fromY The start value of the first keyframe
+ * @param toX The end time of the second keyframe, from 0 to 1
+ * @param toY The end value of the second keyframe
+ * @param duration The duration of the clip
+ * @param offset The offset of the clip
+ */
+const buildLerpString = (fromX: number, fromY: number, toX: number, toY: number, duration: number, offset: number) => {
+  const fromXTime = fromX * duration + offset;
+  const toXTime = toX * duration + offset;
+  return `${fromY}+((${toY}-${fromY})*(t-${fromXTime})/(${toXTime}-${fromXTime}))`;
+};
+
+/**
+ * Equalizes the automation curves of a matrix by adding and interpolating nodes
+ * to each curve, such that all curves have nodes at the same time.
+ *
+ * @param duration The duration of the clip
+ * @param keys the names of each automation to equalize
+ * @param automation the automation clips to equalize
+ * @returns a map of equalized automation clips, and an array of all unique
+ * node times across all automation clips
+ */
+const equalizeAutomation = (duration: number, keys: string[], automation: App.Automation[]): [Map<string, App.Automation>, number[]] => {
+  if(keys.length !== automation.length) throw new Error("Error equalizing automation: keys and automation arrays are not the same length.");
+
+  const map = new Map<string, App.Automation>();
+
+  // if a given matrix value has no automation curves, we create a new one
+  // based on the static value of the matrix. this way, we can simply
+  // interpolate across the static value, instead of having write a condition
+  // for each matrix value at each location it appears in the filter graph.
+
+  for (let i = 0; i < keys.length; i++) {
+    map.set(keys[i], automation[i]);
+  }
+
+  for (const [_, a] of map) {
+    if(a.curves.length === 0) {
+      a.curves = [[0, a.staticVal], [1, a.staticVal]];
+    }
+  }
+
+  // Build out an array containing all unique node times for all automation
+  // clips in the matrix. This will be used to add nodes to each clip that do
+  // not have nodes at the same time as other clips.
+
+  /**
+   * An array of all points along all the matrix's automation curves,
+   * excluding the first and last points. This is used to determine the
+   */
+  const nodeTimes = [...map.values()].reduce((acc: number[], m) => {
+    m.curves.forEach((c) => !acc.includes(c[0]) && (c[0] !== 0 && c[0] !== 1) ? acc.push(c[0]) : null);
+    return acc;
+  }, []).sort((a, b) => a - b);
+
+  // if there are no nodes, we can just return the map and an empty array
+  if(nodeTimes.length === 0) return [map, nodeTimes];
+
+  /**
+   * go through each automation clip in the matrix, and add curve points to
+   * clips that do not have curve points at the same time as other clips. For
+   * the Y value, interpolate between the two closest points.
+   */
+  for (const [_, automation] of map) {
+    for(const time of nodeTimes) {
+      if(automation.curves.some((c) => c[0] === time)) continue;
+
+      const leftIdx = automation.curves.findIndex((c, i) => c[0] < time && automation.curves[i + 1] && automation.curves[i + 1][0] > time);
+      const [left, right] = [automation.curves[leftIdx], automation.curves[leftIdx + 1]];
+
+      automation.curves = automation.curves.toSpliced(leftIdx + 1, 0, [time, left[1] + ((right[1] - left[1]) * (time - left[0])) / (right[0] - left[0])]);
+    }
+  }
+
+  return [map, nodeTimes];
+}
