@@ -10,12 +10,10 @@ export const exportVideo = async () => {
   const ffmpegInstance =  get(ffmpeg);
   let vClips = get(videoClips);
 
-  // sort vClips by z index, lowest to highest. we do this so we properly layer the videos.
+  // sort vClips by z index, lowest to highest. we do this so we properly layer
+  // the videos.
   vClips = vClips.sort((a, b) => a.z - b.z);
 
-  /**
-   * Combined array of video and audio clips.
-   */
   let clips = [...vClips, ...get(audioClips)];
 
   if (!ffmpegInstance.isLoaded()) {
@@ -26,9 +24,6 @@ export const exportVideo = async () => {
   let vFilter = "";
   let aFilter = "";
 
-  /**
-   * Tracks which media files have been loaded into the ffmpeg instance
-   */
   let loadedMedia: Array<string> = [];
 
   // -----------------------
@@ -41,7 +36,6 @@ export const exportVideo = async () => {
     const clip = clips[i];
     const media = clip.media;
 
-    // determine the file extension based on the media type
     let type: string;
     if (media.type === "audio") type = "mp3";
     else if (media.type === "video") type = "mp4";
@@ -49,7 +43,6 @@ export const exportVideo = async () => {
 
     const src = `${media.uuid}.${type}`;
 
-    // if the media hasn't been loaded yet, load it
     if(!loadedMedia.includes(src)) {
       ffmpegInstance.FS("writeFile", src, await fetchFile(media.src));
       loadedMedia.push(src);
