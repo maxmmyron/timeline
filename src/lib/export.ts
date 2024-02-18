@@ -112,7 +112,7 @@ export const exportVideo = async () => {
     // perform audio processing if the clip contains audio (i.e. it's not an image)
     if(clip.media.type === "audio" || clip.media.type === "video") {
       // define delay, since we need it twice
-      const d = (clip.offset * 1000).toFixed(0);
+      const d = Math.max(0, (clip.offset * 1000)).toFixed(0);
 
       aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d},`;
 
