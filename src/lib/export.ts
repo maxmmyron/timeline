@@ -187,25 +187,36 @@ export const exportVideo = async () => {
           const [fromSxScalar, fromSxVal, toSxScalar, toSxVal] = [...equalizedAutomation.get("sx")!.curves[j], ...equalizedAutomation.get("sx")!.curves[j+1]];
           const [fromSyScalar, fromSyVal, toSyScalar, toSyVal] = [...equalizedAutomation.get("sy")!.curves[j], ...equalizedAutomation.get("sy")!.curves[j+1]];
 
-          const fromTime = fromSxScalar * clip.media.duration + equalizedAutomation.get("sx")!.offset;
-          const toTime = toSxScalar * clip.media.duration + equalizedAutomation.get("sx")!.offset;
+          /**
+           * The combined offset of the clip, and the automation clip. the enable
+           * period is absolutely positioned w.r.t. the export's start
+           */
+          const offset = equalizedAutomation.get("sx")!.offset + clip.offset;
+          const duration = equalizedAutomation.get("sx")!.duration;
+
+          const fromTime = fromSxScalar * duration + offset;
+          const toTime = toSxScalar * duration + offset;
+
+          const [scaledFromSxVal, scaledFromSyVal] = [fromSxVal*clip.media.dimensions[0], fromSyVal*clip.media.dimensions[1]];
+          const [scaledToSxVal, scaledToSyVal] = [toSxVal*clip.media.dimensions[0], toSyVal*clip.media.dimensions[1]];
+
 
           // generate ffmpeg lerp strings for each matrix value
-          const sxLerpString = buildLerpString(fromSxScalar, fromSxVal, toSxScalar, toSxVal, clip.media.duration, equalizedAutomation.get("sx")!.offset);
-          const syLerpString = buildLerpString(fromSyScalar, fromSyVal, toSyScalar, toSyVal, clip.media.duration, equalizedAutomation.get("sy")!.offset);
+          const sxLerpString = buildLerpString(fromSxScalar, scaledFromSxVal, toSxScalar, scaledToSxVal, duration, offset);
+          const syLerpString = buildLerpString(fromSyScalar, scaledFromSyVal, toSyScalar, scaledToSyVal, duration, offset);
 
           switch (j) {
             case uniqueNodeTimes.length:
-              xClause += `lte(t\\,${toTime}),${sxLerpString}*iw`;
-              yClause += `lte(t\\,${toTime}),${syLerpString}*ih`;
+              xClause += `lte(t,${toTime}),${sxLerpString}*iw`;
+              yClause += `lte(t,${toTime}),${syLerpString}*ih`;
               break;
             case 0:
-              xClause += `lte(t\\,${fromTime}),${sxLerpString}*iw,`;
-              yClause += `lte(t\\,${fromTime}),${syLerpString}*ih,`;
+              xClause += `lte(t,${fromTime}),${sxLerpString}*iw,`;
+              yClause += `lte(t,${fromTime}),${syLerpString}*ih,`;
               break;
             default:
-              xClause += `between(t\\,${fromTime},${toTime}),${sxLerpString}*iw,`;
-              yClause += `between(t\\,${fromTime},${toTime}),${syLerpString}*ih,`;
+              xClause += `between(t,${fromTime},${toTime}),${sxLerpString}*iw,`;
+              yClause += `between(t,${fromTime},${toTime}),${syLerpString}*ih,`;
               break;
           }
         }
@@ -216,7 +227,7 @@ export const exportVideo = async () => {
           yClause += ")";
         }
 
-        scale = `w=(${xClause}):h=(${yClause}):eval=frame`;
+        scale = `w='${xClause}':h='${yClause}':eval=frame`;
       }
     }
 
@@ -278,7 +289,7 @@ export const exportVideo = async () => {
        * clip is enabled. This starts at clip.offset, and lasts until the the end
        * of the clip (in absolute positioning: offset + calculated duration).
        */
-      const enabledPeriod = `enable='between(t\\,${clip.offset},${clip.offset + (clip.media.duration - clip.end - clip.start)})'`;
+      const enabledPeriod = `enable='between(t,${clip.offset},${clip.offset + (clip.media.duration - clip.end - clip.start)})'`;
 
       vFilter += `overlay=${overlayPos}:${enabledPeriod}${outLink};`
       continue;
@@ -340,7 +351,7 @@ export const exportVideo = async () => {
       const originOffsetXString = `(((${sxLerpString}-1)*${clip.media.dimensions[0]}/2)*(2*${clip.origin[0]}-1))`;
       const originOffsetYString = `(((${syLerpString}-1)*${clip.media.dimensions[1]}/2)*(2*${clip.origin[1]}-1))`;
 
-      vFilter += `overlay=enable='between(t\\,${fromTime},${toTime})':x='(W-w)/2+(${txLerpString})-(${originOffsetXString})':y='(H-h)/2+(${tyLerpString})-(${originOffsetYString})':eval=frame`;
+      vFilter += `overlay=enable='between(t,${fromTime},${toTime})':x='(W-w)/2+(${txLerpString})-(${originOffsetXString})':y='(H-h)/2+(${tyLerpString})-(${originOffsetYString})':eval=frame`;
       if (j !== uniqueNodeTimes.length) vFilter += `,`;
     }
     vFilter += `${outLink};`;
