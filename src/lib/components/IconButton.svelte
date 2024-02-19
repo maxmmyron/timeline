@@ -2,7 +2,7 @@
   export let alt: string;
   export let toggles: boolean = false;
 
-  let toggled = false;
+  export let toggled = false;
 </script>
 
 <button

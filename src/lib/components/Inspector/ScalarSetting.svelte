@@ -40,6 +40,9 @@
   let isHovered = false;
   export let isAutomationVisible = false;
 
+  $: if (isAutomationVisible)
+    dispatcher("automationEditorOpen", isAutomationVisible);
+
   let clazz = "";
   export { clazz as class };
 
@@ -89,11 +92,7 @@
     <IconButton
       alt="Edit automation"
       toggles
-      on:click={() => {
-        isAutomationVisible = !isAutomationVisible;
-        if (isAutomationVisible)
-          dispatcher("automationEditorOpen", isAutomationVisible);
-      }}
+      bind:toggled={isAutomationVisible}
     >
       <AutomationIcon />
     </IconButton>
