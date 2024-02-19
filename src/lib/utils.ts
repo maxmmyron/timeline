@@ -132,7 +132,7 @@ export const updateScrubberAndScroll = (t:  number) => {
 
   const tlScroll = get(scroll);
   if(get(time) * get(scaleFactor) < tlScroll || get(time) * get(scaleFactor) > tlScroll + window.innerWidth) {
-    scroll.set(t * get(scaleFactor) - window.innerWidth / 2);
+    scroll.set(Math.max(0, t * get(scaleFactor) - window.innerWidth / 2));
   }
 };
 

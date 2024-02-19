@@ -20,7 +20,7 @@
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
-  import { frame, getCurrentClips } from "$lib/utils";
+  import { frame, getCurrentClips, updateScrubberAndScroll } from "$lib/utils";
   import MediaBrowser from "$lib/components/MediaBrowser.svelte";
   import TimelineMedia from "$lib/components/TimelineMedia.svelte";
   import Preferences from "$lib/components/Preferences/Preferences.svelte";
@@ -258,8 +258,8 @@
       class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
       aria-label="Skip to start"
       on:click={() => {
-        $time = 0;
         $paused = true;
+        updateScrubberAndScroll(0);
       }}>⏮️</button
     >
     <button
@@ -274,13 +274,15 @@
       aria-label="Skip to end"
       on:click={() => {
         $paused = true;
-        $time = $videoClips.reduce(
-          (acc, clip) =>
-            Math.max(
-              acc,
-              clip.offset + (clip.media.duration - clip.start - clip.end)
-            ),
-          0
+        updateScrubberAndScroll(
+          $videoClips.reduce(
+            (acc, clip) =>
+              Math.max(
+                acc,
+                clip.offset + (clip.media.duration - clip.start - clip.end)
+              ),
+            0
+          )
         );
       }}>⏭️</button
     >
