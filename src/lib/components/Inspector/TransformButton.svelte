@@ -8,7 +8,7 @@
 </script>
 
 <button
-  class="w-5 h-5 flex justify-center items-center hover:scale-110 active:scale-90 translate-transform"
+  class="w-5 h-5 flex justify-center items-center hover:scale-105 active:scale-95 translate-transform"
   on:click={() => (origin = value)}
 >
   {#if $$slots.default}

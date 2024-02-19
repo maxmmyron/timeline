@@ -11,8 +11,8 @@ declare global {
 			z: number;
 			matrix: Matrix;
 			origin: [number, number];
-			volume: number;
-			pan: number;
+			volume: Automation<"volume">;
+			pan: number,
 		};
 
 		type Media = {
@@ -30,9 +30,29 @@ declare global {
 			type: MediaType;
 		};
 
-		type Matrix = [number, number, number, number, number, number];
+		type Matrix = [Automation<"scale">, number, number, Automation<"scale">, Automation<"position">, Automation<"position">];
 
 		type MediaType = "video" | "audio" | "image";
+
+		type Automation<T = AutomationType> = {
+			uuid: string;
+			type: T;
+			anchor: "start" | "end";
+			offset: number;
+			duration: number;
+			/**
+			 * The points that make up the automation graph. Each point is connected
+			 * to the next point by a curve of the same type.
+			 */
+			curves: Array<[number,number]>;
+			/**
+			 * A static value to use if the automation is not defined.
+			 */
+			staticVal: number;
+			valueBounds: [number, number] | null;
+		}
+
+		type AutomationType = "volume" | "position" | "scale";
 	}
 }
 

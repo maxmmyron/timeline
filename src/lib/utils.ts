@@ -87,9 +87,15 @@ export const createClip = (resolved: App.Media, opts?: Partial<App.Clip>): App.C
   end: opts?.end ?? 0,
   uuid: uuidv4(),
   z: get(videoClips).reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1,
-  matrix: opts?.matrix ?? [1, 0, 0, 1, 0, 0],
+  matrix: opts?.matrix ?? [
+    createAutomation("scale", resolved.duration),
+    1, 1,
+    createAutomation("scale", resolved.duration),
+    createAutomation("position", resolved.duration, { initial: 0, }),
+    createAutomation("position", resolved.duration, { initial: 0, })
+  ],
   origin: [0.5, 0.5],
-  volume: 1,
+  volume: createAutomation("volume", resolved.duration),
   pan: 0,
 });
 
@@ -127,5 +133,51 @@ export const updateScrubberAndScroll = (t:  number) => {
   const tlScroll = get(scroll);
   if(get(time) * get(scaleFactor) < tlScroll || get(time) * get(scaleFactor) > tlScroll + window.innerWidth) {
     scroll.set(t * get(scaleFactor) - window.innerWidth / 2);
+  }
+};
+
+export const createAutomation = <T = App.AutomationType>(type: T, duration: number, opts?: {
+  initial?: number,
+  bounds?: [number, number] | null,
+}): App.Automation<T> => ({
+  uuid: uuidv4(),
+  type: type,
+  anchor: "start",
+  offset: 0,
+  duration,
+  curves: [],
+  staticVal: opts?.initial ?? 1,
+  valueBounds: opts?.bounds ?? null,
+});
+
+export const lerpAutomation = (a: App.Automation, offset: number, time: number): number => {
+  if (a.curves.length === 0) return a.staticVal;
+
+  const t = time - offset;
+
+  if (t < a.offset) {
+    // if the current time is before the first curve, return the first value
+    return a.curves[0][0];
+  } else if (t > a.offset + a.duration) {
+    // if the current time is after the last curve, return the last value
+    return a.curves[a.curves.length - 1][1];
+  } else {
+    // find the first curve whose x value is less than or equal to the current
+    // time, and whose next node's x value is greater than or equal to the
+    // current time
+    const startIdx = a.curves.findIndex((c,i) => {
+      const x = c[0] * a.duration + a.offset;
+      const nextX = a.curves[i + 1] ? a.curves[i + 1][0] * a.duration + a.offset : a.duration + a.offset;
+      if (x <= t && nextX >= t) return true;
+      return false;
+    });
+
+    const endIdx = startIdx + 1;
+
+    const startNode = a.curves[startIdx];
+    const endNode = a.curves[endIdx];
+
+    // lerp between start and end values
+    return startNode[1] + (endNode[1] - startNode[1]) * ((t - startNode[0] * a.duration - a.offset) / (endNode[0] * a.duration - startNode[0] * a.duration));
   }
 };

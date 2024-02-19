@@ -43,6 +43,14 @@
       $audioClips[clipIdx][prop] = val;
     }
   };
+
+  let isVolumeAutomationVisible = false;
+
+  /**
+   * An array containing the visibility state of the automation editor for each
+   * scalar setting.
+   */
+  let visibleMatrixAutomation = [false, false, false, false, false, false];
 </script>
 
 <Region class="row-start-2 overflow-scroll [scrollbar-width:thin]">
@@ -57,7 +65,7 @@
 
   {#if type === "video" || type === "image"}
     <section
-      class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 grid grid-cols-[1fr,24px] gap-1 w-full"
+      class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 w-full"
     >
       <header class="col-start-1 grid grid-cols-subgrid">
         <div class="flex justify-between">
@@ -65,7 +73,11 @@
           <IconButton
             alt="Reset clip positioning"
             on:click={() => {
-              matrix = [1, 0, 0, 1, 0, 0];
+              matrix[0].staticVal = matrix[3].staticVal = 1;
+              matrix[4].staticVal = matrix[5].staticVal = 0;
+              matrix[1] = matrix[2] = 0;
+              matrix[0].curves = matrix[3].curves = [];
+              matrix[4].curves = matrix[5].curves = [];
               origin = [0.5, 0.5];
             }}
           >
@@ -124,96 +136,158 @@
         </div>
       </section>
 
-      <div class="col-start-1 grid grid-cols-2 gap-2">
-        <section class="grid gap-2 w-fit">
-          <ScalarSetting
-            class="col-start-1"
-            name="X"
-            bind:scalar={matrix[4]}
-            on:change={() => isPositionLinked && (matrix[5] = matrix[4])}
-            mag={1}
-          />
-          <ScalarSetting
-            name="Y"
-            class="col-start-1"
-            bind:scalar={matrix[5]}
-            on:change={() => isPositionLinked && (matrix[4] = matrix[5])}
-            mag={1}
-          />
+      <div class="col-start-1 grid grid-cols-[1fr,32px,1fr,32px] gap-2">
+        <ScalarSetting
+          supportsAutomation
+          class="col-start-1 row-start-1"
+          name="X"
+          bind:scalar={matrix[4].staticVal}
+          on:change={() => {
+            if (
+              !isPositionLinked ||
+              matrix[4].curves.length !== 0 ||
+              matrix[5].curves.length !== 0
+            )
+              return;
+            matrix[5].staticVal = matrix[4].staticVal;
+          }}
+          bind:automation={matrix[4]}
+          mag={1}
+          automationClass="row-start-3 col-start-1 col-span-4"
+          dynamicBounds
+          bind:isAutomationVisible={visibleMatrixAutomation[4]}
+          on:automationEditorOpen={(e) => {
+            visibleMatrixAutomation = [false, false, false, false, true, false];
+          }}
+        />
+        <ScalarSetting
+          supportsAutomation
+          name="Y"
+          class="col-start-1 row-start-2"
+          bind:scalar={matrix[5].staticVal}
+          on:change={() => {
+            if (
+              !isPositionLinked ||
+              matrix[4].curves.length !== 0 ||
+              matrix[5].curves.length !== 0
+            )
+              return;
+            matrix[4].staticVal = matrix[5].staticVal;
+          }}
+          bind:automation={matrix[5]}
+          mag={1}
+          automationClass="row-start-3 col-start-1 col-span-4"
+          dynamicBounds
+          bind:isAutomationVisible={visibleMatrixAutomation[5]}
+          on:automationEditorOpen={(e) => {
+            visibleMatrixAutomation = [false, false, false, false, false, true];
+          }}
+        />
+        <div
+          class="col-start-2 row-start-1 row-span-2 flex flex-col justify-center gap-1"
+        >
           <div
-            class="col-start-2 row-start-1 row-span-2 flex flex-col justify-center gap-1"
+            class="w-1/2 h-2 rounded-tr-md border-t border-r {isPositionLinked
+              ? 'border-solid'
+              : 'border-dashed'} border-zinc-700"
+          />
+          <IconButton
+            alt="Link position"
+            on:click={() => (isPositionLinked = !isPositionLinked)}
+            toggles
           >
-            <div
-              class="w-1/2 h-2 rounded-tr-md border-t border-r {isPositionLinked
-                ? 'border-solid'
-                : 'border-dashed'} border-zinc-700"
-            />
-            <IconButton
-              alt="Link position"
-              on:click={() => (isPositionLinked = !isPositionLinked)}
-            >
-              {#if isPositionLinked}
-                <UnlinkIcon />
-              {:else}
-                <LinkIcon />
-              {/if}
-            </IconButton>
+            {#if isPositionLinked}
+              <UnlinkIcon />
+            {:else}
+              <LinkIcon />
+            {/if}
+          </IconButton>
 
-            <div
-              class="w-1/2 h-2 rounded-br-md border-b border-r {isPositionLinked
-                ? 'border-solid'
-                : 'border-dashed'} border-zinc-700"
-            />
-          </div>
-        </section>
-        <section class="grid gap-2 w-fit">
-          <ScalarSetting
-            class="col-start-1"
-            name="W"
-            bind:scalar={matrix[0]}
-            props={{ min: 0, max: 6, step: 0.01 }}
-            on:change={() => isScaleLinked && (matrix[3] = matrix[0])}
-            defaultVal={1}
-          />
-          <ScalarSetting
-            class="col-start-1"
-            name="H"
-            bind:scalar={matrix[3]}
-            props={{ min: 0, max: 6, step: 0.01 }}
-            on:change={() => isScaleLinked && (matrix[0] = matrix[3])}
-            defaultVal={1}
-          />
           <div
-            class="col-start-2 row-start-1 row-span-2 flex flex-col justify-center gap-1"
+            class="w-1/2 h-2 rounded-br-md border-b border-r {isPositionLinked
+              ? 'border-solid'
+              : 'border-dashed'} border-zinc-700"
+          />
+        </div>
+        <ScalarSetting
+          supportsAutomation
+          class="col-start-3 row-start-1"
+          name="W"
+          bind:scalar={matrix[0].staticVal}
+          props={{ min: 0, max: 6, step: 0.01 }}
+          on:change={() => {
+            if (
+              !isScaleLinked ||
+              matrix[0].curves.length !== 0 ||
+              matrix[3].curves.length !== 0
+            )
+              return;
+            matrix[3].staticVal = matrix[0].staticVal;
+          }}
+          bind:automation={matrix[0]}
+          defaultVal={1}
+          automationClass="row-start-3 col-start-1 col-span-4"
+          dynamicBounds
+          bind:isAutomationVisible={visibleMatrixAutomation[0]}
+          on:automationEditorOpen={(e) => {
+            visibleMatrixAutomation = [true, false, false, false, false, false];
+          }}
+        />
+        <ScalarSetting
+          supportsAutomation
+          class="col-start-3 row-start-2"
+          name="H"
+          bind:scalar={matrix[3].staticVal}
+          props={{ min: 0, max: 6, step: 0.01 }}
+          on:change={() => {
+            if (
+              !isScaleLinked ||
+              matrix[0].curves.length !== 0 ||
+              matrix[3].curves.length !== 0
+            )
+              return;
+            matrix[0].staticVal = matrix[3].staticVal;
+          }}
+          bind:automation={matrix[3]}
+          defaultVal={1}
+          automationClass="row-start-3 col-start-1 col-span-4"
+          dynamicBounds
+          bind:isAutomationVisible={visibleMatrixAutomation[3]}
+          on:automationEditorOpen={(e) => {
+            visibleMatrixAutomation = [false, false, false, true, false, false];
+          }}
+        />
+        <div
+          class="col-start-4 row-start-1 row-span-2 flex flex-col justify-center gap-1"
+        >
+          <div
+            class="w-1/2 h-2 rounded-tr-md border-t border-r {isScaleLinked
+              ? 'border-solid'
+              : 'border-dashed'} border-zinc-700"
+          />
+          <IconButton
+            alt="Link position"
+            on:click={() => (isScaleLinked = !isScaleLinked)}
+            toggles
           >
-            <div
-              class="w-1/2 h-2 rounded-tr-md border-t border-r {isScaleLinked
-                ? 'border-solid'
-                : 'border-dashed'} border-zinc-700"
-            />
-            <IconButton
-              alt="Link position"
-              on:click={() => (isScaleLinked = !isScaleLinked)}
-            >
-              {#if isScaleLinked}
-                <UnlinkIcon />
-              {:else}
-                <LinkIcon />
-              {/if}
-            </IconButton>
-            <div
-              class="w-1/2 h-2 rounded-br-md border-b border-r {isScaleLinked
-                ? 'border-solid'
-                : 'border-dashed'} border-zinc-700"
-            />
-          </div>
-        </section>
+            {#if isScaleLinked}
+              <UnlinkIcon />
+            {:else}
+              <LinkIcon />
+            {/if}
+          </IconButton>
+          <div
+            class="w-1/2 h-2 rounded-br-md border-b border-r {isScaleLinked
+              ? 'border-solid'
+              : 'border-dashed'} border-zinc-700"
+          />
+        </div>
       </div>
     </section>
   {/if}
   {#if type !== "image"}
     <section
-      class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 space-y-3 grid grid-cols-[1fr,24px] gap-1 w-full"
+      class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 space-y-3 w-full"
     >
       <header class="col-start-1 grid grid-cols-subgrid">
         <div class="flex justify-between">
@@ -221,8 +295,9 @@
           <IconButton
             alt="Reset audio settings"
             on:click={() => {
-              volume = 1;
-              pan = 0;
+              volume.staticVal = 1;
+              volume.curves = [];
+              isVolumeAutomationVisible = false;
             }}
           >
             <ResetIcon />
@@ -231,16 +306,21 @@
       </header>
 
       <section
-        class="col-start-1 grid grid-cols-[min-content,1fr] gap-2 h-fit w-fit"
+        class="col-start-1 grid grid-cols-[min-content,min-content,24px] gap-2 h-fit w-full"
       >
         <ScalarSetting
           useSubgrid
+          supportsAutomation
           name="Volume"
-          bind:scalar={volume}
+          disabled={volume.curves.length > 0}
+          bind:scalar={volume.staticVal}
           props={{ min: 0, max: 1, step: 0.01 }}
           strictBounds
           defaultVal={1}
+          bind:automation={volume}
+          bind:isAutomationVisible={isVolumeAutomationVisible}
         />
+
         <ScalarSetting
           useSubgrid
           name="Pan"
