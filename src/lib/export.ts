@@ -70,9 +70,11 @@ export const exportVideo = async () => {
         }
       }
 
-      // join together the split filter
+      // join together the split filters
       if (media.type !== "image") aFilter += `${splitCount}[${a_outs.join("][")}];`;
-      if (media.type !== "audio") vFilter += `${splitCount}[${v_outs.join("][")}];`;
+      // NOTE: here we scale the video to a large enough size to mitigate automation scaling
+      // artifacts.
+      if (media.type !== "audio") vFilter += `${splitCount},scale=${get(safeRes)[0]*2}:-1[${v_outs.join("][")}];`;
     }
   }
 
@@ -152,10 +154,11 @@ export const exportVideo = async () => {
     // filter for the clip, which may be composed of two separate automation
     // clips (one for scale X, one for scale Y).
     if (clip.media.type === "image" || clip.media.type === "video") {
+      const dims = clip.media.dimensions;
       // if there are no extra nodes on any matrix automation curve, then we can
       // just handle the edge case
       if (clip.matrix[0].curves.length === 0 && clip.matrix[3].curves.length === 0) {
-        scale = `(iw*${clip.matrix[0].staticVal}):(ih*${clip.matrix[3].staticVal})`;
+        scale = `(${dims[0]}*${clip.matrix[0].staticVal}):(${dims[0]}*${clip.matrix[3].staticVal})`;
 
         // if this is an image, we don't need to do any extra processing,
         // so we can just skip to the next clip
@@ -197,26 +200,23 @@ export const exportVideo = async () => {
           const fromTime = fromSxScalar * duration + offset;
           const toTime = toSxScalar * duration + offset;
 
-          const [scaledFromSxVal, scaledFromSyVal] = [fromSxVal*clip.media.dimensions[0], fromSyVal*clip.media.dimensions[1]];
-          const [scaledToSxVal, scaledToSyVal] = [toSxVal*clip.media.dimensions[0], toSyVal*clip.media.dimensions[1]];
-
 
           // generate ffmpeg lerp strings for each matrix value
-          const sxLerpString = buildLerpString(fromSxScalar, scaledFromSxVal, toSxScalar, scaledToSxVal, duration, offset);
-          const syLerpString = buildLerpString(fromSyScalar, scaledFromSyVal, toSyScalar, scaledToSyVal, duration, offset);
+          const sxLerpString = buildLerpString(fromSxScalar, fromSxVal, toSxScalar, toSxVal, duration, offset);
+          const syLerpString = buildLerpString(fromSyScalar, fromSyVal, toSyScalar, toSyVal, duration, offset);
 
           switch (j) {
             case uniqueNodeTimes.length:
-              xClause += `lte(t,${toTime}),${sxLerpString}*iw`;
-              yClause += `lte(t,${toTime}),${syLerpString}*ih`;
+              xClause += `lte(t,${toTime}),(${sxLerpString})*${dims[0]}`;
+              yClause += `lte(t,${toTime}),(${syLerpString})*${dims[1]}`;
               break;
             case 0:
-              xClause += `lte(t,${fromTime}),${sxLerpString}*iw,`;
-              yClause += `lte(t,${fromTime}),${syLerpString}*ih,`;
+              xClause += `lte(t,${fromTime}),(${sxLerpString})*${dims[0]},`;
+              yClause += `lte(t,${fromTime}),(${syLerpString})*${dims[1]},`;
               break;
             default:
-              xClause += `between(t,${fromTime},${toTime}),${sxLerpString}*iw,`;
-              yClause += `between(t,${fromTime},${toTime}),${syLerpString}*ih,`;
+              xClause += `between(t,${fromTime},${toTime}),(${sxLerpString})*${dims[0]},`;
+              yClause += `between(t,${fromTime},${toTime}),(${syLerpString})*${dims[1]},`;
               break;
           }
         }
@@ -378,6 +378,7 @@ export const exportVideo = async () => {
   try {
     ffmpegInstance.setProgress(({ratio}) => exportPercentage.set(ratio));
     exportStatus.set("export");
+    console.log(["-i", "base.mp4", ...[...loadedMedia.map((src) =>  ["-i", src])].flat(), "-filter_complex", `${vFilter}${aFilter}`, "-map", "[vout]", "-map", "[aout]", "export.mp4"].join(" "));
     await ffmpegInstance.run("-i", "base.mp4", ...[...loadedMedia.map((src) =>  ["-i", src])].flat(), "-filter_complex", `${vFilter}${aFilter}`, "-map", "[vout]", "-map", "[aout]", "-vcodec", "libx264", "-crf", "28", "export.mp4");
   } catch(e) {
     exportStatus.set("error");
