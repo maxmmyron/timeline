@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
-  import { exportVideo } from "$lib/export";
+  import { exportVideo } from "$lib/export/index";
   import {
     time,
     videoClips,
