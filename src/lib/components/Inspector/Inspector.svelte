@@ -194,6 +194,7 @@
           <IconButton
             alt="Link position"
             on:click={() => (isPositionLinked = !isPositionLinked)}
+            toggles
           >
             {#if isPositionLinked}
               <UnlinkIcon />
@@ -267,6 +268,7 @@
           <IconButton
             alt="Link position"
             on:click={() => (isScaleLinked = !isScaleLinked)}
+            toggles
           >
             {#if isScaleLinked}
               <UnlinkIcon />
