@@ -1,3 +1,7 @@
+import { ffmpeg } from "$lib/stores";
+import { fetchFile } from "@ffmpeg/ffmpeg";
+import { get } from "svelte/store";
+
 /**
  * Returns a string that can be used in an ffmpeg filtergraph to lerp between
  * two values.
@@ -84,4 +88,76 @@ export const equalizeAutomation = (keys: string[], automation: App.Automation[])
   return [map, nodeTimes];
 }
 
-export const prerenderClip = async (clip: App.Clip) => {};
+/**
+ * Pre-renders a clip to a blob URL, which is then stored in the clip's `prerenderSrc` property and returned.
+ * @param clip
+ */
+export const prerenderClip = async (clip: App.Clip): Promise<string> => {
+  return "";
+};
+
+/**
+ * Renders the clip's duration; returns a new pre-rendered source as a Blob URL.
+ * @param clip
+ * @param usePrerender - Whether or not to use the clip's prerender source, if it has one.
+ *
+ * @throws {Error} - If the usePrerender flag is set, but the clip has no prerender source.
+ */
+export const renderDuration = async (clip: App.Clip, usePrerender: boolean): Promise<string> => {
+  if(usePrerender && !clip.prerenderSrc) {
+    throw new Error("Error prerendering clip: usePrerender flag is set, however the clip has no prerender source.");
+  }
+
+  const ffmpegInstance = get(ffmpeg);
+
+  let source = usePrerender ? clip.prerenderSrc : clip.media.src;
+
+  ffmpegInstance.FS("writeFile", "input.mp4", await fetchFile(source));
+  ffmpegInstance.FS("writeFile", "output.mp4", "");
+
+  return "";
+};
+
+/**
+ * Renders the clip's audio EQ; returns a new pre-rendered source as a Blob URL.
+ * @param clip
+ * @param usePrerender - Whether or not to use the clip's prerender source, if it has one.
+ *
+ * @throws {Error} - If the usePrerender flag is set, but the clip has no prerender source.
+ */
+export const renderAudioEQ = async (clip: App.Clip, usePrerender: boolean): Promise<string> => {
+  if(usePrerender && !clip.prerenderSrc) {
+    throw new Error("Error prerendering clip: usePrerender flag is set, however the clip has no prerender source.");
+  }
+
+  const ffmpegInstance = get(ffmpeg);
+
+  let source = usePrerender ? clip.prerenderSrc : clip.media.src;
+
+  ffmpegInstance.FS("writeFile", "input.mp4", await fetchFile(source));
+  ffmpegInstance.FS("writeFile", "output.mp4", "");
+
+  return "";
+};
+
+/**
+ * Renders the clip's volume EQ; returns a new pre-rendered source as a Blob URL.
+ * @param clip
+ * @param usePrerender - Whether or not to use the clip's prerender source, if it has one.
+ *
+ * @throws {Error} - If the usePrerender flag is set, but the clip has no prerender source.
+ */
+export const renderVideoEQ = async (clip: App.Clip, usePrerender: boolean): Promise<string> => {
+  if(usePrerender && !clip.prerenderSrc) {
+    throw new Error("Error prerendering clip: usePrerender flag is set, however the clip has no prerender source.");
+  }
+
+  const ffmpegInstance = get(ffmpeg);
+
+  let source = usePrerender ? clip.prerenderSrc : clip.media.src;
+
+  ffmpegInstance.FS("writeFile", "input.mp4", await fetchFile(source));
+  ffmpegInstance.FS("writeFile", "output.mp4", "");
+
+  return "";
+};
