@@ -240,7 +240,7 @@ export const exportVideo = async () => {
        */
       const enabledPeriod = `enable='between(t,${clip.offset},${clip.offset + (clip.media.duration - clip.end - clip.start)})'`;
 
-      vFilter += `overlay=${overlayPos}:${enabledPeriod}${outLink};`
+      vFilter += `overlay=${overlayPos}:${enabledPeriod}`
     } else {
       const [equalizedAutomation, uniqueNodeTimes] = equalizeAutomation(["sx", "sy", "tx", "ty"], [clip.matrix[0], clip.matrix[3], clip.matrix[4], clip.matrix[5]]);
 
@@ -282,7 +282,7 @@ export const exportVideo = async () => {
 
       // no curves, but static values don't match default, so we need to add
       // eq filter
-      vFilter += `eq=contrast=${clip.eq[0].staticVal}:brightness=${clip.eq[1].staticVal}:saturation=${clip.eq[2].staticVal}:gamma=${clip.eq[3].staticVal}${outLink};`;
+      vFilter += `,eq=contrast=${clip.eq[0].staticVal}:brightness=${clip.eq[1].staticVal}:saturation=${clip.eq[2].staticVal}:gamma=${clip.eq[3].staticVal}`;
     } else {
       const [equalizedEQAutomation, uniqueEQNodeTimes] = equalizeAutomation(["contrast", "brightness", "saturation", "gamma"], clip.eq);
 
@@ -296,7 +296,7 @@ export const exportVideo = async () => {
 
         const [contrastLerpString, brightnessLerpString, saturationLerpString, gammaLerpString] = strings;
 
-        vFilter += `eq=enable='between(t,${from},${to})':contrast=${contrastLerpString}:brightness=${brightnessLerpString}:saturation=${saturationLerpString}:gamma=${gammaLerpString}:eval=frame`;
+        vFilter += `,eq=enable='between(t,${from},${to})':contrast=${contrastLerpString}:brightness=${brightnessLerpString}:saturation=${saturationLerpString}:gamma=${gammaLerpString}:eval=frame`;
         if (j !== uniqueEQNodeTimes.length) vFilter += `,`;
       }
     }
