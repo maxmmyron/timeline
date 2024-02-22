@@ -123,7 +123,7 @@ export const exportVideo = async () => {
       // if there are no extra nodes on any matrix automation curve, then we can
       // just handle the edge case
       if (clip.matrix[0].curves.length === 0 && clip.matrix[3].curves.length === 0) {
-        scale = `(${dims[0]}*${clip.matrix[0].staticVal}):(${dims[0]}*${clip.matrix[3].staticVal})`;
+        scale = `(${dims[0]}*${clip.matrix[0].staticVal}):(${dims[1]}*${clip.matrix[3].staticVal})`;
 
         // if this is an image, we don't need to do any extra processing,
         // so we can just skip to the next clip
@@ -241,34 +241,33 @@ export const exportVideo = async () => {
       const enabledPeriod = `enable='between(t,${clip.offset},${clip.offset + (clip.media.duration - clip.end - clip.start)})'`;
 
       vFilter += `overlay=${overlayPos}:${enabledPeriod}${outLink};`
-      continue;
-    }
+    } else {
+      const [equalizedAutomation, uniqueNodeTimes] = equalizeAutomation(["sx", "sy", "tx", "ty"], [clip.matrix[0], clip.matrix[3], clip.matrix[4], clip.matrix[5]]);
 
-    const [equalizedAutomation, uniqueNodeTimes] = equalizeAutomation(["sx", "sy", "tx", "ty"], [clip.matrix[0], clip.matrix[3], clip.matrix[4], clip.matrix[5]]);
+      // after adding nodes, we can now build out the filtergraph for this clip by
+      // interpolating between the nodes of each curve.
+      //
+      // we go through each time in nodeTimes, and add a filter for each matrix
+      // value at that time. Note that because nodeTimes *doesn't* include the
+      // first and last points, we iterate from 0 - nodeTimes.length + 1.
 
-    // after adding nodes, we can now build out the filtergraph for this clip by
-    // interpolating between the nodes of each curve.
-    //
-    // we go through each time in nodeTimes, and add a filter for each matrix
-    // value at that time. Note that because nodeTimes *doesn't* include the
-    // first and last points, we iterate from 0 - nodeTimes.length + 1.
+      for (let j = 0; j < uniqueNodeTimes.length + 1; j++) {
+        const {strings, from, to} = buildLerpFilter([
+          [...equalizedAutomation.get("sx")!.curves[j], ...equalizedAutomation.get("sx")!.curves[j+1]],
+          [...equalizedAutomation.get("sy")!.curves[j], ...equalizedAutomation.get("sy")!.curves[j+1]],
+          [...equalizedAutomation.get("tx")!.curves[j], ...equalizedAutomation.get("tx")!.curves[j+1]],
+          [...equalizedAutomation.get("ty")!.curves[j], ...equalizedAutomation.get("ty")!.curves[j+1]],
+        ], equalizedAutomation.get("sx")!.duration, equalizedAutomation.get("sx")!.offset + clip.offset);
 
-    for (let j = 0; j < uniqueNodeTimes.length + 1; j++) {
-      const {strings, from, to} = buildLerpFilter([
-        [...equalizedAutomation.get("sx")!.curves[j], ...equalizedAutomation.get("sx")!.curves[j+1]],
-        [...equalizedAutomation.get("sy")!.curves[j], ...equalizedAutomation.get("sy")!.curves[j+1]],
-        [...equalizedAutomation.get("tx")!.curves[j], ...equalizedAutomation.get("tx")!.curves[j+1]],
-        [...equalizedAutomation.get("ty")!.curves[j], ...equalizedAutomation.get("ty")!.curves[j+1]],
-      ], equalizedAutomation.get("sx")!.duration, equalizedAutomation.get("sx")!.offset + clip.offset);
+        const [sxLerpString, syLerpString, txLerpString, tyLerpString] = strings;
 
-      const [sxLerpString, syLerpString, txLerpString, tyLerpString] = strings;
+        // build out the scaling and translation strings
+        const originOffsetXString = `(((${sxLerpString}-1)*${clip.media.dimensions[0]}/2)*(2*${clip.origin[0]}-1))`;
+        const originOffsetYString = `(((${syLerpString}-1)*${clip.media.dimensions[1]}/2)*(2*${clip.origin[1]}-1))`;
 
-      // build out the scaling and translation strings
-      const originOffsetXString = `(((${sxLerpString}-1)*${clip.media.dimensions[0]}/2)*(2*${clip.origin[0]}-1))`;
-      const originOffsetYString = `(((${syLerpString}-1)*${clip.media.dimensions[1]}/2)*(2*${clip.origin[1]}-1))`;
-
-      vFilter += `overlay=enable='between(t,${from},${to})':x='(W-w)/2+(${txLerpString})-(${originOffsetXString})':y='(H-h)/2+(${tyLerpString})-(${originOffsetYString})':eval=frame`;
-      if (j !== uniqueNodeTimes.length) vFilter += `,`;
+        vFilter += `overlay=enable='between(t,${from},${to})':x='(W-w)/2+(${txLerpString})-(${originOffsetXString})':y='(H-h)/2+(${tyLerpString})-(${originOffsetYString})':eval=frame`;
+        if (j !== uniqueNodeTimes.length) vFilter += `,`;
+      }
     }
 
     // -----------------------
@@ -284,24 +283,25 @@ export const exportVideo = async () => {
       // no curves, but static values don't match default, so we need to add
       // eq filter
       vFilter += `eq=contrast=${clip.eq[0].staticVal}:brightness=${clip.eq[1].staticVal}:saturation=${clip.eq[2].staticVal}:gamma=${clip.eq[3].staticVal}${outLink};`;
-      continue;
+    } else {
+      const [equalizedEQAutomation, uniqueEQNodeTimes] = equalizeAutomation(["contrast", "brightness", "saturation", "gamma"], clip.eq);
+
+      for (let j = 0; j < uniqueEQNodeTimes.length + 1; j++) {
+        const {strings, from, to} = buildLerpFilter([
+          [...equalizedEQAutomation.get("contrast")!.curves[j], ...equalizedEQAutomation.get("contrast")!.curves[j+1]],
+          [...equalizedEQAutomation.get("brightness")!.curves[j], ...equalizedEQAutomation.get("brightness")!.curves[j+1]],
+          [...equalizedEQAutomation.get("saturation")!.curves[j], ...equalizedEQAutomation.get("saturation")!.curves[j+1]],
+          [...equalizedEQAutomation.get("gamma")!.curves[j], ...equalizedEQAutomation.get("gamma")!.curves[j+1]],
+        ], equalizedEQAutomation.get("contrast")!.duration, equalizedEQAutomation.get("contrast")!.offset + clip.offset);
+
+        const [contrastLerpString, brightnessLerpString, saturationLerpString, gammaLerpString] = strings;
+
+        vFilter += `eq=enable='between(t,${from},${to})':contrast=${contrastLerpString}:brightness=${brightnessLerpString}:saturation=${saturationLerpString}:gamma=${gammaLerpString}:eval=frame`;
+        if (j !== uniqueEQNodeTimes.length) vFilter += `,`;
+      }
     }
 
-    const [equalizedEQAutomation, uniqueEQNodeTimes] = equalizeAutomation(["contrast", "brightness", "saturation", "gamma"], clip.eq);
-
-    for (let j = 0; j < uniqueEQNodeTimes.length + 1; j++) {
-      const {strings, from, to} = buildLerpFilter([
-        [...equalizedEQAutomation.get("contrast")!.curves[j], ...equalizedEQAutomation.get("contrast")!.curves[j+1]],
-        [...equalizedEQAutomation.get("brightness")!.curves[j], ...equalizedEQAutomation.get("brightness")!.curves[j+1]],
-        [...equalizedEQAutomation.get("saturation")!.curves[j], ...equalizedEQAutomation.get("saturation")!.curves[j+1]],
-        [...equalizedEQAutomation.get("gamma")!.curves[j], ...equalizedEQAutomation.get("gamma")!.curves[j+1]],
-      ], equalizedEQAutomation.get("contrast")!.duration, equalizedEQAutomation.get("contrast")!.offset + clip.offset);
-
-      const [contrastLerpString, brightnessLerpString, saturationLerpString, gammaLerpString] = strings;
-
-      vFilter += `eq=enable='between(t,${from},${to})':contrast=${contrastLerpString}:brightness=${brightnessLerpString}:saturation=${saturationLerpString}:gamma=${gammaLerpString}:eval=frame`;
-      if (j !== uniqueEQNodeTimes.length) vFilter += `,`;
-    }
+    vFilter += `${outLink};`;
   }
 
   // -----------------------
