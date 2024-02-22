@@ -338,7 +338,7 @@
           bind:scalar={videoEQ[2].staticVal}
           props={{ min: 0, max: 3, step: 0.01 }}
           bind:automation={videoEQ[2]}
-          defaultVal={3}
+          defaultVal={1}
         />
         <ScalarSetting
           supportsAutomation

@@ -98,10 +98,10 @@ export const createClip = (resolved: App.Media, opts?: Partial<App.Clip>): App.C
   volume: createAutomation("volume", resolved.duration),
   pan: 0,
   eq: [
-    createAutomation("contrast", resolved.duration),
-    createAutomation("brightness", resolved.duration),
-    createAutomation("saturation", resolved.duration),
-    createAutomation("gamma", resolved.duration)
+    createAutomation("contrast", resolved.duration, {initial: 1, bounds: [-1000, 1000]}),
+    createAutomation("brightness", resolved.duration, {initial: 0, bounds: [-1, 1]}),
+    createAutomation("saturation", resolved.duration, {initial: 1, bounds: [0, 3]}),
+    createAutomation("gamma", resolved.duration, {initial: 1, bounds: [0.1, 10]}),
   ],
 });
 
