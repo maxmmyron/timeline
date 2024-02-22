@@ -33,6 +33,7 @@
   $: updateProp("volume", volume);
   $: updateProp("pan", pan);
   $: updateProp("origin", origin);
+  $: updateProp("eq", videoEQ);
 
   const updateProp = <T extends keyof typeof clip>(
     prop: T,

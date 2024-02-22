@@ -19,6 +19,11 @@
   $: translateX = lerpAutomation(clip.matrix[4], clip.offset, $time);
   $: translateY = lerpAutomation(clip.matrix[5], clip.offset, $time);
 
+  $: contrast = lerpAutomation(clip.eq[0], clip.offset, $time);
+  $: brightness = lerpAutomation(clip.eq[1], clip.offset, $time) + 1;
+  $: saturate = lerpAutomation(clip.eq[2], clip.offset, $time);
+  $: gamma = lerpAutomation(clip.eq[3], clip.offset, $time);
+
   $: lerpedMatrix = [scaleX, 0, 0, scaleY, translateX, translateY];
 
   onMount(() => {
@@ -52,6 +57,7 @@
     bind:this={$vRefs[clip.uuid]}
     style:transform="translate(-50%, -50%) matrix({lerpedMatrix.join(",")})"
     style:transform-origin="{clip.origin[0] * 100}% {clip.origin[1] * 100}%"
+    style:filter={`contrast(${contrast}) brightness(${brightness}) saturate(${saturate})`}
     style:z-index={clip.z}
     class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
     preload=""
@@ -75,6 +81,7 @@
     bind:this={$iRefs[clip.uuid]}
     style:transform="translate(-50%, -50%) matrix({lerpedMatrix.join(",")})"
     style:transform-origin="{clip.origin[0] * 100}% {clip.origin[1] * 100}%"
+    style:filter={`contrast(${contrast}) brightness(${brightness}) saturate(${saturate})`}
     style:z-index={clip.z}
     class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
   />
