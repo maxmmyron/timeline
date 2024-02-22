@@ -21,12 +21,13 @@
 
   const clipArr = type === "audio" ? $audioClips : $videoClips;
   const clipIdx = clipArr.findIndex((c) => c.uuid === uuid);
-  let clip = clipArr[clipIdx];
+  let clip: App.Clip = clipArr[clipIdx];
 
   let matrix = clip.matrix;
   let volume = clip.volume;
   let pan = clip.pan;
   let origin = clip.origin;
+  let videoEQ = clip.eq;
 
   $: updateProp("matrix", matrix);
   $: updateProp("volume", volume);
@@ -283,6 +284,71 @@
           />
         </div>
       </div>
+    </section>
+
+    <section
+      class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 w-full"
+    >
+      <header class="col-start-1 grid grid-cols-subgrid">
+        <div class="flex justify-between">
+          <h2 class="text-sm font-mono">Video EQ</h2>
+          <IconButton
+            alt="Reset video clip EQ"
+            on:click={() => {
+              // Reset all EQ values to 1 except for the brightness
+              videoEQ[0].staticVal =
+                videoEQ[2].staticVal =
+                videoEQ[3].staticVal =
+                  1;
+              videoEQ[1].staticVal = 0;
+
+              // Clear all automation curves
+              videoEQ[0].curves =
+                videoEQ[1].curves =
+                videoEQ[2].curves =
+                videoEQ[3].curves =
+                  [];
+            }}
+          >
+            <ResetIcon />
+          </IconButton>
+        </div>
+      </header>
+
+      <section class="w-full col-start-1 flex flex-col gap-2 pb-2 mb-2">
+        <ScalarSetting
+          supportsAutomation
+          name="Contrast"
+          bind:scalar={videoEQ[0].staticVal}
+          props={{ min: -1000, max: 1000, step: 0.01 }}
+          bind:automation={videoEQ[0]}
+          defaultVal={1}
+        />
+        <ScalarSetting
+          supportsAutomation
+          name="Brightness"
+          bind:scalar={videoEQ[1].staticVal}
+          props={{ min: -1, max: 1, step: 0.01 }}
+          bind:automation={videoEQ[1]}
+          defaultVal={0}
+        />
+        <ScalarSetting
+          supportsAutomation
+          name="Saturation"
+          bind:scalar={videoEQ[2].staticVal}
+          props={{ min: 0, max: 3, step: 0.01 }}
+          bind:automation={videoEQ[2]}
+          defaultVal={3}
+        />
+        <ScalarSetting
+          supportsAutomation
+          name="Gamma"
+          bind:scalar={videoEQ[3].staticVal}
+          props={{ min: 0.1, max: 10, step: 0.01 }}
+          bind:automation={videoEQ[3]}
+          defaultVal={1}
+        />
+      </section>
     </section>
   {/if}
   {#if type !== "image"}

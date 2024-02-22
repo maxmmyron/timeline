@@ -97,6 +97,12 @@ export const createClip = (resolved: App.Media, opts?: Partial<App.Clip>): App.C
   origin: [0.5, 0.5],
   volume: createAutomation("volume", resolved.duration),
   pan: 0,
+  eq: [
+    createAutomation("contrast", resolved.duration),
+    createAutomation("brightness", resolved.duration),
+    createAutomation("saturation", resolved.duration),
+    createAutomation("gamma", resolved.duration)
+  ],
 });
 
 /**

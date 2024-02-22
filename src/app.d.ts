@@ -12,7 +12,8 @@ declare global {
 			matrix: Matrix;
 			origin: [number, number];
 			volume: Automation<"volume">;
-			pan: number,
+			pan: number;
+			eq: [Automation<"contrast">, Automation<"brightness">, Automation<"saturation">, Automation<"gamma">];
 		};
 
 		type Media = {
@@ -52,7 +53,7 @@ declare global {
 			valueBounds: [number, number] | null;
 		}
 
-		type AutomationType = "volume" | "position" | "scale";
+		type AutomationType = "volume" | "position" | "scale" | "contrast" | "brightness" | "saturation" | "gamma";
 	}
 }
 
