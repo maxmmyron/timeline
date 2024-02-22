@@ -455,7 +455,7 @@ const buildLerpFilter = (args: [number, number, number, number][], duration: num
   from: number,
   to: number
 }=> ({
-  strings: args.map((arg) => buildLerpString(arg[0], arg[1], arg[2], arg[3], duration, offset)),
+  strings: args.map((arg) => buildLerpString(...arg, duration, offset)),
   from: args[defaultScalars[0][0]][defaultScalars[0][1]] * duration + offset,
   to: args[defaultScalars[1][0]][defaultScalars[1][1]] * duration + offset,
 });
