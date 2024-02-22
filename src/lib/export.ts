@@ -1,7 +1,6 @@
 import { get } from "svelte/store";
 import { ffmpeg, safeRes, videoClips, audioClips, exportStatus, exportPercentage } from "./stores";
 import { fetchFile } from "@ffmpeg/ffmpeg";
-import { createAutomation } from "./utils";
 
 export const exportVideo = async () => {
   exportStatus.set("setup");
@@ -20,10 +19,14 @@ export const exportVideo = async () => {
   let vFilter = "";
   let aFilter = "";
 
+  // ----------------------------
+  //
+  // STEP 1: LOAD MEDIA FILES
+  //
+  // ----------------------------
+
   let loadedMedia: Array<string> = [];
 
-  // -----------------------
-  // LOAD AND SPLIT MEDIA
   for (let i = 0; i < clips.length; i++) {
     const clip = clips[i];
     const media = clip.media;
@@ -66,7 +69,7 @@ export const exportVideo = async () => {
       if (media.type !== "image") aFilter += `${splitCount}[${a_outs.join("][")}];`;
       // NOTE: here we scale the video to a large enough size to mitigate automation scaling
       // artifacts.
-      if (media.type !== "audio") vFilter += `${splitCount},scale=${get(safeRes)[0]*2}:-1[${v_outs.join("][")}];`;
+      if (media.type !== "audio") vFilter += `${splitCount},scale=${get(safeRes)[0]*4}:-1[${v_outs.join("][")}];`;
     }
   }
 
@@ -74,28 +77,36 @@ export const exportVideo = async () => {
   ffmpegInstance.FS("writeFile", "export.mp4", "");
 
   const duration = Math.max(...clips.map((clip) => clip.offset + (clip.media.duration - clip.end - clip.start)));
-  if(duration < 0) {
+  if(duration <= 0) {
     exportStatus.set("error");
-    throw new Error("Export duration is negative.");
+    throw new Error("Error exporting video: Timeline is empty, or all clips have a duration of 0.");
   }
 
-  // create black video with empty audio track for duration of video
+  // ----------------------------
+  //
+  // STEP 2: CREATE BASE VIDEO
+  //
+  // ----------------------------
+
   const dims = get(safeRes);
   await ffmpegInstance.run("-t", duration.toString(), "-f", "lavfi", "-i", `color=c=black:s=${dims[0]}x${dims[1]}:r=30`, "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-pix_fmt", "yuv420p", "-crf", "28", "-shortest", "-tune", "stillimage", "-preset", "ultrafast", "base.mp4");
 
-  // -----------------------
-  // TRIM AND DELAY COMPONENTS
+  // ----------------------------
+  //
+  // STEP 3: TRIM, SCALE, AND ADD BASE FILTERS
+  //
+  // ----------------------------
+
   for (let i = 1; i <= clips.length; i++) {
     const clip = clips[i - 1];
 
     let scale: string = "";
 
-    // perform audio processing if the clip contains audio (i.e. it's not an image)
+    // -----------------------
+    // AUDIO TRIM/PROCESSING
     if(clip.media.type === "audio" || clip.media.type === "video") {
-      // define delay, since we need it twice
-      const d = Math.max(0, (clip.offset * 1000)).toFixed(0);
-
-      aFilter += `[a_split${i}]atrim=${clip.start}:${clip.media.duration - clip.end},adelay=${d}|${d},`;
+      const delay = Math.max(0, (clip.offset * 1000)).toFixed(0);
+      aFilter += `[a_split${i}]atrim=${clip.start}:${clip.media.duration - clip.end},adelay=${delay}|${delay},`;
 
       let vol = "";
       if (clip.volume.curves.length === 0) {
@@ -115,9 +126,8 @@ export const exportVideo = async () => {
       if (clip.media.type === "audio") continue;
     }
 
-    // if we're *not* dealing with an audio clip, we need to build out the scale
-    // filter for the clip, which may be composed of two separate automation
-    // clips (one for scale X, one for scale Y).
+    // -----------------------
+    // VIDEO TRIM/PROCESSING
     if (clip.media.type === "image" || clip.media.type === "video") {
       const dims = clip.media.dimensions;
       // if there are no extra nodes on any matrix automation curve, then we can
@@ -154,16 +164,12 @@ export const exportVideo = async () => {
 
           const [sxLerpString, syLerpString] = strings;
 
-          switch (j) {
-            case 0 || uniqueNodeTimes.length:
-              // add a comma if this is not the last clause
-              xClause += `lte(t,${to}),(${sxLerpString})*${dims[0]}${j === 0 ? "," : ""}`;
-              yClause += `lte(t,${to}),(${syLerpString})*${dims[1]}${j === 0 ? "," : ""}`;
-              break;
-            default:
-              xClause += `between(t,${from},${to}),(${sxLerpString})*${dims[0]},`;
-              yClause += `between(t,${from},${to}),(${syLerpString})*${dims[1]},`;
-              break;
+          if(j === 0 || j === uniqueNodeTimes.length) {
+            xClause += `lte(t,${to}),(${sxLerpString})*${dims[0]}${j === 0 ? "," : ""}`;
+            yClause += `lte(t,${to}),(${syLerpString})*${dims[1]}${j === 0 ? "," : ""}`;
+          } else {
+            xClause += `between(t,${from},${to}),(${sxLerpString})*${dims[0]},`;
+            yClause += `between(t,${from},${to}),(${syLerpString})*${dims[1]},`;
           }
         }
 
@@ -176,12 +182,6 @@ export const exportVideo = async () => {
       }
     }
 
-
-    /**
-     * The portion of the ffmpeg video filter that determines when in the final
-     * video this input starts. We reset the presentation timestamp to 0, and
-     * then add the clip's offset to it.
-     */
     const setpts = `PTS-STARTPTS+${clip.offset}/TB`;
 
     /**
@@ -189,9 +189,10 @@ export const exportVideo = async () => {
      * it video will keep playing as if video was still playing, despite it not
      * being visible/audible)
      *
-     * setpts=PTS-STARTPTS+delay: resync video presentation timestamp to start
-     * such that the video's start is "delayed" by the clip.start when it
-     * starts playing
+     * setpts=PTS-STARTPTS+delay: The portion of the ffmpeg video filter that
+     * determines when in the final video this input starts. We reset the
+     * presentation timestamp to 0, and then add the clip's offset to it to
+     * resync video presentation timestamp.
      *
      * scale=width:height: scale the video to the clip's dimensions. we do this
      * here since there is only one input link.
@@ -448,3 +449,5 @@ const buildLerpFilter = (args: [number, number, number, number][], duration: num
   from: args[defaultScalars[0][0]][defaultScalars[0][1]] * duration + offset,
   to: args[defaultScalars[1][0]][defaultScalars[1][1]] * duration + offset,
 });
+
+const trimVideo = (clip: App.Clip, duration: number) => {};
