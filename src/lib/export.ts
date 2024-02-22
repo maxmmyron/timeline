@@ -96,12 +96,6 @@ export const exportVideo = async () => {
   for (let i = 1; i <= clips.length; i++) {
     const clip = clips[i - 1];
 
-    const start = clip.start;
-    const end = (clip.media.duration - clip.end);
-
-    /**
-     * The portion of the ffmpeg audio filter that scales the video's clip.
-     */
     let scale: string = "";
 
     // perform audio processing if the clip contains audio (i.e. it's not an image)
@@ -109,26 +103,14 @@ export const exportVideo = async () => {
       // define delay, since we need it twice
       const d = Math.max(0, (clip.offset * 1000)).toFixed(0);
 
-      aFilter += `[a_split${i}]atrim=${start}:${end},adelay=${d}|${d},`;
+      aFilter += `[a_split${i}]atrim=${clip.start}:${clip.media.duration - clip.end},adelay=${d}|${d},`;
 
       // create a series of volume filters for each point in the automation curve
       if (clip.volume.curves.length === 0) {
         aFilter += `volume=${clip.volume.staticVal},`;
       } else {
         for (let j = 0; j < clip.volume.curves.length - 1; j++) {
-          const [fromX, fromY] = clip.volume.curves[j];
-          const [toX, toY] = clip.volume.curves[j + 1];
-
-          /**
-           * The combined offset of the clip, and the automation clip. the enable
-           * period is absolutely positioned w.r.t. the export's start
-           */
-          const offset = clip.volume.offset + clip.offset;
-
-          const fromXTime = fromX * clip.volume.duration + clip.volume.offset;
-          const toXTime = toX * clip.volume.duration + clip.volume.offset;
-
-          const volumeLerpString = buildLerpString(fromX, fromY, toX, toY, clip.volume.duration, offset);
+          const {strings, from, to} = buildLerpFilter([[...clip.volume.curves[j], ...clip.volume.curves[j+1]]], clip.volume.duration, clip.volume.offset + clip.offset);
 
           /**
            * Add a volume filter for the current curve segment. This
@@ -138,7 +120,7 @@ export const exportVideo = async () => {
            * 3. evaluates the volume at each frame (i.e. each point in the curve)
            *    so that the volume changes smoothly over time
            */
-          aFilter += `volume=enable='between(t,${fromXTime},${toXTime})':volume=${volumeLerpString},eval:frame,`;
+          aFilter += `volume=enable='between(t,${from},${to})':volume=${strings[0]},eval:frame,`;
         }
       }
 
@@ -187,36 +169,25 @@ export const exportVideo = async () => {
           xClause += `if(`;
           yClause += `if(`;
 
-          const [fromSxScalar, fromSxVal, toSxScalar, toSxVal] = [...equalizedAutomation.get("sx")!.curves[j], ...equalizedAutomation.get("sx")!.curves[j+1]];
-          const [fromSyScalar, fromSyVal, toSyScalar, toSyVal] = [...equalizedAutomation.get("sy")!.curves[j], ...equalizedAutomation.get("sy")!.curves[j+1]];
+          const {strings, from, to} = buildLerpFilter([
+            [...equalizedAutomation.get("sx")!.curves[j], ...equalizedAutomation.get("sx")!.curves[j+1]],
+            [...equalizedAutomation.get("sy")!.curves[j], ...equalizedAutomation.get("sy")!.curves[j+1]],
+          ], equalizedAutomation.get("sx")!.duration, equalizedAutomation.get("sx")!.offset + clip.offset);
 
-          /**
-           * The combined offset of the clip, and the automation clip. the enable
-           * period is absolutely positioned w.r.t. the export's start
-           */
-          const offset = equalizedAutomation.get("sx")!.offset + clip.offset;
-          const duration = equalizedAutomation.get("sx")!.duration;
-
-          const fromTime = fromSxScalar * duration + offset;
-          const toTime = toSxScalar * duration + offset;
-
-
-          // generate ffmpeg lerp strings for each matrix value
-          const sxLerpString = buildLerpString(fromSxScalar, fromSxVal, toSxScalar, toSxVal, duration, offset);
-          const syLerpString = buildLerpString(fromSyScalar, fromSyVal, toSyScalar, toSyVal, duration, offset);
+          const [sxLerpString, syLerpString] = strings;
 
           switch (j) {
             case uniqueNodeTimes.length:
-              xClause += `lte(t,${toTime}),(${sxLerpString})*${dims[0]}`;
-              yClause += `lte(t,${toTime}),(${syLerpString})*${dims[1]}`;
+              xClause += `lte(t,${to}),(${sxLerpString})*${dims[0]}`;
+              yClause += `lte(t,${to}),(${syLerpString})*${dims[1]}`;
               break;
             case 0:
-              xClause += `lte(t,${fromTime}),(${sxLerpString})*${dims[0]},`;
-              yClause += `lte(t,${fromTime}),(${syLerpString})*${dims[1]},`;
+              xClause += `lte(t,${from}),(${sxLerpString})*${dims[0]},`;
+              yClause += `lte(t,${from}),(${syLerpString})*${dims[1]},`;
               break;
             default:
-              xClause += `between(t,${fromTime},${toTime}),(${sxLerpString})*${dims[0]},`;
-              yClause += `between(t,${fromTime},${toTime}),(${syLerpString})*${dims[1]},`;
+              xClause += `between(t,${from},${to}),(${sxLerpString})*${dims[0]},`;
+              yClause += `between(t,${from},${to}),(${syLerpString})*${dims[1]},`;
               break;
           }
         }
@@ -251,7 +222,7 @@ export const exportVideo = async () => {
      * scale=width:height: scale the video to the clip's dimensions. we do this
      * here since there is only one input link.
      */
-    vFilter += `[v_split${i}]trim=${start}:${end},setpts=${setpts},scale=${scale}[${i}v];`
+    vFilter += `[v_split${i}]trim=${clip.start}:${clip.media.duration - clip.end},setpts=${setpts},scale=${scale}[${i}v];`
   }
 
   // -----------------------
@@ -320,38 +291,20 @@ export const exportVideo = async () => {
     // first and last points, we iterate from 0 - nodeTimes.length + 1.
 
     for (let j = 0; j < uniqueNodeTimes.length + 1; j++) {
-      // retrieve the X and Y values of each matrix for the given node index
-      const [fromSxScalar, fromSxVal, toSxScalar, toSxVal] = [...equalizedAutomation.get("sx")!.curves[j], ...equalizedAutomation.get("sx")!.curves[j+1]];
-      const [fromSyScalar, fromSyVal, toSyScalar, toSyVal] = [...equalizedAutomation.get("sy")!.curves[j], ...equalizedAutomation.get("sy")!.curves[j+1]];
-      const [fromTxScalar, fromTxVal, toTxScalar, toTxVal] = [...equalizedAutomation.get("tx")!.curves[j], ...equalizedAutomation.get("tx")!.curves[j+1]];
-      const [fromTyScalar, fromTyVal, toTyScalar, toTyVal] = [...equalizedAutomation.get("ty")!.curves[j], ...equalizedAutomation.get("ty")!.curves[j+1]];
+      const {strings, from, to} = buildLerpFilter([
+        [...equalizedAutomation.get("sx")!.curves[j], ...equalizedAutomation.get("sx")!.curves[j+1]],
+        [...equalizedAutomation.get("sy")!.curves[j], ...equalizedAutomation.get("sy")!.curves[j+1]],
+        [...equalizedAutomation.get("tx")!.curves[j], ...equalizedAutomation.get("tx")!.curves[j+1]],
+        [...equalizedAutomation.get("ty")!.curves[j], ...equalizedAutomation.get("ty")!.curves[j+1]],
+      ], equalizedAutomation.get("sx")!.duration, equalizedAutomation.get("sx")!.offset + clip.offset);
 
-      /**
-       * The combined offset of the clip, and the automation clip. the enable
-       * period is absolutely positioned w.r.t. the export's start
-       */
-      const offset = equalizedAutomation.get("sx")!.offset + clip.offset;
-
-      // FIXME: user can change individual matrix automation clip duration/
-      // offsets, which throws off the calculation here
-      const duration = equalizedAutomation.get("sx")!.duration;
-
-      // determine the start and end times for the current node. this is used to
-      // fill in the filter's enable parameter.
-      const fromTime = fromSxScalar * duration + offset;
-      const toTime = toSxScalar * duration + offset;
-
-      // generate ffmpeg lerp strings for each matrix value
-      const sxLerpString = buildLerpString(fromSxScalar, fromSxVal, toSxScalar, toSxVal, duration, offset);
-      const syLerpString = buildLerpString(fromSyScalar, fromSyVal, toSyScalar, toSyVal, duration, offset);
-      const txLerpString = buildLerpString(fromTxScalar, fromTxVal, toTxScalar, toTxVal, duration, offset);
-      const tyLerpString = buildLerpString(fromTyScalar, fromTyVal, toTyScalar, toTyVal, duration, offset);
+      const [sxLerpString, syLerpString, txLerpString, tyLerpString] = strings;
 
       // build out the scaling and translation strings
       const originOffsetXString = `(((${sxLerpString}-1)*${clip.media.dimensions[0]}/2)*(2*${clip.origin[0]}-1))`;
       const originOffsetYString = `(((${syLerpString}-1)*${clip.media.dimensions[1]}/2)*(2*${clip.origin[1]}-1))`;
 
-      vFilter += `overlay=enable='between(t,${fromTime},${toTime})':x='(W-w)/2+(${txLerpString})-(${originOffsetXString})':y='(H-h)/2+(${tyLerpString})-(${originOffsetYString})':eval=frame`;
+      vFilter += `overlay=enable='between(t,${from},${to})':x='(W-w)/2+(${txLerpString})-(${originOffsetXString})':y='(H-h)/2+(${tyLerpString})-(${originOffsetYString})':eval=frame`;
       if (j !== uniqueNodeTimes.length) vFilter += `,`;
     }
     vFilter += `${outLink};`;
@@ -487,3 +440,22 @@ const equalizeAutomation = (keys: string[], automation: App.Automation[]): [Map<
 
   return [map, nodeTimes];
 }
+
+/**
+ * Builds out a lerp string for a given automation curve and filter.
+ *
+ * @param args the arguments for all lerp strings. [fromX, fromY, toX, toY][]
+ * @param duration The total duration of the automation clip
+ * @param offset The offset of the automation clip.
+ * @param defaultScalars The default scalars to use when calculating the from/to
+ * values. Defaults to first and third X values in the first arg array.
+ */
+const buildLerpFilter = (args: [number, number, number, number][], duration: number, offset: number, defaultScalars: [[number, number], [number, number]] = [[0, 0], [0, 2]]): {
+  strings: string[],
+  from: number,
+  to: number
+}=> ({
+  strings: args.map((arg) => buildLerpString(arg[0], arg[1], arg[2], arg[3], duration, offset)),
+  from: args[defaultScalars[0][0]][defaultScalars[0][1]] * duration + offset,
+  to: args[defaultScalars[1][0]][defaultScalars[1][1]] * duration + offset,
+});
