@@ -202,6 +202,10 @@ export const exportVideo = async () => {
   // -----------------------
   // VIDEO FILTER COMPONENT
 
+  // if there are no video clips, we need to add a null filter to the video
+  // filter chain
+  if (vClips.length === 0) vFilter += `[0:v]null[vout];`;
+
   for (let i = 0; i < vClips.length; i++) {
     // define inLink. If this is the first video, use [0:v], otherwise use [vbase${i}]
     const inLink = i === 0 ? `[0:v]` : `[vbase${i}]`;
@@ -213,9 +217,9 @@ export const exportVideo = async () => {
 
     vFilter += `${inLink}[${i + 1}v]`;
 
-    // if there are no extra nodes on any matrix automation curve, then this is
-    // edge case 1. we can use a single overlay/enable filter for the entire
-    // clip.
+    // -----------------------
+    // add matrix transforms
+
     if (clip.matrix[0].curves.length === 0 && clip.matrix[3].curves.length === 0 && clip.matrix[4].curves.length === 0 && clip.matrix[5].curves.length === 0) {
       const originOffsetX = ((clip.matrix[0].staticVal - 1) * clip.media.dimensions[0] / 2) * (2 * clip.origin[0] - 1);
       const originOffsetY = ((clip.matrix[3].staticVal - 1) * clip.media.dimensions[1] / 2) * (2 * clip.origin[1] - 1);
@@ -266,13 +270,39 @@ export const exportVideo = async () => {
       vFilter += `overlay=enable='between(t,${from},${to})':x='(W-w)/2+(${txLerpString})-(${originOffsetXString})':y='(H-h)/2+(${tyLerpString})-(${originOffsetYString})':eval=frame`;
       if (j !== uniqueNodeTimes.length) vFilter += `,`;
     }
-    vFilter += `${outLink};`;
+
+    // -----------------------
+    // add EQ filters
+
+    if (clip.eq.every((eq) => eq.curves.length === 0)) {
+      // if static values match default, we can skip adding the eq filter
+      if (clip.eq.map((eq) => eq.staticVal).join(",") === "1,0,1,1") {
+        vFilter += `${outLink};`;
+        continue;
+      }
+
+      // no curves, but static values don't match default, so we need to add
+      // eq filter
+      vFilter += `eq=contrast=${clip.eq[0].staticVal}:brightness=${clip.eq[1].staticVal}:saturation=${clip.eq[2].staticVal}:gamma=${clip.eq[3].staticVal}${outLink};`;
+      continue;
+    }
+
+    const [equalizedEQAutomation, uniqueEQNodeTimes] = equalizeAutomation(["contrast", "brightness", "saturation", "gamma"], clip.eq);
+
+    for (let j = 0; j < uniqueEQNodeTimes.length + 1; j++) {
+      const {strings, from, to} = buildLerpFilter([
+        [...equalizedEQAutomation.get("contrast")!.curves[j], ...equalizedEQAutomation.get("contrast")!.curves[j+1]],
+        [...equalizedEQAutomation.get("brightness")!.curves[j], ...equalizedEQAutomation.get("brightness")!.curves[j+1]],
+        [...equalizedEQAutomation.get("saturation")!.curves[j], ...equalizedEQAutomation.get("saturation")!.curves[j+1]],
+        [...equalizedEQAutomation.get("gamma")!.curves[j], ...equalizedEQAutomation.get("gamma")!.curves[j+1]],
+      ], equalizedEQAutomation.get("contrast")!.duration, equalizedEQAutomation.get("contrast")!.offset + clip.offset);
+
+      const [contrastLerpString, brightnessLerpString, saturationLerpString, gammaLerpString] = strings;
+
+      vFilter += `eq=enable='between(t,${from},${to})':contrast=${contrastLerpString}:brightness=${brightnessLerpString}:saturation=${saturationLerpString}:gamma=${gammaLerpString}:eval=frame`;
+      if (j !== uniqueEQNodeTimes.length) vFilter += `,`;
+    }
   }
-
-  // if there are no video clips, we need to add a null filter to the video
-  // filter chain
-  if (vClips.length === 0) vFilter += `[0:v]null[vout];`;
-
 
   // -----------------------
   // AUDIO FILTER COMPONENT
