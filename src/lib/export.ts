@@ -8,12 +8,8 @@ export const exportVideo = async () => {
   exportPercentage.set(0);
 
   const ffmpegInstance =  get(ffmpeg);
-  let vClips = get(videoClips);
 
-  // sort vClips by z index, lowest to highest. we do this so we properly layer
-  // the videos.
-  vClips = vClips.sort((a, b) => a.z - b.z);
-
+  let vClips = get(videoClips).toSorted((a, b) => a.z - b.z);
   let clips = [...vClips, ...get(audioClips)];
 
   if (!ffmpegInstance.isLoaded()) {
@@ -28,10 +24,6 @@ export const exportVideo = async () => {
 
   // -----------------------
   // LOAD AND SPLIT MEDIA
-  /**
-   * Tracks the index of the input file with respect to the ffmpeg command.
-   * "base.mp4" is always first, so this starts at 1.
-   */
   for (let i = 0; i < clips.length; i++) {
     const clip = clips[i];
     const media = clip.media;
@@ -105,27 +97,18 @@ export const exportVideo = async () => {
 
       aFilter += `[a_split${i}]atrim=${clip.start}:${clip.media.duration - clip.end},adelay=${d}|${d},`;
 
-      // create a series of volume filters for each point in the automation curve
+      let vol = "";
       if (clip.volume.curves.length === 0) {
-        aFilter += `volume=${clip.volume.staticVal},`;
+        vol = `volume=${clip.volume.staticVal},`;
       } else {
         for (let j = 0; j < clip.volume.curves.length - 1; j++) {
           const {strings, from, to} = buildLerpFilter([[...clip.volume.curves[j], ...clip.volume.curves[j+1]]], clip.volume.duration, clip.volume.offset + clip.offset);
-
-          /**
-           * Add a volume filter for the current curve segment. This
-           * 1. enables the volume filter between the start and end of the curve
-           * 2. defines a function for the volume that is linearly interpolated
-           *    between the start and end of the curve
-           * 3. evaluates the volume at each frame (i.e. each point in the curve)
-           *    so that the volume changes smoothly over time
-           */
-          aFilter += `volume=enable='between(t,${from},${to})':volume=${strings[0]},eval:frame,`;
+          vol += `volume=enable='between(t,${from},${to})':volume=${strings[0]},eval:frame,`;
         }
       }
 
       const pan = [clip.pan < 0 ? 1 : 1 - clip.pan, clip.pan > 0 ? 1 : 1 + clip.pan];
-      aFilter+=`pan=stereo|c0=${pan[0]}*c0|c1=${pan[1]}*c1[${i}a];`;
+      aFilter += `pan=stereo|c0=${pan[0]}*c0|c1=${pan[1]}*c1[${i}a];`;
 
       // if this is an audio clip, we don't need to do any extra processing,
       // so we can just skip to the next clip
@@ -151,11 +134,7 @@ export const exportVideo = async () => {
       } else {
         const [equalizedAutomation, uniqueNodeTimes] = equalizeAutomation(["sx", "sy"], [clip.matrix[0], clip.matrix[3]]);
 
-        // after adding nodes, we can now build out the filtergraph for this
-        // clip's scale component by interpolating between the nodes of each
-        // curve.
-        //
-        // unfortunately, ffmpeg's scale component does not support the enable
+        // ffmpeg's scale component does not support the enable
         // filter, so we need to use a series of ffmpeg `if` statements to
         // interpolate between the nodes of each curve. to achieve this, we'll
         // actually work from the end of the clip to the start, so that we can
@@ -165,7 +144,6 @@ export const exportVideo = async () => {
         let yClause = "";
 
         for (let j = 0; j < uniqueNodeTimes.length+1; j++) {
-          // add a new `if` statement for each matrix value
           xClause += `if(`;
           yClause += `if(`;
 
@@ -177,13 +155,10 @@ export const exportVideo = async () => {
           const [sxLerpString, syLerpString] = strings;
 
           switch (j) {
-            case uniqueNodeTimes.length:
-              xClause += `lte(t,${to}),(${sxLerpString})*${dims[0]}`;
-              yClause += `lte(t,${to}),(${syLerpString})*${dims[1]}`;
-              break;
-            case 0:
-              xClause += `lte(t,${from}),(${sxLerpString})*${dims[0]},`;
-              yClause += `lte(t,${from}),(${syLerpString})*${dims[1]},`;
+            case 0 || uniqueNodeTimes.length:
+              // add a comma if this is not the last clause
+              xClause += `lte(t,${to}),(${sxLerpString})*${dims[0]}${j === 0 ? "," : ""}`;
+              yClause += `lte(t,${to}),(${syLerpString})*${dims[1]}${j === 0 ? "," : ""}`;
               break;
             default:
               xClause += `between(t,${from},${to}),(${sxLerpString})*${dims[0]},`;
@@ -192,7 +167,6 @@ export const exportVideo = async () => {
           }
         }
 
-        // close the `if` statements
         for (let j = 0; j < uniqueNodeTimes.length + 1; j++) {
           xClause += ")";
           yClause += ")";
@@ -266,21 +240,6 @@ export const exportVideo = async () => {
       continue;
     }
 
-    // Here, we need to interpolate the video's matrix automation curves. There's
-    // a lot of complexity here, but it boils down to a lot of repetitive logic.
-    //
-    // If there are no nodes on any of the matrix curves, we can just use a
-    // single overlay/enable filter for the entire clip.
-    //
-    // Otherwise, we need to interpolate between the nodes of each curve. This
-    // presents a few issues:
-    // 1. It isn't guaranteed that each curve will have the same number of nodes
-    // 2. besides the first and last nodes, there's no guarantee that the nodes
-    //    of each curve will be at the same time
-    // We can solve these issues by equalizing the automation curves of the
-    // matrix, such that each curve has the same number of nodes (all at the
-    // same times).
-
     const [equalizedAutomation, uniqueNodeTimes] = equalizeAutomation(["sx", "sy", "tx", "ty"], [clip.matrix[0], clip.matrix[3], clip.matrix[4], clip.matrix[5]]);
 
     // after adding nodes, we can now build out the filtergraph for this clip by
@@ -318,12 +277,12 @@ export const exportVideo = async () => {
   // -----------------------
   // AUDIO FILTER COMPONENT
 
-  // map all video and audio tracks to the base audio track. we need to filter
-  // out images from this, since they don't have audio tracks.
-  const inputs = clips.map((clip, i) => clip.media.type !== "image" ? `[${i+1}a]` : "").filter((input) => input !== "");
+  // filter out images and map the audio clips to their respective inputs
+  const aInputs = clips.filter((input) => input.media.type !== "image").map((_, i) => `[${i+1}a]`);
 
-  // keep in mind, no semicolon here!
-  aFilter += `[0:a]${inputs.join('')}amix=inputs=${inputs.length+1}:duration=first[aout]`;
+  // this is the last filter in the filtergraph, so we do not need to add a
+  // trailing semicolon.
+  aFilter += `[0:a]${aInputs.join('')}amix=inputs=${aInputs.length+1}:duration=first[aout]`;
 
   // -----------------------
   // RUN FFMPEG
