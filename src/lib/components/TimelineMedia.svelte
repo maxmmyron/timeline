@@ -14,8 +14,8 @@
   $: gainNode.gain.value = lerpAutomation(clip.volume, clip.offset, $time);
   $: panNode.pan.value = clip.pan;
 
-  $: scaleX = lerpAutomation(clip.matrix[0], clip.offset, $time);
-  $: scaleY = lerpAutomation(clip.matrix[3], clip.offset, $time);
+  $: scaleX = lerpAutomation(clip.matrix[0], clip.offset, $time) * $playerScale;
+  $: scaleY = lerpAutomation(clip.matrix[3], clip.offset, $time) * $playerScale;
   $: translateX = lerpAutomation(clip.matrix[4], clip.offset, $time);
   $: translateY = lerpAutomation(clip.matrix[5], clip.offset, $time);
 

@@ -1,6 +1,17 @@
 <script lang="ts">
-  import { scale, videoClips, time, selected, audioClips } from "$lib/stores";
-  import { createClip, getCurrentClips } from "$lib/utils";
+  import {
+    scale,
+    videoClips,
+    time,
+    selected,
+    audioClips,
+    paused,
+  } from "$lib/stores";
+  import {
+    createClip,
+    getCurrentClips,
+    updateScrubberAndScroll,
+  } from "$lib/utils";
   import Region from "../Region.svelte";
   import Runtime from "../Runtime.svelte";
 
@@ -73,7 +84,7 @@
 />
 
 <Region
-  class="grid place-items-center grid-cols-3 gap-2 lg:col-start-1 lg:col-span-full lg:row-start-3 lg:row-span-1"
+  class="flex items-center justify-between lg:col-start-1 lg:col-span-full lg:row-start-3 lg:row-span-1"
 >
   <div class="flex gap-2">
     <button
@@ -102,5 +113,39 @@
       <span>+</span>
     </button>
   </label>
+  <div class="flex items-center gap-3">
+    <button
+      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
+      aria-label="Skip to start"
+      on:click={() => {
+        $paused = true;
+        updateScrubberAndScroll(0);
+      }}>⏮️</button
+    >
+    <button
+      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
+      aria-label="Play/pause"
+      on:click={() => ($paused = !$paused)}
+    >
+      {$paused ? "▶️" : "⏸️"}
+    </button>
+    <button
+      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
+      aria-label="Skip to end"
+      on:click={() => {
+        $paused = true;
+        updateScrubberAndScroll(
+          $videoClips.reduce(
+            (acc, clip) =>
+              Math.max(
+                acc,
+                clip.offset + (clip.media.duration - clip.start - clip.end)
+              ),
+            0
+          )
+        );
+      }}>⏭️</button
+    >
+  </div>
   <Runtime time={$time} />
 </Region>

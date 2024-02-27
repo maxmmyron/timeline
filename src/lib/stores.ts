@@ -40,7 +40,7 @@ export const playerScale = writable(1);
  * The resolution of the player as inputted by the user. This is rounded to the
  * nearest even integer.
  */
-export const res = writable([1280, 720]);
+export const res = writable([1920, 1080]);
 
 /**
  * The resolution of the player, rounded to the nearest even integer. This is
