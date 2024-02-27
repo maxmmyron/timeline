@@ -65,41 +65,12 @@
 
   let containerHeight: number = 1;
   let containerWidth: number = 1;
-  // contain container width/height to 1280x720
-  $: safeContainerWidth = Math.min(containerWidth, 1280);
-  // FIXME: this lazily drops 48 px to account for the ribbon--fix in future
-  $: safeContainerHeight = Math.min(containerHeight, 720) - 48;
 
-  /**
-   * The resolution of the player. This value is scaled based on the sizing of
-   * the player's container.
-   */
-  let playerRes = [$safeRes[0], $safeRes[1]] as [number, number];
-
-  /**
-   * Rescale the player resolution when any variable that may affect it changes.
-   */
-  $: playerRes = (() => {
-    // compare aspect ratio of video's resolution to that of the safe container
-    if ($safeRes[0] / $safeRes[1] < safeContainerWidth / safeContainerHeight) {
-      // if video aspect < safe container aspect, we need to shrink the height
-      // of the player to fit, and scale the width accordingly. we can lazily
-      // assume the player height is the same as the safe container height
-      const playerScalingFactor = safeContainerHeight / $safeRes[1];
-      const w = $safeRes[0] * playerScalingFactor;
-      return [w, safeContainerHeight];
-    } else {
-      // if video aspect > safe container aspect, we need to shrink the width
-      // of the player to fit, and scale the height accordingly. we can lazily
-      // assume the player width is the same as the safe container width
-      const playerScalingFactor = safeContainerWidth / $safeRes[0];
-      const h = $safeRes[1] * playerScalingFactor;
-      return [safeContainerWidth, h];
-    }
-  })();
-
-  // update scaling factor of player, which is used to scale the video element
-  $: $playerScale = playerRes[0] / $safeRes[0];
+  $: if ($safeRes[0] / $safeRes[1] < containerWidth / containerHeight) {
+    $playerScale = containerHeight / $safeRes[1];
+  } else {
+    $playerScale = containerWidth / $safeRes[0];
+  }
 
   /**
    * Iterates through the UUIDs of the specified type, and updates the playback
@@ -236,15 +207,14 @@
 </div>
 
 <div
-  class="overflow-hidden flex flex-col gap-2"
+  class="overflow-hidden flex items-center justify-center w-full h-full gap-2"
   bind:clientHeight={containerHeight}
   bind:clientWidth={containerWidth}
 >
   <div
-    class="relative overflow-hidden left-1/2 -translate-x-1/2 bg-black center"
-    style:width="{$safeRes[0]}px"
-    style:height="{$safeRes[1]}px"
-    style:scale={$playerScale}
+    class="relative overflow-hidden bg-black"
+    style:width="{$safeRes[0] * $playerScale}px"
+    style:height="{$safeRes[1] * $playerScale}px"
   >
     {#each $videoClips as clip (clip.uuid)}
       <TimelineMedia {clip} curr={currVideo} />
@@ -253,40 +223,6 @@
       <TimelineMedia {clip} />
     {/each}
   </div>
-  <Region class="w-fit flex gap-2 mx-auto">
-    <button
-      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
-      aria-label="Skip to start"
-      on:click={() => {
-        $paused = true;
-        updateScrubberAndScroll(0);
-      }}>⏮️</button
-    >
-    <button
-      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
-      aria-label="Play/pause"
-      on:click={() => ($paused = !$paused)}
-    >
-      {$paused ? "▶️" : "⏸️"}
-    </button>
-    <button
-      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
-      aria-label="Skip to end"
-      on:click={() => {
-        $paused = true;
-        updateScrubberAndScroll(
-          $videoClips.reduce(
-            (acc, clip) =>
-              Math.max(
-                acc,
-                clip.offset + (clip.media.duration - clip.start - clip.end)
-              ),
-            0
-          )
-        );
-      }}>⏭️</button
-    >
-  </Region>
 </div>
 
 <TimelineRibbon />
