@@ -67,9 +67,9 @@
   let containerWidth: number = 1;
 
   $: if ($safeRes[0] / $safeRes[1] < containerWidth / containerHeight) {
-    $playerScale = containerHeight / $safeRes[1];
+    $playerScale = containerHeight / $safeRes[1] / 1.5;
   } else {
-    $playerScale = containerWidth / $safeRes[0];
+    $playerScale = containerWidth / $safeRes[0] / 1.5;
   }
 
   /**
