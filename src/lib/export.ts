@@ -74,7 +74,7 @@ export const exportVideo = async () => {
       if (media.type !== "image") aFilter += `${splitCount}[${a_outs.join("][")}];`;
       // NOTE: here we scale the video to a large enough size to mitigate automation scaling
       // artifacts.
-      if (media.type !== "audio") vFilter += `${splitCount},scale=${get(safeRes)[0]*2}:-1[${v_outs.join("][")}];`;
+      if (media.type !== "audio") vFilter += `${splitCount},scale=${get(safeRes)[0]*4}:-1[${v_outs.join("][")}];`;
     }
   }
 
@@ -158,7 +158,7 @@ export const exportVideo = async () => {
       // if there are no extra nodes on any matrix automation curve, then we can
       // just handle the edge case
       if (clip.matrix[0].curves.length === 0 && clip.matrix[3].curves.length === 0) {
-        scale = `(${dims[0]}*${clip.matrix[0].staticVal}):(${dims[0]}*${clip.matrix[3].staticVal})`;
+        scale = `(${dims[0]}*${clip.matrix[0].staticVal}):(${dims[1]}*${clip.matrix[3].staticVal})`;
 
         // if this is an image, we don't need to do any extra processing,
         // so we can just skip to the next clip
