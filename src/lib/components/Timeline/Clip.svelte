@@ -15,7 +15,7 @@
 
   export let clip: App.Clip;
   // this is set to 9 as a dirty default
-  export let timelineOffset = 9;
+  export let timelineOffset: number;
 
   $: selectedUUID = $selected ? $selected[0] : null;
 
