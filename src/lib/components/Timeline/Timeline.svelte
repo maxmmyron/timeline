@@ -80,12 +80,12 @@
     <div
       class="bg-zinc-900 border-b border-r border-zinc-950 w-full h-10 px-3 flex items-center justify-end"
     >
-      <p>Video Track 1</p>
+      <p class="text-zinc-500">Video Track 1</p>
     </div>
     <div
       class="bg-zinc-900 border-b border-r border-zinc-950 w-full h-10 px-3 flex items-center justify-end"
     >
-      <p>Audio Track 1</p>
+      <p class="text-zinc-500">Audio Track 1</p>
     </div>
   </aside>
 
@@ -128,7 +128,7 @@
                 class="relative w-full border-l border-zinc-900 h-2.5 top-2.5"
               />
             </div>
-            <div class="w-full pl-1 text-zinc-600">
+            <div class="w-full pl-1 text-zinc-500">
               <Runtime {time} />
             </div>
           </div>
