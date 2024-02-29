@@ -14,8 +14,11 @@
   } from "$lib/stores";
   import { createEventDispatcher } from "svelte";
 
-  let timeline: HTMLElement;
+  let timeline: HTMLDivElement;
   let tickContainer: HTMLElement;
+
+  let timelineOffset = 225;
+  $: timeline && (timelineOffset = timeline.getBoundingClientRect().left);
 
   let tickContainerWidth = 0;
 
@@ -58,6 +61,8 @@
       x,
     });
   };
+
+  $: console.log(timelineOffset);
 </script>
 
 <svelte:window
@@ -67,47 +72,84 @@
   on:mouseup={() => (canMoveScrubber = false)}
 />
 
-<Region
-  class="region relative flex flex-col !p-0 overflow-hidden lg:row-start-4 lg:col-start-1 lg:col-span-full"
-  bind:el={timeline}
-  on:wheel={(e) => {
-    $scroll = Math.max(0, $scroll + e.deltaY * $secondsPerTick);
-  }}
->
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
+<Region class="region relative !p-0 overflow-hidden h-full flex">
+  <!-- TIMELINE TRACKS -->
+  <aside class="h-full bg-zinc-950 w-40 flex-shrink-0 z-20">
+    <div class="bg-zinc-900 border-b border-r border-zinc-950 w-full h-9"></div>
+    <!-- TODO: replace with bespoke video/audio tracks -->
+    <div
+      class="bg-zinc-900 border-b border-r border-zinc-950 w-full h-10 px-3 flex items-center justify-end"
+    >
+      <p>Video Track 1</p>
+    </div>
+    <div
+      class="bg-zinc-900 border-b border-r border-zinc-950 w-full h-10 px-3 flex items-center justify-end"
+    >
+      <p>Audio Track 1</p>
+    </div>
+  </aside>
+
   <div
-    class="h-4 flex"
-    bind:clientWidth={tickContainerWidth}
-    bind:this={tickContainer}
-    on:mousedown={(e) => {
-      canMoveScrubber = true;
-      moveScrubber(e.clientX);
+    class="relative w-full z-10 grid grid-cols-1 grid-rows-[2.25rem,repeat(auto-fill,2.5rem)]"
+    bind:this={timeline}
+    on:wheel={(e) => {
+      $scroll = Math.max(0, $scroll + e.deltaY * $secondsPerTick);
     }}
   >
-    {#each tickTimings as [time, offset]}
+    <div class="row-span-full col-start-1 flex flex-col relative">
       <div
-        class="h-full shrink-0 bg-zinc-300 border-r border-zinc-950/40 pl-0.5 relative overflow-hidden select-none dark:bg-zinc-900 dark:border-zinc-800"
-        style:width="{$tickWidth}px"
-        style:left="-{offset}px"
+        class="h-9 flex"
+        on:mousedown={(e) => {
+          canMoveScrubber = true;
+          moveScrubber(e.clientX);
+        }}
+        bind:this={tickContainer}
+        bind:clientWidth={tickContainerWidth}
       >
-        <Runtime {time} />
+        {#each tickTimings as [time, offset]}
+          <div
+            class="h-full shrink-0 select-none relative"
+            style:width="{$tickWidth}px"
+            style:left="-{offset}px"
+          >
+            <div class="flex h-5">
+              <div class="relative w-full border-l border-zinc-900 h-screen" />
+              <div
+                class="relative w-full border-l border-zinc-900 h-2.5 top-2.5"
+              />
+              <div
+                class="relative w-full border-l border-zinc-900 h-2.5 top-2.5"
+              />
+              <div class="relative w-full border-l border-zinc-900 h-4 top-1" />
+              <div
+                class="relative w-full border-l border-zinc-900 h-2.5 top-2.5"
+              />
+              <div
+                class="relative w-full border-l border-zinc-900 h-2.5 top-2.5"
+              />
+            </div>
+            <div class="w-full pl-1 text-zinc-600">
+              <Runtime {time} />
+            </div>
+          </div>
+        {/each}
       </div>
-    {/each}
-  </div>
-  <div class="relative flex flex-col h-full gap-0.5 bg-zinc-800">
-    <div class="relative flex items-center w-full h-1/2 bg-zinc-950">
+    </div>
+
+    <div class="row-start-2 col-start-1 relative flex items-center w-full h-10">
       {#each $videoClips as clip}
-        <Clip {clip} on:clipMove />
+        <Clip {clip} on:clipMove bind:timelineOffset />
       {/each}
     </div>
-    <div class="relative flex items-center w-full h-1/2 bg-zinc-950">
+    <div class="row-start-3 col-start-1 relative flex items-center w-full h-10">
       {#each $audioClips as clip}
-        <Clip {clip} on:clipMove />
+        <Clip {clip} on:clipMove bind:timelineOffset />
       {/each}
     </div>
+
+    <div
+      class="absolute top-0 w-0.5 bg-zinc-950/40 h-full rounded-full dark:bg-zinc-600/40 z-[999999999]"
+      style:transform="translateX({$time * $scaleFactor - $scroll}px"
+    />
   </div>
-  <div
-    class="absolute top-0 w-0.5 bg-zinc-950/40 h-full rounded-full dark:bg-zinc-600/40 z-[999999999]"
-    style:transform="translateX({$time * $scaleFactor - $scroll}px"
-  />
 </Region>

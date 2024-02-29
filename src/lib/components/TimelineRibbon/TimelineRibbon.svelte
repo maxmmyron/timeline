@@ -83,7 +83,7 @@
   }}
 />
 
-<Region class="flex items-center justify-between h-12">
+<Region class="flex items-center justify-between h-12 text-zinc-400">
   <div class="flex gap-2">
     <button
       class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700 disabled:brightness-50 disabled:cursor-not-allowed disabled:shadow-none"

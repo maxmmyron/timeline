@@ -165,8 +165,12 @@
   onMount(() => requestAnimationFrame(frame));
 </script>
 
+<!-- LOGO -->
+<Region class="row-start-1 col-start-1"></Region>
+
+<!-- MENU RIBBON -->
 <Region
-  class="flex justify-between items-center lg:row-start-1 lg:col-start-1 lg:col-span-full"
+  class="flex justify-between items-center row-start-1 col-start-2 col-span-full"
 >
   <button
     class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
@@ -195,8 +199,12 @@
   </div>
 </Region>
 
+<!-- MEDIA PANEL RIBBON -->
+<Region class="row-start-2 col-start-1"></Region>
+
+<!-- MEDIA PANELS -->
 <div
-  class="relative lg:row-start-2 lg:col-start-1 grid grid-cols-1 grid-rows-2 gap-2 overflow-scroll"
+  class="relative row-start-2 col-start-2 grid grid-cols-1 grid-rows-2 gap-2 overflow-scroll"
 >
   <MediaBrowser />
   {#if $selected}
@@ -206,6 +214,7 @@
   {/if}
 </div>
 
+<!-- PLAYER -->
 <div
   class="overflow-hidden flex items-center justify-center w-full h-full gap-2"
   bind:clientHeight={containerHeight}
@@ -225,20 +234,26 @@
   </div>
 </div>
 
-<TimelineRibbon />
+<!-- TIMELINE RIBBON -->
+<Region class="row-start-3 col-start-1"></Region>
 
-<!-- Update the currentTime property of the current video playing when either
+<!-- TIMELINE -->
+<div class="relative col-start-2 row-start-3 col-span-full flex flex-col gap-2">
+  <TimelineRibbon />
+
+  <!-- Update the currentTime property of the current video playing when either
   the scrubber moves, or the current video's offset is changed (via drag) -->
-<Timeline
-  on:scrubberMove={() => {
-    resetPlayback("video", videoUUIDs);
-    resetPlayback("audio", audioUUIDs);
-  }}
-  on:clipMove={(e) => {
-    if (e.detail.type === "video" || e.detail.type === "image")
-      resetClipPlayback($vRefs, currVideo, e.detail.uuid);
-    else resetClipPlayback($aRefs, currAudio, e.detail.uuid);
-  }}
-/>
+  <Timeline
+    on:scrubberMove={() => {
+      resetPlayback("video", videoUUIDs);
+      resetPlayback("audio", audioUUIDs);
+    }}
+    on:clipMove={(e) => {
+      if (e.detail.type === "video" || e.detail.type === "image")
+        resetClipPlayback($vRefs, currVideo, e.detail.uuid);
+      else resetClipPlayback($aRefs, currAudio, e.detail.uuid);
+    }}
+  />
+</div>
 
 <Preferences />
