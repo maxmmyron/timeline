@@ -58,6 +58,8 @@ export const scroll = writable(0);
  */
 export const paused = writable(true);
 
+export const prerenderStatus: Writable<"idle" | "setup" | "prerender" | "done" | "error"> = writable("idle");
+
 export const exportStatus: Writable<"idle" | "setup" | "export" | "done" | "error"> = writable("idle");
 export const exportPercentage = writable(0);
 
@@ -68,3 +70,6 @@ export const vRefs: Writable<Record<string, HTMLVideoElement>> = writable({});
 export const aRefs: Writable<Record<string, HTMLAudioElement>> = writable({});
 
 export let showPreferences = writable(false);
+
+export let prerenderQueue: Writable<Promise<any>[]> = writable([]);
+export let runningPrerender: Writable<Promise<any> | null> = writable(null);

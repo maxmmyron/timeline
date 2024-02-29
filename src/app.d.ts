@@ -13,6 +13,14 @@ declare global {
 			origin: [number, number];
 			volume: Automation<"volume">;
 			pan: number,
+			/**
+			 * Whether or not the clip has been modified since the last prerender.
+			 */
+			isDirty: boolean;
+			/**
+			 * A blob source for the prerendered clip
+			 */
+			prerenderSrc: string;
 		};
 
 		type Media = {
