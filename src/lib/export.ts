@@ -72,9 +72,16 @@ export const exportVideo = async () => {
 
       // join together the split filters
       if (media.type !== "image") aFilter += `${splitCount}[${a_outs.join("][")}];`;
-      // NOTE: here we scale the video to a large enough size to mitigate automation scaling
-      // artifacts.
-      if (media.type !== "audio") vFilter += `${splitCount},scale=${get(safeRes)[0]*4}:-1[${v_outs.join("][")}];`;
+      if (media.type !== "audio"){
+        // count the number of clips of this media that have matrix automation curves on the scale components.
+        // if there are any, we need to scale the video up to a large enough size to mitigate scaling artifacts.
+        if (clips.filter((clip) => clip.media.uuid === media.uuid)
+            .filter(clip => clip.matrix[0].curves.length > 0 || clip.matrix[3].curves.length > 0)
+            .length > 0) {
+          vFilter += `${splitCount},scale=${get(safeRes)[0]*4}:-1[${v_outs.join("][")}];`;
+        } else
+          vFilter += `${splitCount}[${v_outs.join("][")}];`;
+      }
     }
   }
 
