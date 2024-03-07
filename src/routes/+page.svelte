@@ -15,6 +15,7 @@
     aRefs,
     aCtx,
     showPreferences,
+    visiblePanel,
   } from "$lib/stores";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
@@ -24,6 +25,9 @@
   import MediaBrowser from "$lib/components/MediaBrowser.svelte";
   import TimelineMedia from "$lib/components/TimelineMedia.svelte";
   import Preferences from "$lib/components/Preferences/Preferences.svelte";
+  import IconButton from "$lib/components/IconButton.svelte";
+  import ClipInspectorIcon from "$lib/icon/ClipInspectorIcon.svelte";
+  import MediaPoolIcon from "$lib/icon/MediaPoolIcon.svelte";
 
   // get the UUIDs of the current audio clips (we return this as a comma-sep
   // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS
@@ -200,17 +204,38 @@
 </Region>
 
 <!-- MEDIA PANEL RIBBON -->
-<Region class="row-start-2 col-start-1"></Region>
+<Region
+  class="row-start-2 col-start-1 flex flex-col justify-start items-center"
+>
+  <IconButton
+    alt="Show medial pool"
+    toggled={$visiblePanel === "media"}
+    on:click={() => ($visiblePanel = "media")}
+  >
+    <MediaPoolIcon />
+  </IconButton>
+  <IconButton
+    alt="Show Inspector panel"
+    toggled={$visiblePanel === "inspector"}
+    on:click={() => ($visiblePanel = "inspector")}
+  >
+    <ClipInspectorIcon />
+  </IconButton>
+</Region>
 
 <!-- MEDIA PANELS -->
-<div
-  class="relative row-start-2 col-start-2 grid grid-cols-1 grid-rows-2 gap-2 overflow-scroll"
->
-  <MediaBrowser />
-  {#if $selected}
-    {#key $selected[0]}
+<div class="relative row-start-2 col-start-2 h-full overflow-scroll">
+  {#if $visiblePanel === "media"}
+    <MediaBrowser />
+  {/if}
+  {#if $visiblePanel === "inspector"}
+    {#if $selected}
       <Inspector uuid={$selected[0]} type={$selected[1]} />
-    {/key}
+    {:else}
+      <Region class="h-full">
+        <p class="text-zinc-400">No clip selected</p>
+      </Region>
+    {/if}
   {/if}
 </div>
 

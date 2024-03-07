@@ -1,17 +1,8 @@
 <script lang="ts">
-  import { audioClips, videoClips, selected } from "$lib/stores";
-  import {
-    createClip,
-    getClipEndPos,
-    updateScrubberAndScroll,
-  } from "$lib/utils";
+  import { audioClips, videoClips, uploaded } from "$lib/stores";
+  import { createClip, getClipEndPos } from "$lib/utils";
   import Region from "./Region.svelte";
   import { resolveMedia } from "$lib/loader";
-
-  /**
-   * Media that has been uploaded and fully resolved
-   */
-  let uploaded: Array<ReturnType<typeof resolveMedia>> = [];
 
   const upload = async (fileList: FileList) => {
     for (const file of fileList) {
@@ -20,19 +11,17 @@
       // if (uploadedHashes.includes(hash)) continue;
       // else uploadedHashes = [...uploadedHashes, hash];
 
-      uploaded = [...uploaded, resolveMedia(file)];
+      $uploaded = [...$uploaded, resolveMedia(file)];
     }
   };
 
   export let removeMedia = (uuid: string) => {
-    uploaded = uploaded.filter((m) => m.uuid !== uuid);
+    $uploaded = $uploaded.filter((m) => m.uuid !== uuid);
   };
 </script>
 
 <Region
-  class="flex-grow flex flex-col gap-1 row-start-1 {$selected
-    ? ''
-    : 'row-span-full'}"
+  class="flex flex-col gap-1 row-start-1 h-full"
   on:drop={(e) => e.dataTransfer?.files && upload(e.dataTransfer.files)}
 >
   <label>
@@ -50,11 +39,13 @@
     />
   </label>
 
-  {#if uploaded.length === 0}
-    <p style:color="rgba(0 0 0 / 0.75)">No media uploaded</p>
+  {#if $uploaded.length === 0}
+    <p>No media uploaded</p>
   {/if}
-  <div class="flex-grow flex flex-col gap-1 overflow-scroll">
-    {#each uploaded as { uuid, title, media } (uuid)}
+  <div
+    class="flex-grow flex flex-col gap-1 h-full overflow-scroll [scrollbar-width:thin]"
+  >
+    {#each $uploaded as { uuid, title, media } (uuid)}
       <article
         class="p-2 rounded-md border dark:bg-zinc-900 border-zinc-300 dark:border-zinc-800 flex gap-2 items-center justify-between"
       >

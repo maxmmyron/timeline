@@ -1,5 +1,6 @@
 import { createFFmpeg } from "@ffmpeg/ffmpeg";
 import { derived, writable, type Writable } from "svelte/store";
+import type { resolveMedia } from "$lib/loader";
 
 export const ffmpeg = writable(createFFmpeg({log:true}));
 
@@ -67,6 +68,12 @@ export const iRefs: Writable<Record<string, HTMLImageElement>> = writable({});
 export const vRefs: Writable<Record<string, HTMLVideoElement>> = writable({});
 export const aRefs: Writable<Record<string, HTMLAudioElement>> = writable({});
 
-export let showPreferences = writable(false);
+export const showPreferences = writable(false);
 
-export let pointerMode: Writable<"select" | "slice"> = writable("select");
+export const pointerMode: Writable<"select" | "slice"> = writable("select");
+export const visiblePanel: Writable<"media" | "inspector"> = writable("media");
+
+/**
+ * Media that has been uploaded and fully resolved
+ */
+export const uploaded: Writable<Array<ReturnType<typeof resolveMedia>>> = writable([]);
