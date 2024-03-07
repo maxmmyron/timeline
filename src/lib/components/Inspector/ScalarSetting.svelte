@@ -90,6 +90,7 @@
   />
   {#if supportsAutomation && automation}
     <IconButton
+      showOutline
       alt="Edit automation"
       toggles
       bind:toggled={isAutomationVisible}

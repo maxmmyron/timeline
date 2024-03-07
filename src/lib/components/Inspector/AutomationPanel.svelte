@@ -156,7 +156,11 @@
     <h4 class="text-zinc-600 dark:text-zinc-400">
       Edit {automation.type} automation
     </h4>
-    <IconButton alt="Close" on:click={() => (isAutomationVisible = false)}>
+    <IconButton
+      showOutline
+      alt="Close"
+      on:click={() => (isAutomationVisible = false)}
+    >
       <CloseIcon />
     </IconButton>
   </header>

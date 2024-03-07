@@ -198,11 +198,15 @@
     const { start, end, duration } = initial;
     const dur = clip.media.duration - edge - (mode === "left" ? end : start);
 
-    if (mode === "left" && Math.abs(offset - $time) < threshold)
+    if (mode === "left" && Math.abs(offset - $time) < threshold) {
+      console.log("snap left", offset, start + $time - initial.offset);
       return [$time, start + $time - initial.offset];
-    else if (Math.abs(offset + dur - $time) < threshold)
+    } else if (Math.abs(offset + dur - $time) < threshold) {
+      console.log("snap right", offset, end + $time - initial.offset);
       return [offset, offset + (duration - start - end) - $time];
+    }
 
+    console.log("no snap", offset, edge);
     return [offset, edge];
   };
 

@@ -71,6 +71,7 @@
         <div class="flex justify-between">
           <h2 class="text-sm font-mono">Positioning</h2>
           <IconButton
+            showOutline
             alt="Reset clip positioning"
             on:click={() => {
               matrix[0].staticVal = matrix[3].staticVal = 1;
@@ -192,6 +193,7 @@
               : 'border-dashed'} border-zinc-700"
           />
           <IconButton
+            showOutline
             alt="Link position"
             on:click={() => (isPositionLinked = !isPositionLinked)}
             toggles
@@ -266,6 +268,7 @@
               : 'border-dashed'} border-zinc-700"
           />
           <IconButton
+            showOutline
             alt="Link position"
             on:click={() => (isScaleLinked = !isScaleLinked)}
             toggles
@@ -293,6 +296,7 @@
         <div class="flex justify-between">
           <h2 class="text-sm font-mono">Audio</h2>
           <IconButton
+            showOutline
             alt="Reset audio settings"
             on:click={() => {
               volume.staticVal = 1;

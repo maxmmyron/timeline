@@ -12,8 +12,15 @@
     getCurrentClips,
     updateScrubberAndScroll,
   } from "$lib/utils";
+  import IconButton from "../IconButton.svelte";
   import Region from "../Region.svelte";
   import Runtime from "../Runtime.svelte";
+  import ZoomOutIcon from "$lib/icon/ZoomOutIcon.svelte";
+  import ZoomInIcon from "$lib/icon/ZoomInIcon.svelte";
+  import BeginningSkipIcon from "$lib/icon/BeginningSkip.svelte";
+  import PlayIcon from "$lib/icon/Play.svelte";
+  import PauseIcon from "$lib/icon/Pause.svelte";
+  import EndSkipIcon from "$lib/icon/EndSkip.svelte";
 
   const decrease = () => {
     $scale = Math.max(0.02, $scale - 0.25);
@@ -96,40 +103,32 @@
       on:click={() => slice("audio", $audioClips)}>slice aud</button
     >
   </div>
-  <label class="flex gap-1">
-    <button
-      class="bg-zinc-800 p-1 w-5 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
-      on:click={decrease}
-    >
-      <span>-</span>
-    </button>
+  <div class="flex gap-1">
+    <IconButton alt="Zoom Out" on:click={decrease}>
+      <ZoomOutIcon />
+    </IconButton>
     <input type="range" min="0.02" max="5" step="0.001" bind:value={$scale} />
-    <button
-      class="bg-zinc-800 p-1 w-5 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
-      on:click={increase}
-    >
-      <span>+</span>
-    </button>
-  </label>
+    <IconButton alt="Zoom In" on:click={increase}>
+      <ZoomInIcon />
+    </IconButton>
+  </div>
   <div class="flex items-center gap-3">
-    <button
-      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
-      aria-label="Skip to start"
+    <IconButton
+      alt="Skip to start"
       on:click={() => {
         $paused = true;
         updateScrubberAndScroll(0);
-      }}>⏮️</button
+      }}><BeginningSkipIcon /></IconButton
     >
-    <button
-      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
-      aria-label="Play/pause"
-      on:click={() => ($paused = !$paused)}
-    >
-      {$paused ? "▶️" : "⏸️"}
-    </button>
-    <button
-      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
-      aria-label="Skip to end"
+    <IconButton alt="Play/Pause" on:click={() => ($paused = !$paused)}>
+      {#if $paused}
+        <PlayIcon />
+      {:else}
+        <PauseIcon />
+      {/if}
+    </IconButton>
+    <IconButton
+      alt="Skip to end"
       on:click={() => {
         $paused = true;
         updateScrubberAndScroll(
@@ -142,7 +141,7 @@
             0
           )
         );
-      }}>⏭️</button
+      }}><EndSkipIcon /></IconButton
     >
   </div>
   <Runtime time={$time} />
