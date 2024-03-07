@@ -68,3 +68,5 @@ export const vRefs: Writable<Record<string, HTMLVideoElement>> = writable({});
 export const aRefs: Writable<Record<string, HTMLAudioElement>> = writable({});
 
 export let showPreferences = writable(false);
+
+export let pointerMode: Writable<"select" | "slice"> = writable("select");

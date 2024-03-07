@@ -7,9 +7,10 @@
     scroll,
     audioClips,
     scale,
+    pointerMode,
   } from "$lib/stores";
-  import { getClipDuration, getClipEndPos } from "$lib/utils";
-  import { createEventDispatcher } from "svelte";
+  import { createClip, getClipDuration, getClipEndPos } from "$lib/utils";
+  import { createEventDispatcher, onMount } from "svelte";
 
   type ResizeMode = "left" | "right";
 
@@ -269,6 +270,50 @@
     initial.duration = clip.media.duration;
     initial.x = x;
   };
+
+  const slice = (splitTime: number) => {
+    let clips = clip.media.type === "audio" ? $audioClips : $videoClips;
+
+    // if the time is outside the clip, do nothing
+    // if (
+    //   splitTime < clip.offset ||
+    //   splitTime > clip.offset + clip.media.duration
+    // )
+    //   return;
+
+    let splitOffset = splitTime - clip.offset;
+    let clipDuration = clip.media.duration - clip.start - clip.end;
+
+    const leftClip = createClip(
+      { ...clip.media },
+      {
+        offset: clip.offset,
+        start: clip.start,
+        end: clip.end + (clipDuration - splitOffset),
+        matrix: [...clip.matrix],
+      }
+    );
+
+    const rightClip = createClip(
+      { ...clip.media },
+      {
+        offset: clip.offset + splitOffset,
+        start: clip.start + splitOffset,
+        end: clip.end,
+        matrix: [...clip.matrix],
+      }
+    );
+
+    clips = [...clips, leftClip, rightClip];
+    const oldUUID = clip.uuid;
+    // deselect just in case
+    $selected = null;
+    clips = clips.filter((c) => c.uuid !== oldUUID);
+
+    // update stores to reflect changes
+    if (clip.media.type !== "audio") $videoClips = clips;
+    else $audioClips = clips;
+  };
 </script>
 
 <svelte:window
@@ -284,6 +329,7 @@
 
 <button
   class="absolute h-12 border border-zinc-800 rounded-md bg-zinc-300 min-w-2 shadow-md dark:bg-zinc-800"
+  class:cursor-text={$pointerMode === "slice"}
   class:bg-zinc-400={selectedUUID === clip.uuid}
   class:dark:bg-zinc-900={selectedUUID === clip.uuid}
   class:shadow-lg={selectedUUID === clip.uuid}
@@ -293,6 +339,11 @@
   style:z-index={clip.z}
   bind:this={clipEl}
   on:mousedown|stopPropagation={(e) => {
+    if ($pointerMode === "slice") {
+      slice((e.clientX - timelineOffset + $scroll) / $scaleFactor);
+      $pointerMode = "select";
+      return;
+    }
     canMoveClip = true;
     if (clip.media.type === "audio")
       clip.z = $audioClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1;

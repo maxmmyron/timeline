@@ -11,6 +11,7 @@
     time,
     videoClips,
     audioClips,
+    pointerMode,
   } from "$lib/stores";
   import { createEventDispatcher } from "svelte";
 
