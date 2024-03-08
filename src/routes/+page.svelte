@@ -259,7 +259,7 @@
 <Region class="row-start-3 col-start-1"></Region>
 
 <!-- TIMELINE -->
-<div class="relative col-start-2 row-start-3 col-span-full flex flex-col gap-2">
+<div class="relative col-start-2 row-start-3 col-span-full flex flex-col">
   <TimelineRibbon />
 
   <!-- Update the currentTime property of the current video playing when either

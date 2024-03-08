@@ -25,20 +25,21 @@
   class="flex flex-col gap-1 row-start-1 h-full"
   on:drop={(e) => e.dataTransfer?.files && upload(e.dataTransfer.files)}
 >
-  <label>
-    <IconButton
-      name="Import"
-      alt="Upload to Media Pool"
-      showOutline
-      class="w-6 h-6"
-      icon="import"
-    />
+  <label for="upload">
     <input
+      id="upload"
       class="hidden"
       type="file"
       accept="video/mp4,audio/mp3,image/png,image/jpeg"
       multiple
       on:change={(e) => e.currentTarget.files && upload(e.currentTarget.files)}
+    />
+    <IconButton
+      name="Import"
+      alt="Upload to Media Pool"
+      showOutline
+      class="w-6 h-6 pointer-events-none"
+      icon="import"
     />
   </label>
 

@@ -73,9 +73,11 @@
   on:mouseup={() => (canMoveScrubber = false)}
 />
 
-<Region class="region relative !p-0 overflow-hidden h-full flex">
+<Region
+  class="region relative !p-0 overflow-hidden h-full flex dark:bg-zinc-950 rounded-tl-none rounded-tr-none"
+>
   <!-- TIMELINE TRACKS -->
-  <aside class="h-full bg-zinc-950 w-40 flex-shrink-0 z-20">
+  <aside class="h-full bg-white dark:bg-zinc-950 w-40 flex-shrink-0 z-20">
     <div class="bg-zinc-900 border-b border-r border-zinc-950 w-full h-9"></div>
     <!-- TODO: replace with bespoke video/audio tracks -->
     <div

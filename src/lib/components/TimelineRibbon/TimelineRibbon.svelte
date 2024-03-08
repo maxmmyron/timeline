@@ -30,7 +30,9 @@
   }}
 />
 
-<Region class="flex items-center justify-between h-12 text-zinc-400">
+<Region
+  class="flex items-center justify-between h-12 text-zinc-400 rounded-br-none rounded-bl-none border-b-0"
+>
   <div class="flex gap-2">
     <IconButton
       name="Pointer"
@@ -81,7 +83,6 @@
         );
       }}
     />
-    >
   </div>
   <Runtime time={$time} />
 </Region>
