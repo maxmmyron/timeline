@@ -3,6 +3,7 @@
   import { createClip, getClipEndPos } from "$lib/utils";
   import Region from "./Region.svelte";
   import { resolveMedia } from "$lib/loader";
+  import IconButton from "./IconButton.svelte";
 
   const upload = async (fileList: FileList) => {
     for (const file of fileList) {
@@ -25,11 +26,13 @@
   on:drop={(e) => e.dataTransfer?.files && upload(e.dataTransfer.files)}
 >
   <label>
-    <p
-      class="w-fit bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
-    >
-      Upload
-    </p>
+    <IconButton
+      name="Import"
+      alt="Upload to Media Pool"
+      showOutline
+      class="w-6 h-6"
+      icon="import"
+    />
     <input
       class="hidden"
       type="file"

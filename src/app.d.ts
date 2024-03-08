@@ -53,6 +53,12 @@ declare global {
 		}
 
 		type AutomationType = "volume" | "position" | "scale";
+
+		type Icon = "Automation" | "BeginningSkip" | "BottomOrigin" | "CenterOrigin"
+		| "ClipInspector" | "Close" | "EndSkip" | "Export" | "Import" | "LeftOrigin"
+		| "Link" | "MediaPool" | "OriginSpacer" | "Pause" | "Play" | "Pointer"
+		| "Reset" | "RightOrigin" | "SplitClip" | "TopOrigin" | "Unlink" | "ZoomIn"
+		| "ZoomOut";
 	}
 }
 

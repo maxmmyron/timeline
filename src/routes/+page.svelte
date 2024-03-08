@@ -21,13 +21,11 @@
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
-  import { frame, getCurrentClips, updateScrubberAndScroll } from "$lib/utils";
+  import { frame, getCurrentClips } from "$lib/utils";
   import MediaBrowser from "$lib/components/MediaBrowser.svelte";
   import TimelineMedia from "$lib/components/TimelineMedia.svelte";
   import Preferences from "$lib/components/Preferences/Preferences.svelte";
   import IconButton from "$lib/components/IconButton.svelte";
-  import ClipInspectorIcon from "$lib/icon/ClipInspectorIcon.svelte";
-  import MediaPoolIcon from "$lib/icon/MediaPoolIcon.svelte";
 
   // get the UUIDs of the current audio clips (we return this as a comma-sep
   // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS
@@ -205,22 +203,20 @@
 
 <!-- MEDIA PANEL RIBBON -->
 <Region
-  class="row-start-2 col-start-1 flex flex-col justify-start items-center"
+  class="row-start-2 col-start-1 flex gap-2 flex-col justify-start items-center"
 >
   <IconButton
     alt="Show medial pool"
     toggled={$visiblePanel === "media"}
     on:click={() => ($visiblePanel = "media")}
-  >
-    <MediaPoolIcon />
-  </IconButton>
+    name="MediaPool"
+  />
   <IconButton
+    name="ClipInspector"
     alt="Show Inspector panel"
     toggled={$visiblePanel === "inspector"}
     on:click={() => ($visiblePanel = "inspector")}
-  >
-    <ClipInspectorIcon />
-  </IconButton>
+  />
 </Region>
 
 <!-- MEDIA PANELS -->

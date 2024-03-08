@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import CloseIcon from "$lib/icon/CloseIcon.svelte";
   import IconButton from "../IconButton.svelte";
   import ScalarSetting from "./ScalarSetting.svelte";
 
@@ -157,12 +156,11 @@
       Edit {automation.type} automation
     </h4>
     <IconButton
+      name="Close"
       showOutline
       alt="Close"
       on:click={() => (isAutomationVisible = false)}
-    >
-      <CloseIcon />
-    </IconButton>
+    />
   </header>
   <main class="grid grid-cols-[2rem,1fr,1fr] gap-1">
     <!-- Duration & Automation -->
