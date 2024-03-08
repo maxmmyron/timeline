@@ -40,8 +40,12 @@ body {
   p,
   button,
   input {
-    color: theme("colors.zinc.800");
+    color: theme("colors.zinc.700");
     font-size: theme("fontSize.xs");
+  }
+
+  hr {
+    border-color: theme("colors.zinc.200");
   }
 
   @media (prefers-color-scheme: dark) {
@@ -57,7 +61,11 @@ body {
     p,
     button,
     input {
-      color: theme("colors.zinc.300");
+      color: theme("colors.zinc.400");
     }
+  }
+
+  hr {
+    border-color: theme("colors.zinc.800");
   }
 }

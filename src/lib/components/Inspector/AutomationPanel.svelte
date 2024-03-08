@@ -292,10 +292,10 @@
 
     <!-- Timings -->
     <div class="col-start-2 col-span-2 row-start-3 flex justify-between">
-      <p class="text-zinc-600 dark:text-zinc-500">
+      <p>
         {(0 + automation.offset).toFixed(2)}s
       </p>
-      <p class="text-zinc-600 dark:text-zinc-500">
+      <p>
         {(automation.duration + automation.offset).toFixed(2)}s
       </p>
     </div>

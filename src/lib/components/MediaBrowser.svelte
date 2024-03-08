@@ -42,6 +42,7 @@
       icon="import"
     />
   </label>
+  <hr />
 
   {#if $uploaded.length === 0}
     <p>No media uploaded</p>

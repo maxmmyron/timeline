@@ -174,10 +174,14 @@
 <Region
   class="flex justify-between items-center row-start-1 col-start-2 col-span-full"
 >
-  <button
-    class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
-    on:click={() => ($showPreferences = true)}>Preferences</button
-  >
+  <div class="flex gap-4">
+    <button class="cursor-not-allowed">
+      <p class="text-zinc-500 dark:text-zinc-600">File</p>
+    </button>
+    <button on:click={() => ($showPreferences = true)}>
+      <p class="text-zinc-500 dark:text-zinc-600">Preferences</p>
+    </button>
+  </div>
   <div class="flex items-center gap-2">
     {#if $exportStatus !== "export" && $exportStatus !== "setup"}
       <div class="h-1 w-24 rounded-full"></div>
@@ -192,11 +196,10 @@
       </div>
     {/if}
     <button
-      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex flex-col items-center justify-center border border-zinc-700 disabled:brightness-50 disabled:cursor-not-allowed disabled:shadow-none"
       on:click={exportVideo}
       disabled={$exportStatus !== "idle" && $exportStatus !== "done"}
     >
-      <p>Export</p>
+      <p class="text-zinc-500 dark:text-zinc-600">Export</p>
     </button>
   </div>
 </Region>
@@ -229,7 +232,7 @@
       <Inspector uuid={$selected[0]} type={$selected[1]} />
     {:else}
       <Region class="h-full">
-        <p class="text-zinc-400">No clip selected</p>
+        <p>No clip selected</p>
       </Region>
     {/if}
   {/if}

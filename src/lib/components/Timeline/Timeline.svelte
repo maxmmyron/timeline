@@ -78,17 +78,19 @@
 >
   <!-- TIMELINE TRACKS -->
   <aside class="h-full bg-white dark:bg-zinc-950 w-40 flex-shrink-0 z-20">
-    <div class="bg-zinc-900 border-b border-r border-zinc-950 w-full h-9"></div>
+    <div
+      class="bg-zinc-200 dark:bg-zinc-900 border-b border-r border-zinc-100 dark:border-zinc-950 w-full h-9"
+    ></div>
     <!-- TODO: replace with bespoke video/audio tracks -->
     <div
-      class="bg-zinc-900 border-b border-r border-zinc-950 w-full h-10 px-3 flex items-center justify-end"
+      class="bg-zinc-200 dark:bg-zinc-900 border-b border-r border-zinc-100 dark:border-zinc-950 w-full h-10 px-3 flex items-center justify-end"
     >
-      <p class="text-zinc-500">Video Track 1</p>
+      <p>Video Track 1</p>
     </div>
     <div
-      class="bg-zinc-900 border-b border-r border-zinc-950 w-full h-10 px-3 flex items-center justify-end"
+      class="bg-zinc-200 dark:bg-zinc-900 border-b border-r border-zinc-100 dark:border-zinc-950 w-full h-10 px-3 flex items-center justify-end"
     >
-      <p class="text-zinc-500">Audio Track 1</p>
+      <p>Audio Track 1</p>
     </div>
   </aside>
 
@@ -116,22 +118,26 @@
             style:left="-{offset}px"
           >
             <div class="flex h-5">
-              <div class="relative w-full border-l border-zinc-900 h-screen" />
               <div
-                class="relative w-full border-l border-zinc-900 h-2.5 top-2.5"
+                class="relative w-full border-l border-zinc-300 dark:border-zinc-900 h-screen"
               />
               <div
-                class="relative w-full border-l border-zinc-900 h-2.5 top-2.5"
-              />
-              <div class="relative w-full border-l border-zinc-900 h-4 top-1" />
-              <div
-                class="relative w-full border-l border-zinc-900 h-2.5 top-2.5"
+                class="relative w-full border-l border-zinc-300 dark:border-zinc-900 h-2.5 top-2.5"
               />
               <div
-                class="relative w-full border-l border-zinc-900 h-2.5 top-2.5"
+                class="relative w-full border-l border-zinc-300 dark:border-zinc-900 h-2.5 top-2.5"
+              />
+              <div
+                class="relative w-full border-l border-zinc-300 dark:border-zinc-900 h-4 top-1"
+              />
+              <div
+                class="relative w-full border-l border-zinc-300 dark:border-zinc-900 h-2.5 top-2.5"
+              />
+              <div
+                class="relative w-full border-l border-zinc-300 dark:border-zinc-900 h-2.5 top-2.5"
               />
             </div>
-            <div class="w-full pl-1 text-zinc-500">
+            <div class="w-full pl-1 text-zinc-500 dark:text-zinc-600">
               <Runtime {time} />
             </div>
           </div>
