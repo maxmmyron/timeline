@@ -176,10 +176,10 @@
 >
   <div class="flex gap-4">
     <button class="cursor-not-allowed">
-      <p class="text-zinc-500 dark:text-zinc-600">File</p>
+      <p>File</p>
     </button>
     <button on:click={() => ($showPreferences = true)}>
-      <p class="text-zinc-500 dark:text-zinc-600">Preferences</p>
+      <p>Preferences</p>
     </button>
   </div>
   <div class="flex items-center gap-2">
@@ -199,7 +199,7 @@
       on:click={exportVideo}
       disabled={$exportStatus !== "idle" && $exportStatus !== "done"}
     >
-      <p class="text-zinc-500 dark:text-zinc-600">Export</p>
+      <p>Export</p>
     </button>
   </div>
 </Region>
