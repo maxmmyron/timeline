@@ -22,7 +22,7 @@
 </script>
 
 <Region
-  class="flex flex-col gap-1 row-start-1 h-full"
+  class="flex flex-col gap-1 row-start-1 h-full border-none !bg-transparent"
   on:drop={(e) => e.dataTransfer?.files && upload(e.dataTransfer.files)}
 >
   <label for="upload">

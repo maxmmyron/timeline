@@ -204,38 +204,41 @@
   </div>
 </Region>
 
-<!-- MEDIA PANEL RIBBON -->
-<Region
-  class="row-start-2 col-start-1 flex gap-2 flex-col justify-start items-center"
+<div
+  class="row-start-2 col-start-1 col-span-2 grid grid-cols-subgrid gap-0 border rounded-xl border-zinc-200 dark:border-zinc-800"
 >
-  <IconButton
-    alt="Show medial pool"
-    toggled={$visiblePanel === "media"}
-    on:click={() => ($visiblePanel = "media")}
-    name="MediaPool"
-  />
-  <IconButton
-    name="ClipInspector"
-    alt="Show Inspector panel"
-    toggled={$visiblePanel === "inspector"}
-    on:click={() => ($visiblePanel = "inspector")}
-  />
-</Region>
+  <Region
+    class="col-start-1 flex gap-2 flex-col justify-start items-center border-none mr-1"
+  >
+    <IconButton
+      alt="Show medial pool"
+      toggled={$visiblePanel === "media"}
+      on:click={() => ($visiblePanel = "media")}
+      name="MediaPool"
+    />
+    <IconButton
+      name="ClipInspector"
+      alt="Show Inspector panel"
+      toggled={$visiblePanel === "inspector"}
+      on:click={() => ($visiblePanel = "inspector")}
+    />
+  </Region>
 
-<!-- MEDIA PANELS -->
-<div class="relative row-start-2 col-start-2 h-full overflow-scroll">
-  {#if $visiblePanel === "media"}
-    <MediaBrowser />
-  {/if}
-  {#if $visiblePanel === "inspector"}
-    {#if $selected}
-      <Inspector uuid={$selected[0]} type={$selected[1]} />
-    {:else}
-      <Region class="h-full">
-        <p>No clip selected</p>
-      </Region>
+  <!-- MEDIA PANELS -->
+  <div class="relative col-start-2 h-full overflow-scroll">
+    {#if $visiblePanel === "media"}
+      <MediaBrowser />
     {/if}
-  {/if}
+    {#if $visiblePanel === "inspector"}
+      {#if $selected}
+        <Inspector uuid={$selected[0]} type={$selected[1]} />
+      {:else}
+        <Region class="h-full border-none !bg-transparent">
+          <p>No clip selected</p>
+        </Region>
+      {/if}
+    {/if}
+  </div>
 </div>
 
 <!-- PLAYER -->

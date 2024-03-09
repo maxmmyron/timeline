@@ -45,7 +45,9 @@
   let visibleMatrixAutomation = [false, false, false, false, false, false];
 </script>
 
-<Region class="row-start-2 overflow-scroll [scrollbar-width:thin] h-full">
+<Region
+  class="row-start-2 overflow-scroll [scrollbar-width:thin] h-full border-none !bg-transparent"
+>
   <header
     class="flex justify-between pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 flex-wrap"
   >
