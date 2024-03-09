@@ -208,7 +208,7 @@
   class="row-start-2 col-start-1 col-span-2 grid grid-cols-subgrid gap-0 border rounded-xl border-zinc-200 dark:border-zinc-800"
 >
   <Region
-    class="col-start-1 flex gap-2 flex-col justify-start items-center border-none mr-1"
+    class="col-start-1 flex gap-2 flex-col justify-start items-center border-l-0 border-t-0 border-b-0 mr-1"
   >
     <IconButton
       alt="Show medial pool"
