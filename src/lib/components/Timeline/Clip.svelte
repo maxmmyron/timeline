@@ -329,7 +329,7 @@
 />
 
 <button
-  class="absolute h-12 border border-zinc-800 rounded-md bg-zinc-300 min-w-2 shadow-md dark:bg-zinc-800"
+  class="absolute h-9 border border-zinc-800 rounded-md bg-zinc-300 min-w-2 shadow-md dark:bg-zinc-800"
   class:cursor-text={$pointerMode === "slice"}
   class:bg-zinc-400={selectedUUID === clip.uuid}
   class:dark:bg-zinc-900={selectedUUID === clip.uuid}
@@ -371,25 +371,29 @@
   on:click
 >
   <button
-    class="w-[6px] absolute h-full border-none rounded-l-md cursor-ew-resize bg-zinc-900 left-0 top-0"
+    class="w-[6px] absolute h-full border-none rounded-l-md cursor-ew-resize bg-zinc-400 dark:bg-zinc-900 left-0 top-0 flex items-center justify-center"
+    class:bg-zinc-500={selectedUUID === clip.uuid}
     class:dark:bg-zinc-950={selectedUUID === clip.uuid}
     class:rounded-bl-none={coverCount > 0}
     on:mousedown|capture|stopPropagation={(e) => {
       resizeMode = "left";
       setInitialValues(e.clientX);
     }}
-  ></button>
+  >
+    <div class="h-3/5 w-[1px] bg-zinc-300 dark:bg-zinc-800" />
+  </button>
   <main class="w-full overflow-hidden select-none">
     <p>{clip.media.title}</p>
   </main>
   <button
-    class="w-[6px] absolute h-full border-none rounded-r-md cursor-ew-resize bg-zinc-900 right-0 top-0"
+    class="w-[6px] absolute h-full border-none rounded-r-md cursor-ew-resize bg-zinc-400 dark:bg-zinc-900 right-0 top-0 flex items-center justify-center"
+    class:bg-zinc-500={selectedUUID === clip.uuid}
     class:dark:bg-zinc-950={selectedUUID === clip.uuid}
     on:mousedown|capture|stopPropagation={(e) => {
       resizeMode = "right";
       setInitialValues(e.clientX);
-    }}
-  ></button>
+    }}><div class="h-3/5 w-[1px] bg-zinc-300 dark:bg-zinc-800" /></button
+  >
   {#if coverCount > 0}
     <div
       style:height="{coverCount * 0.5}rem"
