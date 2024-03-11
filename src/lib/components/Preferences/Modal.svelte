@@ -27,7 +27,7 @@
         Close
       </button>
     </header>
-    <hr class="border-zinc-300 dark:border-zinc-800" />
+    <hr />
     <slot />
   </main>
 </dialog>

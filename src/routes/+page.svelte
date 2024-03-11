@@ -15,15 +15,17 @@
     aRefs,
     aCtx,
     showPreferences,
+    visiblePanel,
   } from "$lib/stores";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
-  import { frame, getCurrentClips, updateScrubberAndScroll } from "$lib/utils";
+  import { frame, getCurrentClips } from "$lib/utils";
   import MediaBrowser from "$lib/components/MediaBrowser.svelte";
   import TimelineMedia from "$lib/components/TimelineMedia.svelte";
   import Preferences from "$lib/components/Preferences/Preferences.svelte";
+  import IconButton from "$lib/components/IconButton.svelte";
 
   // get the UUIDs of the current audio clips (we return this as a comma-sep
   // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS
@@ -165,13 +167,21 @@
   onMount(() => requestAnimationFrame(frame));
 </script>
 
+<!-- LOGO -->
+<Region class="row-start-1 col-start-1"></Region>
+
+<!-- MENU RIBBON -->
 <Region
-  class="flex justify-between items-center lg:row-start-1 lg:col-start-1 lg:col-span-full"
+  class="flex justify-between items-center row-start-1 col-start-2 col-span-full"
 >
-  <button
-    class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
-    on:click={() => ($showPreferences = true)}>Preferences</button
-  >
+  <div class="flex gap-4">
+    <button class="cursor-not-allowed">
+      <p>File</p>
+    </button>
+    <button on:click={() => ($showPreferences = true)}>
+      <p>Preferences</p>
+    </button>
+  </div>
   <div class="flex items-center gap-2">
     {#if $exportStatus !== "export" && $exportStatus !== "setup"}
       <div class="h-1 w-24 rounded-full"></div>
@@ -186,7 +196,6 @@
       </div>
     {/if}
     <button
-      class="bg-zinc-800 p-1 h-5 rounded-md shadow-md flex flex-col items-center justify-center border border-zinc-700 disabled:brightness-50 disabled:cursor-not-allowed disabled:shadow-none"
       on:click={exportVideo}
       disabled={$exportStatus !== "idle" && $exportStatus !== "done"}
     >
@@ -196,16 +205,43 @@
 </Region>
 
 <div
-  class="relative lg:row-start-2 lg:col-start-1 grid grid-cols-1 grid-rows-2 gap-2 overflow-scroll"
+  class="row-start-2 col-start-1 col-span-2 grid grid-cols-subgrid gap-0 border rounded-xl border-zinc-200 dark:border-zinc-800"
 >
-  <MediaBrowser />
-  {#if $selected}
-    {#key $selected[0]}
-      <Inspector uuid={$selected[0]} type={$selected[1]} />
-    {/key}
-  {/if}
+  <Region
+    class="col-start-1 flex gap-2 flex-col justify-start items-center border-l-0 border-t-0 border-b-0 mr-1"
+  >
+    <IconButton
+      alt="Show medial pool"
+      toggled={$visiblePanel === "media"}
+      on:click={() => ($visiblePanel = "media")}
+      name="MediaPool"
+    />
+    <IconButton
+      name="ClipInspector"
+      alt="Show Inspector panel"
+      toggled={$visiblePanel === "inspector"}
+      on:click={() => ($visiblePanel = "inspector")}
+    />
+  </Region>
+
+  <!-- MEDIA PANELS -->
+  <div class="relative col-start-2 h-full overflow-scroll">
+    {#if $visiblePanel === "media"}
+      <MediaBrowser />
+    {/if}
+    {#if $visiblePanel === "inspector"}
+      {#if $selected}
+        <Inspector uuid={$selected[0]} type={$selected[1]} />
+      {:else}
+        <Region class="h-full border-none !bg-transparent">
+          <p>No clip selected</p>
+        </Region>
+      {/if}
+    {/if}
+  </div>
 </div>
 
+<!-- PLAYER -->
 <div
   class="overflow-hidden flex items-center justify-center w-full h-full gap-2"
   bind:clientHeight={containerHeight}
@@ -225,20 +261,26 @@
   </div>
 </div>
 
-<TimelineRibbon />
+<!-- TIMELINE RIBBON -->
+<Region class="row-start-3 col-start-1"></Region>
 
-<!-- Update the currentTime property of the current video playing when either
+<!-- TIMELINE -->
+<div class="relative col-start-2 row-start-3 col-span-full flex flex-col">
+  <TimelineRibbon />
+
+  <!-- Update the currentTime property of the current video playing when either
   the scrubber moves, or the current video's offset is changed (via drag) -->
-<Timeline
-  on:scrubberMove={() => {
-    resetPlayback("video", videoUUIDs);
-    resetPlayback("audio", audioUUIDs);
-  }}
-  on:clipMove={(e) => {
-    if (e.detail.type === "video" || e.detail.type === "image")
-      resetClipPlayback($vRefs, currVideo, e.detail.uuid);
-    else resetClipPlayback($aRefs, currAudio, e.detail.uuid);
-  }}
-/>
+  <Timeline
+    on:scrubberMove={() => {
+      resetPlayback("video", videoUUIDs);
+      resetPlayback("audio", audioUUIDs);
+    }}
+    on:clipMove={(e) => {
+      if (e.detail.type === "video" || e.detail.type === "image")
+        resetClipPlayback($vRefs, currVideo, e.detail.uuid);
+      else resetClipPlayback($aRefs, currAudio, e.detail.uuid);
+    }}
+  />
+</div>
 
 <Preferences />

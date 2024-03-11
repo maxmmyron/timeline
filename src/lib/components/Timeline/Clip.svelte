@@ -7,15 +7,17 @@
     scroll,
     audioClips,
     scale,
+    pointerMode,
+    visiblePanel,
   } from "$lib/stores";
-  import { getClipDuration, getClipEndPos } from "$lib/utils";
-  import { createEventDispatcher } from "svelte";
+  import { createClip, getClipDuration, getClipEndPos } from "$lib/utils";
+  import { createEventDispatcher, onMount } from "svelte";
 
   type ResizeMode = "left" | "right";
 
   export let clip: App.Clip;
   // this is set to 9 as a dirty default
-  export let timelineOffset = 9;
+  export let timelineOffset: number;
 
   $: selectedUUID = $selected ? $selected[0] : null;
 
@@ -198,11 +200,15 @@
     const { start, end, duration } = initial;
     const dur = clip.media.duration - edge - (mode === "left" ? end : start);
 
-    if (mode === "left" && Math.abs(offset - $time) < threshold)
+    if (mode === "left" && Math.abs(offset - $time) < threshold) {
+      console.log("snap left", offset, start + $time - initial.offset);
       return [$time, start + $time - initial.offset];
-    else if (Math.abs(offset + dur - $time) < threshold)
+    } else if (Math.abs(offset + dur - $time) < threshold) {
+      console.log("snap right", offset, end + $time - initial.offset);
       return [offset, offset + (duration - start - end) - $time];
+    }
 
+    console.log("no snap", offset, edge);
     return [offset, edge];
   };
 
@@ -265,6 +271,50 @@
     initial.duration = clip.media.duration;
     initial.x = x;
   };
+
+  const slice = (splitTime: number) => {
+    let clips = clip.media.type === "audio" ? $audioClips : $videoClips;
+
+    // if the time is outside the clip, do nothing
+    // if (
+    //   splitTime < clip.offset ||
+    //   splitTime > clip.offset + clip.media.duration
+    // )
+    //   return;
+
+    let splitOffset = splitTime - clip.offset;
+    let clipDuration = clip.media.duration - clip.start - clip.end;
+
+    const leftClip = createClip(
+      { ...clip.media },
+      {
+        offset: clip.offset,
+        start: clip.start,
+        end: clip.end + (clipDuration - splitOffset),
+        matrix: [...clip.matrix],
+      }
+    );
+
+    const rightClip = createClip(
+      { ...clip.media },
+      {
+        offset: clip.offset + splitOffset,
+        start: clip.start + splitOffset,
+        end: clip.end,
+        matrix: [...clip.matrix],
+      }
+    );
+
+    clips = [...clips, leftClip, rightClip];
+    const oldUUID = clip.uuid;
+    // deselect just in case
+    $selected = null;
+    clips = clips.filter((c) => c.uuid !== oldUUID);
+
+    // update stores to reflect changes
+    if (clip.media.type !== "audio") $videoClips = clips;
+    else $audioClips = clips;
+  };
 </script>
 
 <svelte:window
@@ -279,7 +329,8 @@
 />
 
 <button
-  class="absolute h-12 border border-zinc-800 rounded-md bg-zinc-300 min-w-2 shadow-md dark:bg-zinc-800"
+  class="absolute h-9 border border-zinc-800 rounded-md bg-zinc-300 min-w-2 shadow-md dark:bg-zinc-800"
+  class:cursor-text={$pointerMode === "slice"}
   class:bg-zinc-400={selectedUUID === clip.uuid}
   class:dark:bg-zinc-900={selectedUUID === clip.uuid}
   class:shadow-lg={selectedUUID === clip.uuid}
@@ -289,6 +340,11 @@
   style:z-index={clip.z}
   bind:this={clipEl}
   on:mousedown|stopPropagation={(e) => {
+    if ($pointerMode === "slice") {
+      slice((e.clientX - timelineOffset + $scroll) / $scaleFactor);
+      $pointerMode = "select";
+      return;
+    }
     canMoveClip = true;
     if (clip.media.type === "audio")
       clip.z = $audioClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1;
@@ -302,6 +358,7 @@
   }}
   on:click|stopPropagation={() => {
     $selected = [clip.uuid, clip.media.type];
+    $visiblePanel = "inspector";
   }}
   on:keydown|stopPropagation={(e) => {
     if (e.key === "Delete" && selectedUUID === clip.uuid) {
@@ -314,25 +371,29 @@
   on:click
 >
   <button
-    class="w-[6px] absolute h-full border-none rounded-l-md cursor-ew-resize bg-zinc-900 left-0 top-0"
+    class="w-[6px] absolute h-full border-none rounded-l-md cursor-ew-resize bg-zinc-400 dark:bg-zinc-900 left-0 top-0 flex items-center justify-center"
+    class:bg-zinc-500={selectedUUID === clip.uuid}
     class:dark:bg-zinc-950={selectedUUID === clip.uuid}
     class:rounded-bl-none={coverCount > 0}
     on:mousedown|capture|stopPropagation={(e) => {
       resizeMode = "left";
       setInitialValues(e.clientX);
     }}
-  ></button>
+  >
+    <div class="h-3/5 w-[1px] bg-zinc-300 dark:bg-zinc-800" />
+  </button>
   <main class="w-full overflow-hidden select-none">
     <p>{clip.media.title}</p>
   </main>
   <button
-    class="w-[6px] absolute h-full border-none rounded-r-md cursor-ew-resize bg-zinc-900 right-0 top-0"
+    class="w-[6px] absolute h-full border-none rounded-r-md cursor-ew-resize bg-zinc-400 dark:bg-zinc-900 right-0 top-0 flex items-center justify-center"
+    class:bg-zinc-500={selectedUUID === clip.uuid}
     class:dark:bg-zinc-950={selectedUUID === clip.uuid}
     on:mousedown|capture|stopPropagation={(e) => {
       resizeMode = "right";
       setInitialValues(e.clientX);
-    }}
-  ></button>
+    }}><div class="h-3/5 w-[1px] bg-zinc-300 dark:bg-zinc-800" /></button
+  >
   {#if coverCount > 0}
     <div
       style:height="{coverCount * 0.5}rem"

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import IconButton from "$lib/components/IconButton.svelte";
-  import AutomationIcon from "$lib/icon/AutomationIcon.svelte";
   import AutomationPanel from "./AutomationPanel.svelte";
 
   export let name: string | null = "";
@@ -90,12 +89,12 @@
   />
   {#if supportsAutomation && automation}
     <IconButton
+      name="Automation"
       alt="Edit automation"
       toggles
       bind:toggled={isAutomationVisible}
-    >
-      <AutomationIcon />
-    </IconButton>
+      showOutline
+    />
   {/if}
 </label>
 {#if isAutomationVisible && automation}

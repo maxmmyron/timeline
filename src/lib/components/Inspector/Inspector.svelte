@@ -3,15 +3,7 @@
   import { videoClips, audioClips, safeRes } from "$lib/stores";
   import IconButton from "../IconButton.svelte";
   import ScalarSetting from "./ScalarSetting.svelte";
-  import ResetIcon from "$lib/icon/Reset.svelte";
-  import TopOrigin from "$lib/icon/TopOrigin.svelte";
-  import LeftOrigin from "$lib/icon/LeftOrigin.svelte";
-  import CenterOrigin from "$lib/icon/CenterOrigin.svelte";
-  import RightOrigin from "$lib/icon/RightOrigin.svelte";
-  import BottomOrigin from "$lib/icon/BottomOrigin.svelte";
   import TransformButton from "./TransformButton.svelte";
-  import UnlinkIcon from "$lib/icon/UnlinkIcon.svelte";
-  import LinkIcon from "$lib/icon/LinkIcon.svelte";
 
   export let uuid: string;
   export let type: App.MediaType;
@@ -53,14 +45,16 @@
   let visibleMatrixAutomation = [false, false, false, false, false, false];
 </script>
 
-<Region class="row-start-2 overflow-scroll [scrollbar-width:thin]">
+<Region
+  class="row-start-2 overflow-scroll [scrollbar-width:thin] h-full border-none !bg-transparent"
+>
   <header
     class="flex justify-between pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 flex-wrap"
   >
     <p>{clip.media.title}</p>
     <p>{clip.media.duration.toPrecision(3)}s</p>
     <p>{clip.media.dimensions[0]}px x {clip.media.dimensions[1]}px</p>
-    <p class="text-zinc-500">{clip.uuid}</p>
+    <p class="text-zinc-600 dark:text-zinc-500">{clip.uuid}</p>
   </header>
 
   {#if type === "video" || type === "image"}
@@ -71,6 +65,8 @@
         <div class="flex justify-between">
           <h2 class="text-sm font-mono">Positioning</h2>
           <IconButton
+            name="Reset"
+            showOutline
             alt="Reset clip positioning"
             on:click={() => {
               matrix[0].staticVal = matrix[3].staticVal = 1;
@@ -80,9 +76,7 @@
               matrix[4].curves = matrix[5].curves = [];
               origin = [0.5, 0.5];
             }}
-          >
-            <ResetIcon />
-          </IconButton>
+          />
         </div>
       </header>
 
@@ -92,23 +86,13 @@
           class="relative grid grid-cols-3 grid-rows-3 p-0.5 w-16 h-16 rounded-md bg-zinc-100 dark:bg-zinc-800/15"
         >
           <TransformButton bind:origin value={[0, 0]} />
-          <TransformButton bind:origin value={[0.5, 0]}>
-            <TopOrigin />
-          </TransformButton>
+          <TransformButton name="TopOrigin" bind:origin value={[0.5, 0]} />
           <TransformButton bind:origin value={[1, 0]} />
-          <TransformButton bind:origin value={[0, 0.5]}>
-            <LeftOrigin />
-          </TransformButton>
-          <TransformButton bind:origin value={[0.5, 0.5]}>
-            <CenterOrigin />
-          </TransformButton>
-          <TransformButton bind:origin value={[1, 0.5]}>
-            <RightOrigin />
-          </TransformButton>
+          <TransformButton name="LeftOrigin" bind:origin value={[0, 0.5]} />
+          <TransformButton name="CenterOrigin" bind:origin value={[0.5, 0.5]} />
+          <TransformButton name="RightOrigin" bind:origin value={[1, 0.5]} />
           <TransformButton bind:origin value={[0, 1]} />
-          <TransformButton bind:origin value={[0.5, 1]}>
-            <BottomOrigin />
-          </TransformButton>
+          <TransformButton name="BottomOrigin" bind:origin value={[0.5, 1]} />
           <TransformButton bind:origin value={[1, 1]} />
           <div
             class="w-1 h-1 bg-zinc-950/40 dark:bg-zinc-100/40 rounded-sm absolute transform -translate-x-1/2 -translate-y-1/2"
@@ -192,16 +176,12 @@
               : 'border-dashed'} border-zinc-700"
           />
           <IconButton
+            name={isPositionLinked ? "Unlink" : "Link"}
             alt="Link position"
             on:click={() => (isPositionLinked = !isPositionLinked)}
             toggles
-          >
-            {#if isPositionLinked}
-              <UnlinkIcon />
-            {:else}
-              <LinkIcon />
-            {/if}
-          </IconButton>
+            showOutline
+          />
 
           <div
             class="w-1/2 h-2 rounded-br-md border-b border-r {isPositionLinked
@@ -266,16 +246,12 @@
               : 'border-dashed'} border-zinc-700"
           />
           <IconButton
+            name={isScaleLinked ? "Unlink" : "Link"}
             alt="Link position"
             on:click={() => (isScaleLinked = !isScaleLinked)}
             toggles
-          >
-            {#if isScaleLinked}
-              <UnlinkIcon />
-            {:else}
-              <LinkIcon />
-            {/if}
-          </IconButton>
+            showOutline
+          />
           <div
             class="w-1/2 h-2 rounded-br-md border-b border-r {isScaleLinked
               ? 'border-solid'
@@ -293,15 +269,15 @@
         <div class="flex justify-between">
           <h2 class="text-sm font-mono">Audio</h2>
           <IconButton
+            name="Reset"
+            showOutline
             alt="Reset audio settings"
             on:click={() => {
               volume.staticVal = 1;
               volume.curves = [];
               isVolumeAutomationVisible = false;
             }}
-          >
-            <ResetIcon />
-          </IconButton>
+          ></IconButton>
         </div>
       </header>
 
