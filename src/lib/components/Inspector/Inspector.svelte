@@ -49,201 +49,228 @@
   class="row-start-2 overflow-scroll [scrollbar-width:thin] h-full border-none !bg-transparent"
 >
   <header
-    class="flex justify-between pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 flex-wrap"
+    class="flex justify-between pb-4 mb-3 border-b border-zinc-300 dark:border-zinc-800 flex-wrap"
   >
-    <p>{clip.media.title}</p>
-    <p>{clip.media.duration.toPrecision(3)}s</p>
-    <p>{clip.media.dimensions[0]}px x {clip.media.dimensions[1]}px</p>
-    <p class="text-zinc-600 dark:text-zinc-500">{clip.uuid}</p>
+    <h2 class="text-zinc-300 overflow-clip text-ellipsis">
+      {clip.media.title}
+    </h2>
   </header>
 
+  <section class="pb-4 mb-3 border-b border-zinc-800 space-y-3">
+    <h3 class="text-zinc-400">Info</h3>
+    <div class="grid grid-cols-3 gap-y-3">
+      <p class="text-zinc-500">length</p>
+      <p class="col-span-2">{clip.media.duration.toPrecision(3)}s</p>
+      <p class="text-zinc-500">dimensions</p>
+      <p class="col-span-2">
+        {clip.media.dimensions[0]}px x {clip.media.dimensions[1]}px
+      </p>
+      <p class="text-zinc-500">clip uuid</p>
+      <p class="col-span-2">{clip.uuid}</p>
+    </div>
+  </section>
+
   {#if type === "video" || type === "image"}
-    <section
-      class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 w-full"
-    >
-      <header class="col-start-1 grid grid-cols-subgrid">
-        <div class="flex justify-between">
-          <h2 class="text-sm font-mono">Positioning</h2>
-          <IconButton
-            name="Reset"
-            showOutline
-            alt="Reset clip positioning"
-            on:click={() => {
-              matrix[0].staticVal = matrix[3].staticVal = 1;
-              matrix[4].staticVal = matrix[5].staticVal = 0;
-              matrix[1] = matrix[2] = 0;
-              matrix[0].curves = matrix[3].curves = [];
-              matrix[4].curves = matrix[5].curves = [];
-              origin = [0.5, 0.5];
+    <section class="pb-4 mb-3 border-b border-zinc-800 w-full space-y-3">
+      <h3 class="text-zinc-400">Transforms</h3>
+      <!-- <header class="col-start-1 grid grid-cols-subgrid">
+        <IconButton
+          name="Reset"
+          showOutline
+          alt="Reset clip positioning"
+          on:click={() => {
+            matrix[0].staticVal = matrix[3].staticVal = 1;
+            matrix[4].staticVal = matrix[5].staticVal = 0;
+            matrix[1] = matrix[2] = 0;
+            matrix[0].curves = matrix[3].curves = [];
+            matrix[4].curves = matrix[5].curves = [];
+            origin = [0.5, 0.5];
+          }}
+        />
+      </header> -->
+
+      <div class="grid grid-cols-5 gap-x-3">
+        <h3 class="text-zinc-500">origin</h3>
+        <div class="flex gap-3 w-full col-span-4">
+          <div
+            class="relative grid grid-cols-3 grid-rows-3 p-0.5 w-16 h-16 rounded-md bg-zinc-100 bg-zinc-925"
+          >
+            <TransformButton bind:origin value={[0, 0]} />
+            <TransformButton name="TopOrigin" bind:origin value={[0.5, 0]} />
+            <TransformButton bind:origin value={[1, 0]} />
+            <TransformButton name="LeftOrigin" bind:origin value={[0, 0.5]} />
+            <TransformButton
+              name="CenterOrigin"
+              bind:origin
+              value={[0.5, 0.5]}
+            />
+            <TransformButton name="RightOrigin" bind:origin value={[1, 0.5]} />
+            <TransformButton bind:origin value={[0, 1]} />
+            <TransformButton name="BottomOrigin" bind:origin value={[0.5, 1]} />
+            <TransformButton bind:origin value={[1, 1]} />
+            <div
+              class="w-1 h-1 bg-zinc-950/40 dark:bg-zinc-100/40 rounded-sm absolute transform -translate-x-1/2 -translate-y-1/2"
+              style:top="{12 + origin[1] * 40}px"
+              style:left="{12 + origin[0] * 40}px"
+            />
+          </div>
+          <div class="grid grid-cols-[min-content,1fr] gap-x-2 gap-y-3 h-full">
+            <ScalarSetting
+              useSubgrid
+              class="col-start-1"
+              name="Left"
+              bind:scalar={origin[0]}
+              props={{ min: 0, max: 1, step: 0.01 }}
+              defaultVal={0.5}
+            />
+            <ScalarSetting
+              useSubgrid
+              class="col-start-1"
+              name="Top"
+              bind:scalar={origin[1]}
+              props={{ min: 0, max: 1, step: 0.01 }}
+              defaultVal={0.5}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-5 gap-x-3">
+        <h3 class="text-zinc-500">position</h3>
+        <div class="flex gap-3">
+          <ScalarSetting
+            supportsAutomation
+            class="col-start-1 row-start-1"
+            name="X"
+            bind:scalar={matrix[4].staticVal}
+            on:change={() => {
+              if (
+                !isPositionLinked ||
+                matrix[4].curves.length !== 0 ||
+                matrix[5].curves.length !== 0
+              )
+                return;
+              matrix[5].staticVal = matrix[4].staticVal;
+            }}
+            bind:automation={matrix[4]}
+            mag={1}
+            automationClass="row-start-3 col-start-1 col-span-4"
+            dynamicBounds
+            bind:isAutomationVisible={visibleMatrixAutomation[4]}
+            on:automationEditorOpen={(e) => {
+              visibleMatrixAutomation = [
+                false,
+                false,
+                false,
+                false,
+                true,
+                false,
+              ];
             }}
           />
-        </div>
-      </header>
-
-      <section class="w-full col-start-1 flex flex-wrap gap-2 pb-2 mb-2">
-        <h3 class="w-full">Transform Origin</h3>
-        <div
-          class="relative grid grid-cols-3 grid-rows-3 p-0.5 w-16 h-16 rounded-md bg-zinc-100 dark:bg-zinc-800/15"
-        >
-          <TransformButton bind:origin value={[0, 0]} />
-          <TransformButton name="TopOrigin" bind:origin value={[0.5, 0]} />
-          <TransformButton bind:origin value={[1, 0]} />
-          <TransformButton name="LeftOrigin" bind:origin value={[0, 0.5]} />
-          <TransformButton name="CenterOrigin" bind:origin value={[0.5, 0.5]} />
-          <TransformButton name="RightOrigin" bind:origin value={[1, 0.5]} />
-          <TransformButton bind:origin value={[0, 1]} />
-          <TransformButton name="BottomOrigin" bind:origin value={[0.5, 1]} />
-          <TransformButton bind:origin value={[1, 1]} />
-          <div
-            class="w-1 h-1 bg-zinc-950/40 dark:bg-zinc-100/40 rounded-sm absolute transform -translate-x-1/2 -translate-y-1/2"
-            style:top="{12 + origin[1] * 40}px"
-            style:left="{12 + origin[0] * 40}px"
-          />
-        </div>
-        <div class="grid grid-cols-[min-content,1fr] gap-2 h-fit">
           <ScalarSetting
-            useSubgrid
-            class="col-start-1"
-            name="Left"
-            bind:scalar={origin[0]}
-            props={{ min: 0, max: 1, step: 0.01 }}
-            defaultVal={0.5}
-          />
-          <ScalarSetting
-            useSubgrid
-            class="col-start-1"
-            name="Top"
-            bind:scalar={origin[1]}
-            props={{ min: 0, max: 1, step: 0.01 }}
-            defaultVal={0.5}
-          />
-        </div>
-      </section>
-
-      <div class="col-start-1 grid grid-cols-[1fr,32px,1fr,32px] gap-2">
-        <ScalarSetting
-          supportsAutomation
-          class="col-start-1 row-start-1"
-          name="X"
-          bind:scalar={matrix[4].staticVal}
-          on:change={() => {
-            if (
-              !isPositionLinked ||
-              matrix[4].curves.length !== 0 ||
-              matrix[5].curves.length !== 0
-            )
-              return;
-            matrix[5].staticVal = matrix[4].staticVal;
-          }}
-          bind:automation={matrix[4]}
-          mag={1}
-          automationClass="row-start-3 col-start-1 col-span-4"
-          dynamicBounds
-          bind:isAutomationVisible={visibleMatrixAutomation[4]}
-          on:automationEditorOpen={(e) => {
-            visibleMatrixAutomation = [false, false, false, false, true, false];
-          }}
-        />
-        <ScalarSetting
-          supportsAutomation
-          name="Y"
-          class="col-start-1 row-start-2"
-          bind:scalar={matrix[5].staticVal}
-          on:change={() => {
-            if (
-              !isPositionLinked ||
-              matrix[4].curves.length !== 0 ||
-              matrix[5].curves.length !== 0
-            )
-              return;
-            matrix[4].staticVal = matrix[5].staticVal;
-          }}
-          bind:automation={matrix[5]}
-          mag={1}
-          automationClass="row-start-3 col-start-1 col-span-4"
-          dynamicBounds
-          bind:isAutomationVisible={visibleMatrixAutomation[5]}
-          on:automationEditorOpen={(e) => {
-            visibleMatrixAutomation = [false, false, false, false, false, true];
-          }}
-        />
-        <div
-          class="col-start-2 row-start-1 row-span-2 flex flex-col justify-center gap-1"
-        >
-          <div
-            class="w-1/2 h-2 rounded-tr-md border-t border-r {isPositionLinked
-              ? 'border-solid'
-              : 'border-dashed'} border-zinc-700"
+            supportsAutomation
+            name="Y"
+            class="col-start-1 row-start-2"
+            bind:scalar={matrix[5].staticVal}
+            on:change={() => {
+              if (
+                !isPositionLinked ||
+                matrix[4].curves.length !== 0 ||
+                matrix[5].curves.length !== 0
+              )
+                return;
+              matrix[4].staticVal = matrix[5].staticVal;
+            }}
+            bind:automation={matrix[5]}
+            mag={1}
+            automationClass="row-start-3 col-start-1 col-span-4"
+            dynamicBounds
+            bind:isAutomationVisible={visibleMatrixAutomation[5]}
+            on:automationEditorOpen={(e) => {
+              visibleMatrixAutomation = [
+                false,
+                false,
+                false,
+                false,
+                false,
+                true,
+              ];
+            }}
           />
           <IconButton
             name={isPositionLinked ? "Unlink" : "Link"}
             alt="Link position"
             on:click={() => (isPositionLinked = !isPositionLinked)}
             toggles
-            showOutline
-          />
-
-          <div
-            class="w-1/2 h-2 rounded-br-md border-b border-r {isPositionLinked
-              ? 'border-solid'
-              : 'border-dashed'} border-zinc-700"
           />
         </div>
-        <ScalarSetting
-          supportsAutomation
-          class="col-start-3 row-start-1"
-          name="W"
-          bind:scalar={matrix[0].staticVal}
-          props={{ min: 0, max: 6, step: 0.01 }}
-          on:change={() => {
-            if (
-              !isScaleLinked ||
-              matrix[0].curves.length !== 0 ||
-              matrix[3].curves.length !== 0
-            )
-              return;
-            matrix[3].staticVal = matrix[0].staticVal;
-          }}
-          bind:automation={matrix[0]}
-          defaultVal={1}
-          automationClass="row-start-3 col-start-1 col-span-4"
-          dynamicBounds
-          bind:isAutomationVisible={visibleMatrixAutomation[0]}
-          on:automationEditorOpen={(e) => {
-            visibleMatrixAutomation = [true, false, false, false, false, false];
-          }}
-        />
-        <ScalarSetting
-          supportsAutomation
-          class="col-start-3 row-start-2"
-          name="H"
-          bind:scalar={matrix[3].staticVal}
-          props={{ min: 0, max: 6, step: 0.01 }}
-          on:change={() => {
-            if (
-              !isScaleLinked ||
-              matrix[0].curves.length !== 0 ||
-              matrix[3].curves.length !== 0
-            )
-              return;
-            matrix[0].staticVal = matrix[3].staticVal;
-          }}
-          bind:automation={matrix[3]}
-          defaultVal={1}
-          automationClass="row-start-3 col-start-1 col-span-4"
-          dynamicBounds
-          bind:isAutomationVisible={visibleMatrixAutomation[3]}
-          on:automationEditorOpen={(e) => {
-            visibleMatrixAutomation = [false, false, false, true, false, false];
-          }}
-        />
-        <div
-          class="col-start-4 row-start-1 row-span-2 flex flex-col justify-center gap-1"
-        >
-          <div
-            class="w-1/2 h-2 rounded-tr-md border-t border-r {isScaleLinked
-              ? 'border-solid'
-              : 'border-dashed'} border-zinc-700"
+      </div>
+
+      <div class="grid grid-cols-5 gap-x-3">
+        <h3 class="text-zinc-500">scale</h3>
+        <div class="flex gap-3">
+          <ScalarSetting
+            supportsAutomation
+            class="col-start-3 row-start-1"
+            name="W"
+            bind:scalar={matrix[0].staticVal}
+            props={{ min: 0, max: 6, step: 0.01 }}
+            on:change={() => {
+              if (
+                !isScaleLinked ||
+                matrix[0].curves.length !== 0 ||
+                matrix[3].curves.length !== 0
+              )
+                return;
+              matrix[3].staticVal = matrix[0].staticVal;
+            }}
+            bind:automation={matrix[0]}
+            defaultVal={1}
+            automationClass="row-start-3 col-start-1 col-span-4"
+            dynamicBounds
+            bind:isAutomationVisible={visibleMatrixAutomation[0]}
+            on:automationEditorOpen={(e) => {
+              visibleMatrixAutomation = [
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+              ];
+            }}
+          />
+          <ScalarSetting
+            supportsAutomation
+            class="col-start-3 row-start-2"
+            name="H"
+            bind:scalar={matrix[3].staticVal}
+            props={{ min: 0, max: 6, step: 0.01 }}
+            on:change={() => {
+              if (
+                !isScaleLinked ||
+                matrix[0].curves.length !== 0 ||
+                matrix[3].curves.length !== 0
+              )
+                return;
+              matrix[0].staticVal = matrix[3].staticVal;
+            }}
+            bind:automation={matrix[3]}
+            defaultVal={1}
+            automationClass="row-start-3 col-start-1 col-span-4"
+            dynamicBounds
+            bind:isAutomationVisible={visibleMatrixAutomation[3]}
+            on:automationEditorOpen={(e) => {
+              visibleMatrixAutomation = [
+                false,
+                false,
+                false,
+                true,
+                false,
+                false,
+              ];
+            }}
           />
           <IconButton
             name={isScaleLinked ? "Unlink" : "Link"}
@@ -251,11 +278,6 @@
             on:click={() => (isScaleLinked = !isScaleLinked)}
             toggles
             showOutline
-          />
-          <div
-            class="w-1/2 h-2 rounded-br-md border-b border-r {isScaleLinked
-              ? 'border-solid'
-              : 'border-dashed'} border-zinc-700"
           />
         </div>
       </div>

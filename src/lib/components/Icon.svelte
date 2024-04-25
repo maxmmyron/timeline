@@ -1,12 +1,6 @@
 <script lang="ts">
   let icons: Record<App.Icon, string> = {
-    Automation: `<path fill-rule="evenodd" clip-rule="evenodd" d="M15.25 3C14.7668 3 14.375 3.39175 14.375 3.875V4.75C14.375 5.23325 14.7668 5.625 15.25 5.625H16.125C16.6082 5.625 17 5.23325 17 4.75V3.875C17 3.39175 16.6082 3 16.125 3H15.25Z" fill="currentColor"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M8.00013 14.3485C6.95945 15.5081 5.64605 16.3437 3.875 16.3437V15.0312C5.16645 15.0312 6.14993 14.445 7.02331 13.4718C7.91787 12.475 8.64686 11.1288 9.42219 9.68887L9.44442 9.6476C10.1938 8.25573 10.9904 6.77642 11.9999 5.65153C13.0406 4.49191 14.3539 3.65625 16.125 3.65625V4.96875C14.8336 4.96875 13.8501 5.55496 12.9767 6.52816C12.0821 7.52495 11.3531 8.87122 10.5778 10.3111L10.5556 10.3524C9.80617 11.7443 9.00965 13.2236 8.00013 14.3485Z" fill="currentColor"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M3.875 14.375C3.39175 14.375 3 14.7668 3 15.25V16.125C3 16.6082 3.39175 17 3.875 17H4.75C5.23325 17 5.625 16.6082 5.625 16.125V15.25C5.625 14.7668 5.23325 14.375 4.75 14.375H3.875Z" fill="currentColor"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M9.20006 15.6875L10.4375 16.9249L11.6749 15.6875L10.4375 14.4501L9.20006 15.6875Z" fill="currentColor"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M8.32506 4.3125L9.5625 5.54994L10.7999 4.3125L9.5625 3.07506L8.32506 4.3125Z" fill="currentColor"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M10 16.125H4.3125V15.25H10V16.125Z" fill="currentColor"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M10 3.875L15.6875 3.875V4.75L10 4.75V3.875Z" fill="currentColor"/>`,
+    Automation: `<path d="M10.8839 4.94454L15.0555 9.11612C15.5436 9.60427 15.5436 10.3957 15.0555 10.8839L10.8839 15.0555C10.3957 15.5436 9.60427 15.5436 9.11612 15.0555L4.94454 10.8839C4.45639 10.3957 4.45639 9.60427 4.94454 9.11612L9.11612 4.94454C9.60427 4.45639 10.3957 4.45639 10.8839 4.94454Z" stroke="currentColor" stroke-width="1.5"/>`,
     BeginningSkip: `<path d="M10.084 2.37404C10.3584 1.96242 11 2.15668 11 2.65139L11 17.3486C11 17.8433 10.3584 18.0376 10.084 17.626L5.3698 10.5547C5.14587 10.2188 5.14587 9.7812 5.3698 9.4453L10.084 2.37404Z" fill="currentColor" stroke="currentColor" stroke-width="1.5"/>
 <rect x="4" y="18" width="2" height="16" rx="0.5" transform="rotate(-180 4 18)" fill="currentColor" stroke="currentColor" stroke-width="1.5"/>
 <path d="M17.084 2.37404C17.3584 1.96242 18 2.15668 18 2.65139L18 17.3486C18 17.8433 17.3584 18.0376 17.084 17.626L12.3698 10.5547C12.1459 10.2188 12.1459 9.7812 12.3698 9.4453L17.084 2.37404Z" fill="currentColor" stroke="currentColor" stroke-width="1.5"/>`,
@@ -101,6 +95,8 @@
   };
 
   export let name: App.Icon;
+
+  export let color: string;
 </script>
 
 <svg
@@ -109,6 +105,7 @@
   viewBox="0 0 20 20"
   fill="none"
   xmlns="http://www.w3.org/2000/svg"
+  class={color}
 >
   {@html icons[name]}
 </svg>

@@ -8,6 +8,8 @@
   export let toggled = false;
 
   export let showOutline: boolean = true;
+
+  export let color: string = "currentColor";
 </script>
 
 <button
@@ -23,5 +25,5 @@
     if (toggles) toggled = !toggled;
   }}
 >
-  <Icon bind:name />
+  <Icon bind:name {color} />
 </button>

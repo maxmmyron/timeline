@@ -51,13 +51,13 @@
 <label
   class="{useSubgrid
     ? 'grid grid-cols-subgrid col-start-1 col-span-full'
-    : 'flex gap-2'} items-center {clazz}"
+    : 'flex gap-1'} items-center {clazz}"
 >
   {#if name}
-    <p class="text-ellipsis">{name}</p>
+    <p class="text-ellipsis text-zinc-400 mr-1">{name}</p>
   {/if}
   <input
-    class="border border-zinc-300 rounded-md dark:bg-zinc-900 dark:border-zinc-800 max-w-[2rem] w-max disabled:opacity-50 disabled:cursor-not-allowed text-center"
+    class="h-6 w-11 px-1 disabled:opacity-50 disabled:cursor-not-allowed text-right rounded-lg bg-zinc-925 text-zinc-500"
     type="number"
     disabled={automation && automation.curves.length > 0}
     {...props}
@@ -93,7 +93,8 @@
       alt="Edit automation"
       toggles
       bind:toggled={isAutomationVisible}
-      showOutline
+      showOutline={false}
+      color="text-zinc-500"
     />
   {/if}
 </label>
@@ -104,3 +105,9 @@
     <AutomationPanel bind:automation bind:isAutomationVisible {dynamicBounds} />
   </div>
 {/if}
+
+<style>
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+  }
+</style>
