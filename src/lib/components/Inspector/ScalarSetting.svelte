@@ -10,7 +10,6 @@
 
   export let useSubgrid: boolean = false;
   export let supportsAutomation: boolean = false;
-  export let dynamicBounds: boolean = false;
 
   /**
    * Whether or not the numerical override input can exceed the bounds defined
@@ -44,8 +43,6 @@
 
   let clazz = "";
   export { clazz as class };
-
-  export let automationClass = "";
 </script>
 
 <label
@@ -98,13 +95,6 @@
     />
   {/if}
 </label>
-{#if isAutomationVisible && automation}
-  <div
-    class="{useSubgrid ? 'col-start-1 col-end-5' : ''} w-full {automationClass}"
-  >
-    <AutomationPanel bind:automation bind:isAutomationVisible {dynamicBounds} />
-  </div>
-{/if}
 
 <style>
   input[type="number"]::-webkit-inner-spin-button {

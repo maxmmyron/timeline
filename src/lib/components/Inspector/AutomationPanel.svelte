@@ -148,9 +148,7 @@
   }}
 />
 
-<section
-  class="space-y-2 pb-2 border-b border-zinc-300 dark:border-zinc-800 border-dashed"
->
+<section class="space-y-2 p-2 bg-zinc-925 my-2 rounded-lg">
   <header class="flex justify-between items-center">
     <h4 class="text-zinc-600 dark:text-zinc-400">
       Edit {automation.type} automation

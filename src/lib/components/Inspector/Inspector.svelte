@@ -4,6 +4,7 @@
   import IconButton from "../IconButton.svelte";
   import ScalarSetting from "./ScalarSetting.svelte";
   import TransformButton from "./TransformButton.svelte";
+  import AutomationPanel from "./AutomationPanel.svelte";
 
   export let uuid: string;
   export let type: App.MediaType;
@@ -154,8 +155,6 @@
             }}
             bind:automation={matrix[4]}
             mag={1}
-            automationClass="row-start-3 col-start-1 col-span-4"
-            dynamicBounds
             bind:isAutomationVisible={visibleMatrixAutomation[4]}
             on:automationEditorOpen={(e) => {
               visibleMatrixAutomation = [
@@ -184,8 +183,6 @@
             }}
             bind:automation={matrix[5]}
             mag={1}
-            automationClass="row-start-3 col-start-1 col-span-4"
-            dynamicBounds
             bind:isAutomationVisible={visibleMatrixAutomation[5]}
             on:automationEditorOpen={(e) => {
               visibleMatrixAutomation = [
@@ -212,7 +209,6 @@
         <div class="flex gap-3">
           <ScalarSetting
             supportsAutomation
-            class="col-start-3 row-start-1"
             name="W"
             bind:scalar={matrix[0].staticVal}
             props={{ min: 0, max: 6, step: 0.01 }}
@@ -227,8 +223,6 @@
             }}
             bind:automation={matrix[0]}
             defaultVal={1}
-            automationClass="row-start-3 col-start-1 col-span-4"
-            dynamicBounds
             bind:isAutomationVisible={visibleMatrixAutomation[0]}
             on:automationEditorOpen={(e) => {
               visibleMatrixAutomation = [
@@ -243,7 +237,6 @@
           />
           <ScalarSetting
             supportsAutomation
-            class="col-start-3 row-start-2"
             name="H"
             bind:scalar={matrix[3].staticVal}
             props={{ min: 0, max: 6, step: 0.01 }}
@@ -258,8 +251,6 @@
             }}
             bind:automation={matrix[3]}
             defaultVal={1}
-            automationClass="row-start-3 col-start-1 col-span-4"
-            dynamicBounds
             bind:isAutomationVisible={visibleMatrixAutomation[3]}
             on:automationEditorOpen={(e) => {
               visibleMatrixAutomation = [
@@ -280,6 +271,34 @@
             showOutline
           />
         </div>
+      </div>
+
+      <div>
+        {#if visibleMatrixAutomation[0]}
+          <AutomationPanel
+            bind:automation={matrix[0]}
+            bind:isAutomationVisible={visibleMatrixAutomation[0]}
+            dynamicBounds
+          />
+        {:else if visibleMatrixAutomation[3]}
+          <AutomationPanel
+            bind:automation={matrix[3]}
+            bind:isAutomationVisible={visibleMatrixAutomation[3]}
+            dynamicBounds
+          />
+        {:else if visibleMatrixAutomation[4]}
+          <AutomationPanel
+            bind:automation={matrix[4]}
+            bind:isAutomationVisible={visibleMatrixAutomation[4]}
+            dynamicBounds
+          />
+        {:else if visibleMatrixAutomation[5]}
+          <AutomationPanel
+            bind:automation={matrix[5]}
+            bind:isAutomationVisible={visibleMatrixAutomation[5]}
+            dynamicBounds
+          />
+        {/if}
       </div>
     </section>
   {/if}
