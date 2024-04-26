@@ -5,6 +5,7 @@
   import ScalarSetting from "./ScalarSetting.svelte";
   import TransformButton from "./TransformButton.svelte";
   import AutomationPanel from "./AutomationPanel.svelte";
+  import StaticRangeSetting from "./StaticRangeSetting.svelte";
 
   export let uuid: string;
   export let type: App.MediaType;
@@ -52,15 +53,17 @@
     | 4
     | 5
     | -1;
+
+  $: automationOpen = currentAutomation !== -1 || isVolumeAutomationVisible;
 </script>
 
 <Region
   class="row-start-2 overflow-scroll [scrollbar-width:thin] h-full border-none !bg-transparent grid grid-rows-[auto,200px]"
 >
   <main
-    class="row-start-1 {currentAutomation === -1
-      ? 'row-span-2'
-      : 'row-span-1'} overflow-scroll"
+    class="row-start-1 {automationOpen
+      ? 'row-span-1'
+      : 'row-span-2'} overflow-scroll"
   >
     <header
       class="flex justify-between pb-4 mb-3 border-b border-zinc-300 dark:border-zinc-800 flex-wrap"
@@ -88,7 +91,7 @@
       <section class="pb-4 mb-3 border-b border-zinc-800 w-full space-y-3">
         <h3 class="text-zinc-400">Transforms</h3>
 
-        <div class="grid grid-cols-5 gap-x-3">
+        <div class="grid grid-cols-5 gap-x-3 items-baseline">
           <h3 class="text-zinc-500">origin</h3>
           <div class="flex gap-3 w-full col-span-4">
             <div
@@ -144,7 +147,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-5 gap-x-3">
+        <div class="grid grid-cols-5 gap-x-3 items-baseline">
           <h3 class="text-zinc-500">position</h3>
           <div class="flex gap-3">
             <ScalarSetting
@@ -212,7 +215,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-5 gap-x-3">
+        <div class="grid grid-cols-5 gap-x-3 items-baseline">
           <h3 class="text-zinc-500">scale</h3>
           <div class="flex gap-3">
             <ScalarSetting
@@ -283,65 +286,49 @@
       </section>
     {/if}
     {#if type !== "image"}
-      <section
-        class="pb-2 mb-2 border-b border-zinc-300 dark:border-zinc-800 space-y-3 w-full"
-      >
-        <header class="col-start-1 grid grid-cols-subgrid">
-          <div class="flex justify-between">
-            <h2 class="text-sm font-mono">Audio</h2>
-            <IconButton
-              name="Reset"
-              showOutline
-              alt="Reset audio settings"
-              on:click={() => {
-                volume.staticVal = 1;
-                volume.curves = [];
-                isVolumeAutomationVisible = false;
-              }}
-            ></IconButton>
-          </div>
-        </header>
+      <div class="pb-4 mb-3 border-b border-zinc-800 w-full space-y-3">
+        <h3 class="text-zinc-400">Audio</h3>
 
-        <section
-          class="col-start-1 grid grid-cols-[min-content,min-content,24px] gap-2 h-fit w-full"
-        >
+        <div class="grid grid-cols-5 gap-x-3 items-baseline">
+          <h3 class="text-zinc-500">Volume</h3>
           <ScalarSetting
-            useSubgrid
             supportsAutomation
-            name="Volume"
             disabled={volume.curves.length > 0}
             bind:scalar={volume.staticVal}
             props={{ min: 0, max: 1, step: 0.01 }}
-            strictBounds
             defaultVal={1}
             bind:automation={volume}
             bind:isAutomationVisible={isVolumeAutomationVisible}
           />
+        </div>
 
-          <ScalarSetting
-            useSubgrid
-            name="Pan"
+        <div class="grid grid-cols-5 gap-x-3 items-baseline">
+          <h3 class="text-zinc-500">Pan</h3>
+          <StaticRangeSetting
+            class="col-span-3"
             bind:scalar={pan}
             props={{ min: -1, max: 1, step: 0.01 }}
-            strictBounds
           />
-        </section>
-      </section>
+        </div>
+      </div>
     {/if}
   </main>
 
-  {#if currentAutomation !== -1}
+  {#if automationOpen}
     <div class="row-start-2 border-t border-zinc-800 pt-2">
-      <h3 class="text-zinc-400">
-        Automation: {matrix[currentAutomation].type}
-      </h3>
-      {#key currentAutomation}
+      {#if currentAutomation !== -1}
+        <h3 class="text-zinc-400">
+          Automation: {matrix[currentAutomation].type}
+        </h3>
         <AutomationPanel
           bind:automation={matrix[currentAutomation]}
-          bind:isAutomationVisible={visibleMatrixAutomation[currentAutomation]}
           dynamicBounds
         />
-      {/key}
+      {/if}
+      {#if isVolumeAutomationVisible}
+        <h3 class="text-zinc-400">Automation: Volume</h3>
+        <AutomationPanel bind:automation={volume} />
+      {/if}
     </div>
   {/if}
 </Region>

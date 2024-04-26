@@ -1,9 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import IconButton from "../IconButton.svelte";
   import ScalarSetting from "./ScalarSetting.svelte";
 
-  export let isAutomationVisible: boolean;
   export let automation: App.Automation;
   export let dynamicBounds: boolean = false;
 
