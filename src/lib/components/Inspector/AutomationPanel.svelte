@@ -148,30 +148,19 @@
   }}
 />
 
-<section class="space-y-2 p-2 bg-zinc-925 my-2 rounded-lg">
-  <header class="flex justify-between items-center">
-    <h4 class="text-zinc-600 dark:text-zinc-400">
-      Edit {automation.type} automation
-    </h4>
-    <IconButton
-      name="Close"
-      showOutline
-      alt="Close"
-      on:click={() => (isAutomationVisible = false)}
-    />
-  </header>
-  <main class="grid grid-cols-[2rem,1fr,1fr] gap-1">
+<section class="p-1 border border-zinc-800 my-2 rounded-lg">
+  <main class="grid grid-cols-[2.75rem,1fr,1fr] gap-1">
     <!-- Duration & Automation -->
-    <div class="row-start-1 col-span-full flex gap-2 h-fit">
+    <div
+      class="row-start-1 col-start-2 col-span-2 flex gap-2 h-fit justify-between"
+    >
       <ScalarSetting
-        class="w-1/2"
         name="Duration"
         bind:scalar={automation.duration}
         props={{ min: 0, max: Infinity, step: 0.01 }}
         strictBounds
       />
       <ScalarSetting
-        class="w-1/2"
         name="Offset"
         bind:scalar={automation.offset}
         defaultVal={0}
@@ -182,7 +171,7 @@
 
     <!-- Graph Editor -->
     <div
-      class="row-start-2 col-start-2 col-span-2 p-1 rounded-md bg-zinc-100 dark:bg-zinc-800/15"
+      class="row-start-2 col-start-2 col-span-2 p-1 rounded-md bg-zinc-100 dark:bg-zinc-925"
     >
       <div class="relative h-20 w-full">
         <!-- Visual spacers -->
