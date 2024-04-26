@@ -1,7 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import IconButton from "$lib/components/IconButton.svelte";
-  import AutomationPanel from "./AutomationPanel.svelte";
 
   export let name: string | null = "";
   export let scalar: number;
@@ -70,7 +69,10 @@
     on:mouseenter={() => (isHovered = true)}
     on:mouseleave={() => (isHovered = false)}
     on:auxclick={(e) => {
-      if (e.button === 1) scalar = defaultVal;
+      if (e.button === 1) {
+        scalar = defaultVal;
+        if (automation) automation.curves = [];
+      }
     }}
     on:wheel={(e) => {
       let mult = e.shiftKey ? 10 : 1;
