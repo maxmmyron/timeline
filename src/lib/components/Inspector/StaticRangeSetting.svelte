@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import IconButton from "$lib/components/IconButton.svelte";
+  import ScalarSetting from "./ScalarSetting.svelte";
 
   export let name: string | null = "";
   export let scalar: number;
@@ -47,14 +48,15 @@
 <label
   class="{useSubgrid
     ? 'grid grid-cols-subgrid col-start-1 col-span-full'
-    : 'flex gap-1'} items-center {clazz}"
+    : 'flex gap-1'} items-center {clazz} w-full"
 >
   {#if name}
     <p class="text-ellipsis text-zinc-400 mr-1">{name}</p>
   {/if}
+  <p class="text-zinc-600">{props.min}</p>
   <input
-    class="h-6 w-11 px-1 disabled:opacity-50 disabled:cursor-not-allowed text-right rounded-lg bg-zinc-925 text-zinc-500"
-    type="number"
+    class="h-6 flex-1 px-1 disabled:opacity-50 disabled:cursor-not-allowed text-right rounded-lg bg-zinc-925 text-zinc-500"
+    type="range"
     disabled={automation && automation.curves.length > 0}
     {...props}
     {...$$restProps}
@@ -86,6 +88,12 @@
     }}
     on:change
   />
+  <p class="text-zinc-600">{props.max}</p>
+  <output
+    class="h-6 w-11 rounded-lg bg-zinc-925 text-zinc-600 flex items-center px-1"
+  >
+    <p>{scalar.toFixed(2)}</p>
+  </output>
   {#if supportsAutomation && automation}
     <IconButton
       name="Automation"
@@ -97,9 +105,3 @@
     />
   {/if}
 </label>
-
-<style>
-  input[type="number"]::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-  }
-</style>

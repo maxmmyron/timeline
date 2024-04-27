@@ -225,7 +225,7 @@
   </Region>
 
   <!-- MEDIA PANELS -->
-  <div class="relative col-start-2 h-full overflow-scroll">
+  <div class="relative col-start-2 h-full overflow-scroll ml-2">
     {#if $visiblePanel === "media"}
       <MediaBrowser />
     {/if}

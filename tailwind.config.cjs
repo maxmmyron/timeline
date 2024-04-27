@@ -3,7 +3,13 @@ const config = {
   content: ["./src/**/*.{html,js,svelte,ts}"],
 
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        zinc: {
+          925: "#101013",
+        }
+      }
+    },
   },
 
   plugins: [],
