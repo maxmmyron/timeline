@@ -167,12 +167,9 @@
   onMount(() => requestAnimationFrame(frame));
 </script>
 
-<!-- LOGO -->
-<Region class="row-start-1 col-start-1"></Region>
-
 <!-- MENU RIBBON -->
 <Region
-  class="flex justify-between items-center row-start-1 col-start-2 col-span-full"
+  class="flex justify-between items-center row-start-1 col-start-1 col-span-full"
 >
   <div class="flex gap-4">
     <button class="cursor-not-allowed">
@@ -204,42 +201,11 @@
   </div>
 </Region>
 
-<div
-  class="row-start-2 col-start-1 col-span-2 grid grid-cols-subgrid gap-0 border rounded-xl border-zinc-200 dark:border-zinc-800"
+<Region
+  class="row-start-2 col-start-1 flex flex-col gap-1 h-full !bg-transparent border border-zinc-900"
 >
-  <Region
-    class="col-start-1 flex gap-2 flex-col justify-start items-center border-l-0 border-t-0 border-b-0 mr-1"
-  >
-    <IconButton
-      alt="Show medial pool"
-      toggled={$visiblePanel === "media"}
-      on:click={() => ($visiblePanel = "media")}
-      name="MediaPool"
-    />
-    <IconButton
-      name="ClipInspector"
-      alt="Show Inspector panel"
-      toggled={$visiblePanel === "inspector"}
-      on:click={() => ($visiblePanel = "inspector")}
-    />
-  </Region>
-
-  <!-- MEDIA PANELS -->
-  <div class="relative col-start-2 h-full overflow-scroll ml-2">
-    {#if $visiblePanel === "media"}
-      <MediaBrowser />
-    {/if}
-    {#if $visiblePanel === "inspector"}
-      {#if $selected}
-        <Inspector uuid={$selected[0]} type={$selected[1]} />
-      {:else}
-        <Region class="h-full border-none !bg-transparent">
-          <p>No clip selected</p>
-        </Region>
-      {/if}
-    {/if}
-  </div>
-</div>
+  <MediaBrowser />
+</Region>
 
 <!-- PLAYER -->
 <div
@@ -261,11 +227,20 @@
   </div>
 </div>
 
-<!-- TIMELINE RIBBON -->
-<Region class="row-start-3 col-start-1"></Region>
+<Region
+  class="row-start-2 col-start-3 !bg-transparent border border-zinc-900 overflow-scroll [scrollbar-width:thin] h-full grid grid-rows-[auto,200px]"
+>
+  {#if $selected}
+    <Inspector uuid={$selected[0]} type={$selected[1]} />
+  {:else}
+    <div class="w-full h-full flex items-center justify-center">
+      <p>No clip selected</p>
+    </div>
+  {/if}
+</Region>
 
 <!-- TIMELINE -->
-<div class="relative col-start-2 row-start-3 col-span-full flex flex-col">
+<div class="relative col-start-1 row-start-3 col-span-full flex flex-col">
   <TimelineRibbon />
 
   <!-- Update the currentTime property of the current video playing when either

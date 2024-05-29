@@ -10,7 +10,7 @@
 </script>
 
 <main
-  class="h-dvh p-2 grid gap-2 grid-cols-[3rem,340px,9fr,3rem] grid-rows-[3rem,7fr,5fr] bg-zinc-50 dark:bg-zinc-950"
+  class="h-dvh p-0.5 grid gap-0.5 grid-cols-[340px,9fr,340px] grid-rows-[3rem,7fr,5fr] bg-zinc-50 dark:bg-zinc-950"
 >
   {#if $aCtx}
     <slot />

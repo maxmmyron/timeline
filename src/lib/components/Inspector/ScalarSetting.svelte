@@ -85,6 +85,7 @@
       }
     }}
     on:change
+    on:input
   />
   {#if supportsAutomation && automation}
     <IconButton
