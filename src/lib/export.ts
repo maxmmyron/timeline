@@ -1,13 +1,12 @@
 import { get } from "svelte/store";
-import { ffmpeg, safeRes, videoClips, audioClips, exportStatus, exportPercentage } from "./stores";
-import { fetchFile } from "@ffmpeg/ffmpeg";
-import { createAutomation } from "./utils";
+import { ffmpeg as ffmpegInstance, safeRes, videoClips, audioClips, exportStatus, exportPercentage } from "./stores";
+import { fetchFile } from "@ffmpeg/util";
 
 export const exportVideo = async () => {
   exportStatus.set("setup");
   exportPercentage.set(0);
 
-  const ffmpegInstance =  get(ffmpeg);
+  const ffmpeg =  get(ffmpegInstance);
   let vClips = get(videoClips);
 
   // sort vClips by z index, lowest to highest. we do this so we properly layer
@@ -16,7 +15,7 @@ export const exportVideo = async () => {
 
   let clips = [...vClips, ...get(audioClips)];
 
-  if (!ffmpegInstance.isLoaded()) {
+  if (!ffmpeg.loaded) {
     exportStatus.set("error");
     throw new Error("ffmpeg.wasm did not load on editor startup. Please refresh the page.");
   }
@@ -44,7 +43,7 @@ export const exportVideo = async () => {
     const src = `${media.uuid}.${type}`;
 
     if(!loadedMedia.includes(src)) {
-      ffmpegInstance.FS("writeFile", src, await fetchFile(media.src));
+      await ffmpeg.writeFile(src, await fetchFile(media.src));
       loadedMedia.push(src);
 
       // there may be multiple instances of the same media file in the timeline,
@@ -85,8 +84,8 @@ export const exportVideo = async () => {
     }
   }
 
-  ffmpegInstance.FS("writeFile", "base.mp4", "");
-  ffmpegInstance.FS("writeFile", "export.mp4", "");
+  await ffmpeg.writeFile("base.mp4", "");
+  await ffmpeg.writeFile("export.mp4", "");
 
   const duration = Math.max(...clips.map((clip) => clip.offset + (clip.media.duration - clip.end - clip.start)));
   if(duration < 0) {
@@ -96,7 +95,7 @@ export const exportVideo = async () => {
 
   // create black video with empty audio track for duration of video
   const dims = get(safeRes);
-  await ffmpegInstance.run("-t", duration.toString(), "-f", "lavfi", "-i", `color=c=black:s=${dims[0]}x${dims[1]}:r=30`, "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-pix_fmt", "yuv420p", "-crf", "28", "-shortest", "-tune", "stillimage", "-preset", "ultrafast", "base.mp4");
+  await ffmpeg.exec(["-t", duration.toString(), "-f", "lavfi", "-i", `color=c=black:s=${dims[0]}x${dims[1]}:r=30`, "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100", "-pix_fmt", "yuv420p", "-crf", "28", "-shortest", "-tune", "stillimage", "-preset", "ultrafast", "base.mp4"]);
 
   // -----------------------
   // TRIM AND DELAY COMPONENTS
@@ -383,10 +382,10 @@ export const exportVideo = async () => {
   // RUN FFMPEG
 
   try {
-    ffmpegInstance.setProgress(({ratio}) => exportPercentage.set(ratio));
+    ffmpeg.on("progress", ({ progress }) => exportPercentage.set(progress));
     exportStatus.set("export");
     console.log(["-i", "base.mp4", ...[...loadedMedia.map((src) =>  ["-i", src])].flat(), "-filter_complex", `${vFilter}${aFilter}`, "-map", "[vout]", "-map", "[aout]", "export.mp4"].join(" "));
-    await ffmpegInstance.run("-i", "base.mp4", ...[...loadedMedia.map((src) =>  ["-i", src])].flat(), "-filter_complex", `${vFilter}${aFilter}`, "-map", "[vout]", "-map", "[aout]", "-vcodec", "libx264", "-crf", "28", "export.mp4");
+    await ffmpeg.exec(["-i", "base.mp4", ...[...loadedMedia.map((src) =>  ["-i", src])].flat(), "-filter_complex", `${vFilter}${aFilter}`, "-map", "[vout]", "-map", "[aout]", "-vcodec", "libx264", "-crf", "28", "export.mp4"]);
   } catch(e) {
     exportStatus.set("error");
     throw e;
@@ -395,13 +394,13 @@ export const exportVideo = async () => {
   // -----------------------
   // EXPORT VIDEO FILE
 
-  const exportData = ffmpegInstance.FS("readFile", "export.mp4");
+  const exportData = await ffmpeg.readFile("export.mp4");
 
   exportStatus.set("done");
 
   const link = document.createElement("a");
   link.download = "export.mp4";
-  link.href = URL.createObjectURL(new Blob([exportData.buffer], { type: "video/mp4" }));
+  link.href = URL.createObjectURL(new Blob([exportData], { type: "video/mp4" }));
   document.body.appendChild(link);
   link.dispatchEvent(new MouseEvent("click"));
   document.body.removeChild(link);

@@ -1,8 +1,8 @@
-import { createFFmpeg } from "@ffmpeg/ffmpeg";
+import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { derived, writable, type Writable } from "svelte/store";
 import type { resolveMedia } from "$lib/loader";
 
-export const ffmpeg = writable(createFFmpeg({log:true}));
+// export const ffmpeg: Writable<FFmpeg> = writable(new FFmpeg());
 
 export const selected: Writable<[string, App.MediaType] | null> = writable(null);
 

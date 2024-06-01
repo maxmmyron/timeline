@@ -1,10 +1,29 @@
 <script lang="ts">
-  import { ffmpeg, aCtx } from "$lib/stores";
+  import { aCtx } from "$lib/stores";
   import { onMount } from "svelte";
   import "../app.pcss";
+  import { toBlobURL } from "@ffmpeg/util";
+  import { FFmpeg } from "@ffmpeg/ffmpeg";
+
+  let ffmpeg = new FFmpeg();
+  const loadFFmpeg = async () => {
+    const baseUrl = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
+
+    ffmpeg.on("log", ({ message }) => {
+      console.log(message);
+    });
+
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${baseUrl}/ffmpeg-core.js`, "text/javascript"),
+      wasmURL: await toBlobURL(
+        `${baseUrl}/ffmpeg-core.wasm`,
+        "application/wasm"
+      ),
+    });
+  };
 
   onMount(async () => {
-    if (!$ffmpeg.isLoaded()) await $ffmpeg.load();
+    await loadFFmpeg();
     $aCtx = new AudioContext();
   });
 </script>
