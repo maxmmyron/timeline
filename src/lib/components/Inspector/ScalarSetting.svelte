@@ -70,6 +70,7 @@
     on:mouseleave={() => (isHovered = false)}
     on:auxclick={(e) => {
       if (e.button === 1) {
+        e.preventDefault();
         scalar = defaultVal;
         if (automation) automation.curves = [];
       }

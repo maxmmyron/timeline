@@ -46,15 +46,16 @@
    */
   let visibleMatrixAutomation = [false, false, false, false, false, false];
 
-  let currentAutomation: 0 | 3 | 4 | 5 | -1;
-  $: currentAutomation = visibleMatrixAutomation.findIndex((v) => v) as
+  let currentMatrixAutomation: 0 | 3 | 4 | 5 | -1;
+  $: currentMatrixAutomation = visibleMatrixAutomation.findIndex((v) => v) as
     | 0
     | 3
     | 4
     | 5
     | -1;
 
-  $: automationOpen = currentAutomation !== -1 || isVolumeAutomationVisible;
+  $: automationOpen =
+    currentMatrixAutomation !== -1 || isVolumeAutomationVisible;
 </script>
 
 <main
@@ -301,17 +302,27 @@
 
 {#if automationOpen}
   <div class="row-start-2 border-t border-zinc-800 pt-2">
-    {#if currentAutomation !== -1}
+    <div class="flex justify-between items-center gap-2">
       <h3 class="text-zinc-400">
-        Automation: {matrix[currentAutomation].type}
+        Automation: {currentMatrixAutomation !== -1
+          ? matrix[currentMatrixAutomation].type
+          : "Volume"}
       </h3>
+      <IconButton
+        name="Close"
+        alt="Close automation panel"
+        on:click={(e) => {
+          visibleMatrixAutomation[currentMatrixAutomation] = false;
+          isVolumeAutomationVisible = false;
+        }}
+      />
+    </div>
+    {#if currentMatrixAutomation !== -1}
       <AutomationPanel
-        bind:automation={matrix[currentAutomation]}
+        bind:automation={matrix[currentMatrixAutomation]}
         dynamicBounds
       />
-    {/if}
-    {#if isVolumeAutomationVisible}
-      <h3 class="text-zinc-400">Automation: Volume</h3>
+    {:else}
       <AutomationPanel bind:automation={volume} />
     {/if}
   </div>
