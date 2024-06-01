@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
-  import { exportVideo } from "$lib/export";
   import {
     time,
     videoClips,
@@ -15,7 +14,6 @@
     aRefs,
     aCtx,
     showPreferences,
-    visiblePanel,
   } from "$lib/stores";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
@@ -26,6 +24,7 @@
   import TimelineMedia from "$lib/components/TimelineMedia.svelte";
   import Preferences from "$lib/components/Preferences/Preferences.svelte";
   import IconButton from "$lib/components/IconButton.svelte";
+  import Export from "$lib/components/Export.svelte";
 
   // get the UUIDs of the current audio clips (we return this as a comma-sep
   // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS
@@ -192,12 +191,7 @@
         ></div>
       </div>
     {/if}
-    <button
-      on:click={exportVideo}
-      disabled={$exportStatus !== "idle" && $exportStatus !== "done"}
-    >
-      <p>Export</p>
-    </button>
+    <Export />
   </div>
 </Region>
 
