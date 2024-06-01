@@ -1,22 +1,22 @@
 <script lang="ts">
   import { audioClips, videoClips, uploaded } from "$lib/stores";
   import { createClip, getClipEndPos } from "$lib/utils";
-  import Region from "./Region.svelte";
   import { resolveMedia } from "$lib/loader";
   import IconButton from "./IconButton.svelte";
 
   const upload = async (fileList: FileList) => {
     for (const file of fileList) {
-      // const hash = cyrb53((await file.arrayBuffer).toString());
-      // console.log("Uploading", file.name, "with hash", hash);
-      // if (uploadedHashes.includes(hash)) continue;
-      // else uploadedHashes = [...uploadedHashes, hash];
-
       $uploaded = [...$uploaded, resolveMedia(file)];
     }
   };
 
   export let removeMedia = (uuid: string) => {
+    // TODO: add confirmation dialog
+    if ($videoClips.find((c) => c.media.uuid === uuid))
+      $videoClips = $videoClips.filter((c) => c.media.uuid !== uuid);
+    else if ($audioClips.find((c) => c.media.uuid === uuid))
+      $audioClips = $audioClips.filter((c) => c.media.uuid !== uuid);
+
     $uploaded = $uploaded.filter((m) => m.uuid !== uuid);
   };
 </script>
