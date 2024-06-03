@@ -94,7 +94,6 @@ export const createClip = (resolved: App.Media, opts?: Partial<App.Clip>): App.C
     createAutomation("position", resolved.duration, { initial: 0, }),
     createAutomation("position", resolved.duration, { initial: 0, })
   ],
-  origin: [0.5, 0.5],
   volume: createAutomation("volume", resolved.duration),
   pan: 0,
 });

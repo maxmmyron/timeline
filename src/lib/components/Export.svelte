@@ -394,12 +394,14 @@
         clip.matrix[4].curves.length === 0 &&
         clip.matrix[5].curves.length === 0
       ) {
-        const originOffsetX =
-          (((clip.matrix[0].staticVal - 1) * clip.media.dimensions[0]) / 2) *
-          (2 * clip.origin[0] - 1);
-        const originOffsetY =
-          (((clip.matrix[3].staticVal - 1) * clip.media.dimensions[1]) / 2) *
-          (2 * clip.origin[1] - 1);
+        // 0.5 == center origin
+        // const ORIGIN = 0.5;
+        // const originOffsetX =
+        //   (((clip.matrix[0].staticVal - 1) * clip.media.dimensions[0]) / 2) *
+        //   (2 * ORIGIN - 1);
+        // const originOffsetY =
+        //   (((clip.matrix[3].staticVal - 1) * clip.media.dimensions[1]) / 2) *
+        //   (2 * ORIGIN - 1);
 
         /**
          * The portion of the ffmpeg filter that defines the position of the clip.
@@ -408,7 +410,8 @@
          * 1. the x and y values of the clip's transformation matrix
          * 2. the offset of the clip based on the transform origin and scaling
          */
-        const overlayPos = `(W-w)/2+${clip.matrix[4].staticVal - originOffsetX}:(H-h)/2+${clip.matrix[5].staticVal - originOffsetY}`;
+        // const overlayPos = `(W-w)/2+${clip.matrix[4].staticVal - originOffsetX}:(H-h)/2+${clip.matrix[5].staticVal - originOffsetY}`;
+        const overlayPos = `(W-w)/2+${clip.matrix[4].staticVal}:(H-h)/2+${clip.matrix[5].staticVal}`;
 
         /**
          * The portion of the ffmpeg filter that defines the period over which the
@@ -483,22 +486,6 @@
         const toTime = toSxScalar * duration + offset;
 
         // generate ffmpeg lerp strings for each matrix value
-        const sxLerpString = buildLerpString(
-          fromSxScalar,
-          fromSxVal,
-          toSxScalar,
-          toSxVal,
-          duration,
-          offset
-        );
-        const syLerpString = buildLerpString(
-          fromSyScalar,
-          fromSyVal,
-          toSyScalar,
-          toSyVal,
-          duration,
-          offset
-        );
         const txLerpString = buildLerpString(
           fromTxScalar,
           fromTxVal,
@@ -516,11 +503,12 @@
           offset
         );
 
-        // build out the scaling and translation strings
-        const originOffsetXString = `(((${sxLerpString}-1)*${clip.media.dimensions[0]}/2)*(2*${clip.origin[0]}-1))`;
-        const originOffsetYString = `(((${syLerpString}-1)*${clip.media.dimensions[1]}/2)*(2*${clip.origin[1]}-1))`;
+        // build out the scaling and translation strings (these are zero because)
+        // const originOffsetXString = `(((${sxLerpString}-1)*${clip.media.dimensions[0]}/2)*(0))`;
+        // const originOffsetYString = `(((${syLerpString}-1)*${clip.media.dimensions[1]}/2)*(0))`;
 
-        vFilter += `overlay=enable='between(t,${fromTime},${toTime})':x='(W-w)/2+(${txLerpString})-(${originOffsetXString})':y='(H-h)/2+(${tyLerpString})-(${originOffsetYString})':eval=frame`;
+        // vFilter += `overlay=enable='between(t,${fromTime},${toTime})':x='(W-w)/2+(${txLerpString})-(${originOffsetXString})':y='(H-h)/2+(${tyLerpString})-(${originOffsetYString})':eval=frame`;
+        vFilter += `overlay=enable='between(t,${fromTime},${toTime})':x='(W-w)/2+(${txLerpString})':y='(H-h)/2+(${tyLerpString})':eval=frame`;
         if (j !== uniqueNodeTimes.length) vFilter += `,`;
       }
       vFilter += `${outLink};`;
