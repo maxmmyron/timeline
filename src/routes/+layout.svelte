@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { ffmpeg, aCtx } from "$lib/stores";
+  import { aCtx } from "$lib/stores";
   import { onMount } from "svelte";
   import "../app.pcss";
 
   onMount(async () => {
-    if (!$ffmpeg.isLoaded()) await $ffmpeg.load();
     $aCtx = new AudioContext();
   });
 </script>
