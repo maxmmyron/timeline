@@ -1,9 +1,7 @@
 <script lang="ts">
-  import Region from "$lib/components/Region.svelte";
-  import { videoClips, audioClips, safeRes } from "$lib/stores";
+  import { videoClips, audioClips } from "$lib/stores";
   import IconButton from "../IconButton.svelte";
   import ScalarSetting from "./ScalarSetting.svelte";
-  import TransformButton from "./TransformButton.svelte";
   import AutomationPanel from "./AutomationPanel.svelte";
   import StaticRangeSetting from "./StaticRangeSetting.svelte";
 
@@ -20,12 +18,10 @@
   let matrix = clip.matrix;
   let volume = clip.volume;
   let pan = clip.pan;
-  let origin = clip.origin;
 
   $: updateProp("matrix", matrix);
   $: updateProp("volume", volume);
   $: updateProp("pan", pan);
-  $: updateProp("origin", origin);
 
   const updateProp = <T extends keyof typeof clip>(
     prop: T,
@@ -88,52 +84,6 @@
   {#if type === "video" || type === "image"}
     <section class="pb-4 mb-3 border-b border-zinc-800 w-full space-y-3">
       <h3 class="text-zinc-400">Transforms</h3>
-
-      <div class="grid grid-cols-5 gap-x-3 items-baseline">
-        <h3 class="text-zinc-500">origin</h3>
-        <div class="flex gap-3 w-full col-span-4">
-          <div
-            class="relative grid grid-cols-3 grid-rows-3 p-0.5 w-16 h-16 rounded-md bg-zinc-100 bg-zinc-925"
-          >
-            <TransformButton bind:origin value={[0, 0]} />
-            <TransformButton name="TopOrigin" bind:origin value={[0.5, 0]} />
-            <TransformButton bind:origin value={[1, 0]} />
-            <TransformButton name="LeftOrigin" bind:origin value={[0, 0.5]} />
-            <TransformButton
-              name="CenterOrigin"
-              bind:origin
-              value={[0.5, 0.5]}
-            />
-            <TransformButton name="RightOrigin" bind:origin value={[1, 0.5]} />
-            <TransformButton bind:origin value={[0, 1]} />
-            <TransformButton name="BottomOrigin" bind:origin value={[0.5, 1]} />
-            <TransformButton bind:origin value={[1, 1]} />
-            <div
-              class="w-1 h-1 bg-zinc-950/40 dark:bg-zinc-100/40 rounded-sm absolute transform -translate-x-1/2 -translate-y-1/2"
-              style:top="{12 + origin[1] * 40}px"
-              style:left="{12 + origin[0] * 40}px"
-            />
-          </div>
-          <div class="grid grid-cols-[min-content,1fr] gap-x-2 gap-y-3 h-full">
-            <ScalarSetting
-              useSubgrid
-              class="col-start-1"
-              name="Left"
-              bind:scalar={origin[0]}
-              props={{ min: 0, max: 1, step: 0.01 }}
-              defaultVal={0.5}
-            />
-            <ScalarSetting
-              useSubgrid
-              class="col-start-1"
-              name="Top"
-              bind:scalar={origin[1]}
-              props={{ min: 0, max: 1, step: 0.01 }}
-              defaultVal={0.5}
-            />
-          </div>
-        </div>
-      </div>
 
       <div class="grid grid-cols-5 gap-x-3 items-baseline">
         <h3 class="text-zinc-500">position</h3>

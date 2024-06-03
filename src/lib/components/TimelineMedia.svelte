@@ -51,7 +51,6 @@
     title={clip.uuid}
     bind:this={$vRefs[clip.uuid]}
     style:transform="translate(-50%, -50%) matrix({lerpedMatrix.join(",")})"
-    style:transform-origin="{clip.origin[0] * 100}% {clip.origin[1] * 100}%"
     style:z-index={clip.z}
     class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
     preload=""
@@ -74,7 +73,6 @@
     alt=""
     bind:this={$iRefs[clip.uuid]}
     style:transform="translate(-50%, -50%) matrix({lerpedMatrix.join(",")})"
-    style:transform-origin="{clip.origin[0] * 100}% {clip.origin[1] * 100}%"
     style:z-index={clip.z}
     class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
   />

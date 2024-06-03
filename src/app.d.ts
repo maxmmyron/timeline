@@ -10,7 +10,6 @@ declare global {
 			uuid: string;
 			z: number;
 			matrix: Matrix;
-			origin: [number, number];
 			volume: Automation<"volume">;
 			pan: number,
 		};
@@ -54,11 +53,10 @@ declare global {
 
 		type AutomationType = "volume" | "position" | "scale";
 
-		type Icon = "Automation" | "BeginningSkip" | "BottomOrigin" | "CenterOrigin"
-		| "ClipInspector" | "Close" | "EndSkip" | "Export" | "Import" | "LeftOrigin"
-		| "Link" | "MediaPool" | "OriginSpacer" | "Pause" | "Play" | "Pointer"
-		| "Reset" | "RightOrigin" | "SplitClip" | "TopOrigin" | "Unlink" | "ZoomIn"
-		| "ZoomOut";
+		type Icon = "Automation" | "BeginningSkip"
+		| "ClipInspector" | "Close" | "EndSkip" | "Export" | "Import"
+		| "Link" | "MediaPool" | "Pause" | "Play" | "Pointer"
+		| "Reset" | "SplitClip" |  "Unlink" | "ZoomIn" | "ZoomOut";
 	}
 }
 
