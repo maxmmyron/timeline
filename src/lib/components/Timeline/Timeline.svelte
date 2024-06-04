@@ -71,6 +71,17 @@
     if (canMoveScrubber) moveScrubber(e.clientX);
   }}
   on:mouseup={() => (canMoveScrubber = false)}
+  on:keydown={(e) => {
+    let mult = 1;
+    if (e.shiftKey) mult = 30;
+
+    // TODO: update when project framerate is implemented
+    if (e.key === "ArrowLeft") {
+      $time = Math.max(0, $time - (1 / 60) * mult);
+    } else if (e.key === "ArrowRight") {
+      $time += (1 / 60) * mult;
+    }
+  }}
 />
 
 <Region
@@ -102,6 +113,8 @@
     }}
   >
     <div class="row-span-full col-start-1 flex flex-col relative">
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <!-- FIXME: ignore rule for now -->
       <div
         class="h-9 flex"
         on:mousedown={(e) => {
