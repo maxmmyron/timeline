@@ -56,7 +56,6 @@
   }
 
   $: if (!$paused) {
-    console.log("Starting animation");
     animationRequestId = requestAnimationFrame(draw);
   }
 </script>
