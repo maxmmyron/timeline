@@ -113,6 +113,8 @@
     }}
   >
     <div class="row-span-full col-start-1 flex flex-col relative">
+      <!-- svelte-ignore a11y-no-static-element-interactions -->
+      <!-- FIXME: ignore rule for now -->
       <div
         class="h-9 flex"
         on:mousedown={(e) => {
