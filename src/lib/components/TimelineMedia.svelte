@@ -1,5 +1,13 @@
 <script lang="ts">
-  import { aCtx, iRefs, vRefs, aRefs, playerScale, time } from "$lib/stores";
+  import {
+    aCtx,
+    iRefs,
+    vRefs,
+    aRefs,
+    playerScale,
+    time,
+    audioAnalyser,
+  } from "$lib/stores";
   import { lerpAutomation } from "$lib/utils";
   import { onMount } from "svelte";
 
@@ -34,6 +42,7 @@
 
     sourceNode.connect(gainNode);
     gainNode.connect(panNode);
+    panNode.connect($audioAnalyser!);
     panNode.connect($aCtx!.destination);
 
     return () => {

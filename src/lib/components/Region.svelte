@@ -6,7 +6,7 @@
 </script>
 
 <article
-  class="rounded-sm p-2 {clazz} bg-zinc-100 dark:bg-zinc-900"
+  class="rounded-sm p-2 {clazz} bg-zinc-100 dark:bg-zinc-925"
   bind:this={el}
   on:wheel
   on:drop|preventDefault|stopPropagation
