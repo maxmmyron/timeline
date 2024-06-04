@@ -1,45 +1,57 @@
+<script lang="ts" context="module">
+  let leftChannelAnalyzer: AnalyserNode;
+  let rightChannelAnalyzer: AnalyserNode;
+
+  export { leftChannelAnalyzer, rightChannelAnalyzer };
+</script>
+
 <script lang="ts">
-  import { aCtx, audioAnalyser, paused } from "$lib/stores";
+  import { aCtx, paused } from "$lib/stores";
   import { onMount } from "svelte";
   import Region from "./Region.svelte";
 
-  let loudnessLeft = 0;
-  let loudnessRight = 0;
+  let lChannelLoudness = 0;
+  let rChannelLoudness = 0;
 
-  let bufferLength: number;
-  let dataArray: Uint8Array;
+  let lChannelDataArr = new Uint8Array(0);
+  let rChannelDataArr = new Uint8Array(0);
 
   onMount(() => {
-    $audioAnalyser = $aCtx!.createAnalyser();
-    $audioAnalyser.fftSize = 256;
+    leftChannelAnalyzer = $aCtx!.createAnalyser();
+    leftChannelAnalyzer.fftSize = 256;
 
-    bufferLength = $audioAnalyser.frequencyBinCount;
-    dataArray = new Uint8Array(bufferLength);
+    rightChannelAnalyzer = $aCtx!.createAnalyser();
+    rightChannelAnalyzer.fftSize = 256;
+
+    lChannelDataArr = new Uint8Array(leftChannelAnalyzer.frequencyBinCount);
+    rChannelDataArr = new Uint8Array(rightChannelAnalyzer.frequencyBinCount);
 
     return () => {
       cancelAnimationFrame(animationRequestId);
-      $audioAnalyser!.disconnect();
+      leftChannelAnalyzer.disconnect();
+      rightChannelAnalyzer.disconnect();
     };
   });
 
   let animationRequestId = 0;
 
   const draw = () => {
-    if ($paused || !$audioAnalyser) return;
-    $audioAnalyser.getByteFrequencyData(dataArray);
-
-    // TODO: use createChannelSplitter to get left and right channels
-    loudnessLeft =
-      dataArray.reduce((acc, curr) => acc + curr, 0) / dataArray.length;
-    loudnessRight =
-      dataArray.reduce((acc, curr) => acc + curr, 0) / dataArray.length;
+    if ($paused) return;
+    leftChannelAnalyzer.getByteFrequencyData(lChannelDataArr);
+    rightChannelAnalyzer.getByteFrequencyData(rChannelDataArr);
+    lChannelLoudness =
+      lChannelDataArr.reduce((acc, curr) => acc + curr, 0) /
+      lChannelDataArr.length;
+    rChannelLoudness =
+      rChannelDataArr.reduce((acc, curr) => acc + curr, 0) /
+      rChannelDataArr.length;
 
     requestAnimationFrame(draw);
   };
 
   $: if ($paused) {
-    loudnessLeft = 0;
-    loudnessRight = 0;
+    lChannelLoudness = 0;
+    rChannelLoudness = 0;
     cancelAnimationFrame(animationRequestId);
   }
 
@@ -53,13 +65,13 @@
   <div class="w-3 rounded-sm bg-zinc-950 shadow-sm overflow-clip">
     <div
       class="w-full h-full bg-gradient-to-b from-red-500 via-yellow-300 to-green-400 clip"
-      style="--loudness: {loudnessLeft / 256};"
+      style="--loudness: {lChannelLoudness / 256};"
     ></div>
   </div>
   <div class="w-3 rounded-sm bg-zinc-950 shadow-sm overflow-clip">
     <div
       class="w-full h-full bg-gradient-to-b from-red-500 via-yellow-300 to-green-400 clip"
-      style="--loudness: {loudnessRight / 256};"
+      style="--loudness: {rChannelLoudness / 256};"
     ></div>
   </div>
 </Region>
