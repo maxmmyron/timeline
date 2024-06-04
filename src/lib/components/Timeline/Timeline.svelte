@@ -71,6 +71,17 @@
     if (canMoveScrubber) moveScrubber(e.clientX);
   }}
   on:mouseup={() => (canMoveScrubber = false)}
+  on:keydown={(e) => {
+    let mult = 1;
+    if (e.shiftKey) mult = 30;
+
+    // TODO: update when project framerate is implemented
+    if (e.key === "ArrowLeft") {
+      $time = Math.max(0, $time - (1 / 60) * mult);
+    } else if (e.key === "ArrowRight") {
+      $time += (1 / 60) * mult;
+    }
+  }}
 />
 
 <Region
