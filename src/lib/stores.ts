@@ -77,3 +77,5 @@ export const visiblePanel: Writable<"media" | "inspector"> = writable("media");
  * Media that has been uploaded and fully resolved
  */
 export const uploaded: Writable<Array<ReturnType<typeof resolveMedia>>> = writable([]);
+
+export const volumeMultiplier = writable(1);

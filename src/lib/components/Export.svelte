@@ -6,6 +6,7 @@
     audioClips,
     exportStatus,
     exportPercentage,
+    volumeMultiplier,
   } from "$lib/stores";
   import { FFmpeg } from "@ffmpeg/ffmpeg";
 
@@ -196,7 +197,7 @@
 
         // create a series of volume filters for each point in the automation curve
         if (clip.volume.curves.length === 0) {
-          aFilter += `volume=${clip.volume.staticVal},`;
+          aFilter += `volume=${clip.volume.staticVal * get(volumeMultiplier)},`;
         } else {
           for (let j = 0; j < clip.volume.curves.length - 1; j++) {
             const [fromX, fromY] = clip.volume.curves[j];
@@ -212,10 +213,10 @@
             const toXTime = toX * clip.volume.duration + clip.volume.offset;
 
             const volumeLerpString = buildLerpString(
-              fromX,
-              fromY,
-              toX,
-              toY,
+              fromX * get(volumeMultiplier),
+              fromY * get(volumeMultiplier),
+              toX * get(volumeMultiplier),
+              toY * get(volumeMultiplier),
               clip.volume.duration,
               offset
             );

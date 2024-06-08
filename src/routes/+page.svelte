@@ -25,6 +25,7 @@
   import Preferences from "$lib/components/Preferences/Preferences.svelte";
   import IconButton from "$lib/components/IconButton.svelte";
   import Export from "$lib/components/Export.svelte";
+  import VolumeMeter from "$lib/components/VolumeMeter.svelte";
 
   // get the UUIDs of the current audio clips (we return this as a comma-sep
   // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS
@@ -233,23 +234,28 @@
   {/if}
 </Region>
 
-<!-- TIMELINE -->
-<div class="relative col-start-1 row-start-3 col-span-full flex flex-col">
-  <TimelineRibbon />
+<div
+  class="relative col-start-1 row-start-3 col-span-full grid gap-0.5 grid-cols-[1fr,4rem] grid-rows-1"
+>
+  <div class="flex flex-col">
+    <TimelineRibbon />
 
-  <!-- Update the currentTime property of the current video playing when either
+    <!-- Update the currentTime property of the current video playing when either
   the scrubber moves, or the current video's offset is changed (via drag) -->
-  <Timeline
-    on:scrubberMove={() => {
-      resetPlayback("video", videoUUIDs);
-      resetPlayback("audio", audioUUIDs);
-    }}
-    on:clipMove={(e) => {
-      if (e.detail.type === "video" || e.detail.type === "image")
-        resetClipPlayback($vRefs, currVideo, e.detail.uuid);
-      else resetClipPlayback($aRefs, currAudio, e.detail.uuid);
-    }}
-  />
+    <Timeline
+      on:scrubberMove={() => {
+        resetPlayback("video", videoUUIDs);
+        resetPlayback("audio", audioUUIDs);
+      }}
+      on:clipMove={(e) => {
+        if (e.detail.type === "video" || e.detail.type === "image")
+          resetClipPlayback($vRefs, currVideo, e.detail.uuid);
+        else resetClipPlayback($aRefs, currAudio, e.detail.uuid);
+      }}
+    />
+  </div>
+
+  <VolumeMeter />
 </div>
 
 <Preferences />
