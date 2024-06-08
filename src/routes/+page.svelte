@@ -235,7 +235,7 @@
 </Region>
 
 <div
-  class="relative col-start-1 row-start-3 col-span-full grid gap-0.5 grid-cols-[1fr,3rem] grid-rows-1"
+  class="relative col-start-1 row-start-3 col-span-full grid gap-0.5 grid-cols-[1fr,4rem] grid-rows-1"
 >
   <div class="flex flex-col">
     <TimelineRibbon />

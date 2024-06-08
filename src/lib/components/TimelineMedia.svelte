@@ -1,5 +1,13 @@
 <script lang="ts">
-  import { aCtx, iRefs, vRefs, aRefs, playerScale, time } from "$lib/stores";
+  import {
+    aCtx,
+    iRefs,
+    vRefs,
+    aRefs,
+    playerScale,
+    time,
+    volumeMultiplier,
+  } from "$lib/stores";
 
   import {
     rightChannelAnalyzer,
@@ -18,7 +26,8 @@
   let panNode: StereoPannerNode = $aCtx!.createStereoPanner();
   let splitter: ChannelSplitterNode = $aCtx!.createChannelSplitter(2);
 
-  $: gainNode.gain.value = lerpAutomation(clip.volume, clip.offset, $time);
+  $: gainNode.gain.value =
+    lerpAutomation(clip.volume, clip.offset, $time) * $volumeMultiplier;
   $: panNode.pan.value = clip.pan;
 
   $: scaleX = lerpAutomation(clip.matrix[0], clip.offset, $time) * $playerScale;

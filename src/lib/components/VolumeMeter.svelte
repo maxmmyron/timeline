@@ -6,7 +6,7 @@
 </script>
 
 <script lang="ts">
-  import { aCtx, paused } from "$lib/stores";
+  import { aCtx, paused, volumeMultiplier } from "$lib/stores";
   import { onMount } from "svelte";
   import Region from "./Region.svelte";
 
@@ -46,6 +46,9 @@
       rChannelDataArr.reduce((acc, curr) => acc + curr, 0) /
       rChannelDataArr.length;
 
+    lChannelLoudness *= $volumeMultiplier;
+    rChannelLoudness *= $volumeMultiplier;
+
     requestAnimationFrame(draw);
   };
 
@@ -73,10 +76,23 @@
       style="--loudness: {rChannelLoudness / 256};"
     ></div>
   </div>
+  <input
+    type="range"
+    min="0"
+    max="1"
+    step="0.001"
+    bind:value={$volumeMultiplier}
+  />
 </Region>
 
 <style>
   .clip {
     clip-path: inset(calc((1 - var(--loudness)) * 100%) 0 0 0);
+  }
+
+  input {
+    writing-mode: vertical-lr;
+    direction: rtl;
+    appearance: slider-vertical;
   }
 </style>
