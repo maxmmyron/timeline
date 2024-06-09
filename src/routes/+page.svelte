@@ -13,17 +13,14 @@
     vRefs,
     aRefs,
     aCtx,
-    showPreferences,
   } from "$lib/stores";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
-  import Region from "$lib/components/Region.svelte";
   import Inspector from "$lib/components/Inspector/Inspector.svelte";
   import { frame, getCurrentClips } from "$lib/utils";
   import MediaBrowser from "$lib/components/MediaBrowser.svelte";
   import TimelineMedia from "$lib/components/TimelineMedia.svelte";
-  import Preferences from "$lib/components/Preferences/Preferences.svelte";
-  import IconButton from "$lib/components/IconButton.svelte";
+  import Preferences from "$lib/components/Preferences.svelte";
   import Export from "$lib/components/Export.svelte";
   import VolumeMeter from "$lib/components/VolumeMeter.svelte";
   import Panel from "$lib/components/Panel.svelte";
@@ -170,37 +167,14 @@
   let currentPanel: string;
 </script>
 
-<!-- MENU RIBBON -->
-<!-- <Region
-  class="flex justify-between items-center row-start-1 col-start-1 col-span-full"
->
-  <div class="flex gap-4">
-    <button on:click={() => ($showPreferences = true)}>
-      <p>Preferences</p>
-    </button>
-  </div>
-  <div class="flex items-center gap-2">
-    {#if $exportStatus !== "export" && $exportStatus !== "setup"}
-      <div class="h-1 w-24 rounded-full"></div>
-    {:else if $exportStatus === "setup"}
-      <div class="h-1 w-24 rounded-full bg-zinc-800 animate-pulse"></div>
-    {:else}
-      <div class="h-1 w-24 rounded-full bg-zinc-800">
-        <div
-          class="h-full bg-blue-400 rounded-full transition-all"
-          style:width="{$exportPercentage * 100}%"
-        ></div>
-      </div>
-    {/if}
-    <Export />
-  </div>
-</Region> -->
-
-<Panel panels={["Media Browser"]}>
+<Panel panels={["Media Browser"]} bg="bg-zinc-925">
   <MediaBrowser />
 </Panel>
 
-<Panel panels={["Preview", "Node Editor", "Export"]} bind:currentPanel>
+<Panel
+  panels={["Preview", "Node Editor", "Export", "Preferences"]}
+  bind:currentPanel
+>
   {#if currentPanel === "Preview"}
     <div
       class="overflow-hidden flex items-center justify-center w-full h-full gap-2"
@@ -240,35 +214,12 @@
       {/if}
       <Export />
     </div>
+  {:else if currentPanel === "Preferences"}
+    <Preferences />
   {/if}
 </Panel>
-<!-- <Region
-  class="row-start-2 col-start-1 flex flex-col gap-1 h-full !bg-transparent border border-zinc-900"
->
-  <MediaBrowser /> -->
-<!-- </Region> -->
 
-<!-- PLAYER -->
-<!-- <div
-  class="overflow-hidden flex items-center justify-center w-full h-full gap-2"
-  bind:clientHeight={containerHeight}
-  bind:clientWidth={containerWidth}
->
-  <div
-    class="relative overflow-hidden bg-black"
-    style:width="{$safeRes[0] * $playerScale}px"
-    style:height="{$safeRes[1] * $playerScale}px"
-  >
-    {#each $videoClips as clip (clip.uuid)}
-      <TimelineMedia {clip} curr={currVideo} />
-    {/each}
-    {#each $audioClips as clip (clip.uuid)}
-      <TimelineMedia {clip} />
-    {/each}
-  </div>
-</div> -->
-
-<Panel panels={["Media Inspector"]}>
+<Panel panels={["Media Inspector"]} bg="bg-zinc-925">
   {#if $selected}
     <Inspector uuid={$selected[0]} type={$selected[1]} />
   {:else}
@@ -277,18 +228,6 @@
     </div>
   {/if}
 </Panel>
-
-<!-- <Region
-  class="row-start-2 col-start-3 !bg-transparent border border-zinc-900 overflow-scroll [scrollbar-width:thin] h-full grid grid-rows-[auto,200px]"
->
-  {#if $selected}
-    <Inspector uuid={$selected[0]} type={$selected[1]} />
-  {:else}
-    <div class="w-full h-full flex items-center justify-center">
-      <p>No clip selected</p>
-    </div>
-  {/if}
-</Region> -->
 
 <div
   class="relative col-start-1 row-start-2 col-span-full grid gap-0.5 grid-cols-[1fr,4rem] grid-rows-1"
@@ -313,5 +252,3 @@
 
   <VolumeMeter />
 </div>
-
-<Preferences />
