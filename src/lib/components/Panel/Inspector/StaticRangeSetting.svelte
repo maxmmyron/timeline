@@ -1,7 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
   import IconButton from "$lib/components/IconButton.svelte";
-  import ScalarSetting from "./ScalarSetting.svelte";
 
   export let name: string | null = "";
   export let scalar: number;
