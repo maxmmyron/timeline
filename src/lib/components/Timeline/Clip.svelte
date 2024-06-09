@@ -12,6 +12,13 @@
   import { createClip, getClipDuration, getClipEndPos } from "$lib/utils";
   import { createEventDispatcher, onMount } from "svelte";
 
+  onMount(() => {
+    // on unmount, deselect the clip if it is selected.
+    return () => {
+      if ($selected && clip.uuid === $selected[0]) $selected = null;
+    };
+  });
+
   type ResizeMode = "left" | "right";
 
   export let clip: App.Clip;
@@ -360,7 +367,6 @@
   }}
   on:keydown|stopPropagation={(e) => {
     if (e.key === "Delete" && selectedUUID === clip.uuid) {
-      $selected = null;
       if (clip.media.type === "audio")
         $audioClips = $audioClips.filter((c) => c.uuid !== clip.uuid);
       else $videoClips = $videoClips.filter((c) => c.uuid !== clip.uuid);
