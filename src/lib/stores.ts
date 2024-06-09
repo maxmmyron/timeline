@@ -68,10 +68,7 @@ export const iRefs: Writable<Record<string, HTMLImageElement>> = writable({});
 export const vRefs: Writable<Record<string, HTMLVideoElement>> = writable({});
 export const aRefs: Writable<Record<string, HTMLAudioElement>> = writable({});
 
-export const showPreferences = writable(false);
-
 export const pointerMode: Writable<"select" | "slice"> = writable("select");
-export const visiblePanel: Writable<"media" | "inspector"> = writable("media");
 
 /**
  * Media that has been uploaded and fully resolved

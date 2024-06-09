@@ -8,7 +8,6 @@
     audioClips,
     scale,
     pointerMode,
-    visiblePanel,
   } from "$lib/stores";
   import { createClip, getClipDuration, getClipEndPos } from "$lib/utils";
   import { createEventDispatcher, onMount } from "svelte";
@@ -358,7 +357,6 @@
   }}
   on:click|stopPropagation={() => {
     $selected = [clip.uuid, clip.media.type];
-    $visiblePanel = "inspector";
   }}
   on:keydown|stopPropagation={(e) => {
     if (e.key === "Delete" && selectedUUID === clip.uuid) {
