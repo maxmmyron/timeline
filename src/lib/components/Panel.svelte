@@ -5,7 +5,7 @@
   export let bg = "bg-zinc-950";
 </script>
 
-<div class="flex flex-col">
+<div class="flex flex-col overflow-hidden">
   <div class="flex gap-0.5 z-10">
     {#each panels as panel}
       <button
@@ -18,7 +18,7 @@
     {/each}
   </div>
   <div
-    class="flex-grow rounded-sm rounded-tl-none {bg} border border-zinc-800 p-1"
+    class="flex-grow rounded-sm rounded-tl-none {bg} border border-zinc-800 p-1 overflow-hidden"
   >
     <slot />
   </div>

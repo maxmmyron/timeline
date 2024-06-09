@@ -733,16 +733,19 @@
   };
 </script>
 
-<div class="flex flex-col gap-1 h-full">
-  <div class="h-full flex-grow flex flex-col gap-1 p-2">
+<div class="flex flex-col gap-1 h-full overflow-hidden">
+  <div class="h-full flex-grow flex flex-col gap-2 p-2 overflow-hidden">
     <p>EXPORT LOGGER</p>
-    <div class="h-full overflow-scroll">
+    <hr />
+    <div class="h-full overflow-scroll space-y-1">
       {#each logs as log}
         <p>{log}</p>
       {/each}
     </div>
   </div>
-  <div class="border-t border-zinc-800 p-2 flex justify-end items-center gap-2">
+  <div
+    class="border-t border-zinc-800 mx-2 py-2 flex justify-end items-center gap-2"
+  >
     {#if !isExporting}
       <div class="h-1 w-24 rounded-full bg-zinc-900"></div>
     {:else}
