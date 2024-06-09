@@ -2,7 +2,6 @@
   import { scale, videoClips, time, paused, pointerMode } from "$lib/stores";
   import { updateScrubberAndScroll } from "$lib/utils";
   import IconButton from "../IconButton.svelte";
-  import Region from "../Region.svelte";
   import Runtime from "../Runtime.svelte";
 
   const decrease = () => {
@@ -30,8 +29,8 @@
   }}
 />
 
-<Region
-  class="flex items-center justify-between h-12 text-zinc-400 rounded-br-none rounded-bl-none border-b-0"
+<div
+  class="rounded-sm bg-zinc-925 p-2 flex items-center justify-between h-12 text-zinc-400 rounded-br-none rounded-bl-none border-b-0"
 >
   <div class="flex gap-2">
     <IconButton
@@ -85,4 +84,4 @@
     />
   </div>
   <Runtime time={$time} />
-</Region>
+</div>

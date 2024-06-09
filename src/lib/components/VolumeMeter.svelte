@@ -8,7 +8,6 @@
 <script lang="ts">
   import { aCtx, paused, volumeMultiplier } from "$lib/stores";
   import { onMount } from "svelte";
-  import Region from "./Region.svelte";
 
   let lChannelLoudness = 0;
   let rChannelLoudness = 0;
@@ -63,7 +62,7 @@
   }
 </script>
 
-<Region class="flex justify-center gap-0.5">
+<div class="rounded-sm p-2 flex justify-center gap-0.5 bg-zinc-925">
   <div class="w-3 rounded-sm bg-zinc-950 shadow-sm overflow-clip">
     <div
       class="w-full h-full bg-gradient-to-b from-red-500 via-yellow-300 to-green-400 clip"
@@ -83,7 +82,7 @@
     step="0.001"
     bind:value={$volumeMultiplier}
   />
-</Region>
+</div>
 
 <style>
   .clip {
