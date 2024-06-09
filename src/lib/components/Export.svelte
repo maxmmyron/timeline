@@ -727,6 +727,7 @@
 
 <button
   on:click={exportVideo}
+  class="border border-zinc-800 px-2 rounded-sm"
   disabled={$exportStatus !== "idle" && $exportStatus !== "done"}
 >
   <p>Export</p>
