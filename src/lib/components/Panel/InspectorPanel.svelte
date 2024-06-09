@@ -1,9 +1,9 @@
 <script lang="ts">
   import { videoClips, audioClips } from "$lib/stores";
   import IconButton from "../IconButton.svelte";
-  import ScalarSetting from "./ScalarSetting.svelte";
-  import AutomationPanel from "./AutomationPanel.svelte";
-  import StaticRangeSetting from "./StaticRangeSetting.svelte";
+  import ScalarSetting from "./Inspector/ScalarSetting.svelte";
+  import AutomationGraph from "./Inspector/AutomationGraph.svelte";
+  import StaticRangeSetting from "./Inspector/StaticRangeSetting.svelte";
 
   export let uuid: string;
   export let type: App.MediaType;
@@ -57,12 +57,12 @@
 <main
   class="row-start-1 {automationOpen
     ? 'row-span-1'
-    : 'row-span-2'} overflow-scroll"
+    : 'row-span-2'} overflow-scroll p-2"
 >
   <header
     class="flex justify-between pb-4 mb-3 border-b border-zinc-300 dark:border-zinc-800 flex-wrap"
   >
-    <h2 class="text-zinc-300 overflow-clip text-ellipsis">
+    <h2 class="text-zinc-300 overflow-clip text-ellipsis text-xs uppercase">
       {clip.media.title}
     </h2>
   </header>
@@ -268,12 +268,12 @@
       />
     </div>
     {#if currentMatrixAutomation !== -1}
-      <AutomationPanel
+      <AutomationGraph
         bind:automation={matrix[currentMatrixAutomation]}
         dynamicBounds
       />
     {:else}
-      <AutomationPanel bind:automation={volume} />
+      <AutomationGraph bind:automation={volume} />
     {/if}
   </div>
 {/if}

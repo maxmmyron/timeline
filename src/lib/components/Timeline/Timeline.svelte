@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Region from "../Region.svelte";
   import Clip from "./Clip.svelte";
   import Runtime from "../Runtime.svelte";
 
@@ -84,8 +83,8 @@
   }}
 />
 
-<Region
-  class="region relative !p-0 overflow-hidden h-full flex dark:bg-zinc-950 rounded-tl-none rounded-tr-none"
+<div
+  class="relative p-0 rounded-sm overflow-hidden h-full flex dark:bg-zinc-950 rounded-tl-none rounded-tr-none"
 >
   <!-- TIMELINE TRACKS -->
   <aside class="h-full bg-white dark:bg-zinc-950 w-40 flex-shrink-0 z-20">
@@ -174,4 +173,4 @@
       style:transform="translateX({$time * $scaleFactor - $scroll}px"
     />
   </div>
-</Region>
+</div>
