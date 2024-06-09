@@ -4,11 +4,14 @@
     safeRes,
     videoClips,
     audioClips,
-    exportStatus,
     exportPercentage,
     volumeMultiplier,
   } from "$lib/stores";
   import { FFmpeg } from "@ffmpeg/ffmpeg";
+
+  let logs: string[] = [];
+
+  let isExporting = false;
 
   /**
    * Resolves a file from a string. We need this because @ffmpeg/util doesn't seem to work.
@@ -35,15 +38,18 @@
   let isFfmpegLoaded = false;
 
   export const exportVideo = async () => {
-    exportStatus.set("setup");
+    logs = [];
+    isExporting = true;
     exportPercentage.set(0);
 
     // load ffmpeg for first time, if necessary
     if (!isFfmpegLoaded) {
       console.log("loading ffmpeg for first time...");
+      logs = [...logs, "loading ffmpeg for first time..."];
       const baseUrl = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm";
 
       ffmpeg.on("log", ({ message }) => {
+        logs = [...logs, message];
         console.log(message);
       });
 
@@ -62,10 +68,11 @@
     let clips = [...vClips, ...$audioClips];
 
     if (!ffmpeg.loaded) {
-      exportStatus.set("error");
-      throw new Error(
-        "ffmpeg.wasm did not load on editor startup. Please refresh the page."
-      );
+      isExporting = false;
+      logs = [
+        ...logs,
+        "ffmpeg.wasm did not load on editor startup. Please refresh the page.",
+      ];
     }
 
     let vFilter = "";
@@ -147,8 +154,9 @@
       )
     );
     if (duration < 0) {
-      exportStatus.set("error");
-      throw new Error("Export duration is negative.");
+      isExporting = false;
+      logs = [...logs, "Error: duration of video is less than 0."];
+      return;
     }
 
     // create black video with empty audio track for duration of video
@@ -536,7 +544,6 @@
 
     try {
       ffmpeg.on("progress", ({ progress }) => exportPercentage.set(progress));
-      exportStatus.set("export");
       console.log(
         [
           "-i",
@@ -567,8 +574,9 @@
         "28",
         "export.mp4",
       ]);
-    } catch (e) {
-      exportStatus.set("error");
+    } catch (e: any) {
+      isExporting = false;
+      logs = [...logs, e.message];
       throw e;
     }
 
@@ -577,7 +585,7 @@
 
     const exportData = await ffmpeg.readFile("export.mp4");
 
-    exportStatus.set("done");
+    isExporting = false;
 
     const link = document.createElement("a");
     link.download = "export.mp4";
@@ -725,10 +733,32 @@
   };
 </script>
 
-<button
-  on:click={exportVideo}
-  class="border border-zinc-800 px-2 rounded-sm"
-  disabled={$exportStatus !== "idle" && $exportStatus !== "done"}
->
-  <p>Export</p>
-</button>
+<div class="flex flex-col gap-1 h-full">
+  <div class="h-full flex-grow flex flex-col gap-1 p-2">
+    <p>EXPORT LOGGER</p>
+    <div class="h-full overflow-scroll">
+      {#each logs as log}
+        <p>{log}</p>
+      {/each}
+    </div>
+  </div>
+  <div class="border-t border-zinc-800 p-2 flex justify-end items-center gap-2">
+    {#if !isExporting}
+      <div class="h-1 w-24 rounded-full bg-zinc-900"></div>
+    {:else}
+      <div class="h-1 w-24 rounded-full bg-zinc-800">
+        <div
+          class="h-full bg-blue-400 rounded-full transition-all"
+          style:width="{$exportPercentage * 100}%"
+        ></div>
+      </div>
+    {/if}
+    <button
+      on:click={exportVideo}
+      class="border border-zinc-800 px-3 py-1 rounded-sm"
+      disabled={isExporting}
+    >
+      <p class="uppercase">Export</p>
+    </button>
+  </div>
+</div>

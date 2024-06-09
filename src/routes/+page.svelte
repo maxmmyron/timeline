@@ -8,8 +8,6 @@
     selected,
     paused,
     audioClips,
-    exportStatus,
-    exportPercentage,
     vRefs,
     aRefs,
     aCtx,
@@ -21,9 +19,9 @@
   import MediaBrowser from "$lib/components/MediaBrowser.svelte";
   import TimelineMedia from "$lib/components/TimelineMedia.svelte";
   import Preferences from "$lib/components/Preferences.svelte";
-  import Export from "$lib/components/Export.svelte";
   import VolumeMeter from "$lib/components/VolumeMeter.svelte";
   import Panel from "$lib/components/Panel.svelte";
+  import ExportPanel from "$lib/components/ExportPanel.svelte";
 
   // get the UUIDs of the current audio clips (we return this as a comma-sep
   // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS
@@ -196,24 +194,10 @@
     </div>
   {:else if currentPanel === "Node Editor"}
     <div class="flex items-center justify-center w-full h-full">
-      <p>Node Editor</p>
+      <p>coming soon...</p>
     </div>
   {:else if currentPanel === "Export"}
-    <div class="flex items-center justify-center w-full h-full">
-      {#if $exportStatus !== "export" && $exportStatus !== "setup"}
-        <div class="h-1 w-24 rounded-full"></div>
-      {:else if $exportStatus === "setup"}
-        <div class="h-1 w-24 rounded-full bg-zinc-800 animate-pulse"></div>
-      {:else}
-        <div class="h-1 w-24 rounded-full bg-zinc-800">
-          <div
-            class="h-full bg-blue-400 rounded-full transition-all"
-            style:width="{$exportPercentage * 100}%"
-          ></div>
-        </div>
-      {/if}
-      <Export />
-    </div>
+    <ExportPanel />
   {:else if currentPanel === "Preferences"}
     <Preferences />
   {/if}
