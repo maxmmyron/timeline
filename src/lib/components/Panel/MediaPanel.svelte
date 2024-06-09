@@ -2,7 +2,7 @@
   import { audioClips, videoClips, uploaded } from "$lib/stores";
   import { createClip, getClipEndPos } from "$lib/utils";
   import { resolveMedia } from "$lib/loader";
-  import IconButton from "./IconButton.svelte";
+  import IconButton from "../IconButton.svelte";
 
   const upload = async (fileList: FileList) => {
     for (const file of fileList) {

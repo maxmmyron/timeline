@@ -1,9 +1,9 @@
 <script lang="ts">
   import { videoClips, audioClips } from "$lib/stores";
   import IconButton from "../IconButton.svelte";
-  import ScalarSetting from "./ScalarSetting.svelte";
-  import AutomationPanel from "./AutomationPanel.svelte";
-  import StaticRangeSetting from "./StaticRangeSetting.svelte";
+  import ScalarSetting from "./Inspector/ScalarSetting.svelte";
+  import AutomationGraph from "./Inspector/AutomationGraph.svelte";
+  import StaticRangeSetting from "./Inspector/StaticRangeSetting.svelte";
 
   export let uuid: string;
   export let type: App.MediaType;
@@ -268,12 +268,12 @@
       />
     </div>
     {#if currentMatrixAutomation !== -1}
-      <AutomationPanel
+      <AutomationGraph
         bind:automation={matrix[currentMatrixAutomation]}
         dynamicBounds
       />
     {:else}
-      <AutomationPanel bind:automation={volume} />
+      <AutomationGraph bind:automation={volume} />
     {/if}
   </div>
 {/if}

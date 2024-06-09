@@ -14,14 +14,14 @@
   } from "$lib/stores";
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
-  import Inspector from "$lib/components/Inspector/Inspector.svelte";
+  import InspectorPanel from "$lib/components/Panel/InspectorPanel.svelte";
   import { frame, getCurrentClips } from "$lib/utils";
-  import MediaBrowser from "$lib/components/MediaBrowser.svelte";
+  import MediaPanel from "$lib/components/Panel/MediaPanel.svelte";
   import TimelineMedia from "$lib/components/TimelineMedia.svelte";
-  import Preferences from "$lib/components/Preferences.svelte";
+  import PreferencesPanel from "$lib/components/Panel/PreferencesPanel.svelte";
   import VolumeMeter from "$lib/components/VolumeMeter.svelte";
-  import Panel from "$lib/components/Panel.svelte";
-  import ExportPanel from "$lib/components/ExportPanel.svelte";
+  import Panel from "$lib/components/Panel/Panel.svelte";
+  import ExportPanel from "$lib/components/Panel/ExportPanel.svelte";
 
   // get the UUIDs of the current audio clips (we return this as a comma-sep
   // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS
@@ -166,7 +166,7 @@
 </script>
 
 <Panel panels={["Media Browser"]} bg="bg-zinc-925">
-  <MediaBrowser />
+  <MediaPanel />
 </Panel>
 
 <Panel
@@ -199,13 +199,13 @@
   {:else if currentPanel === "Export"}
     <ExportPanel />
   {:else if currentPanel === "Preferences"}
-    <Preferences />
+    <PreferencesPanel />
   {/if}
 </Panel>
 
 <Panel panels={["Media Inspector"]} bg="bg-zinc-925">
   {#if $selected}
-    <Inspector uuid={$selected[0]} type={$selected[1]} />
+    <InspectorPanel uuid={$selected[0]} type={$selected[1]} />
   {:else}
     <div class="w-full h-full flex items-center justify-center">
       <p>No clip selected</p>
