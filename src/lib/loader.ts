@@ -1,76 +1,95 @@
 import {v4 as uuidv4} from "uuid";
 
-export const resolveMedia = (file: File): {uuid: string, title: string, media: Promise<App.Media>} => {
+export const createMediaFromFile = (file: File): {uuid: string, title: string, media: Promise<App.Media>} => {
   const uuid = uuidv4();
 
   return {
     uuid,
     title: file.name,
-    media: new Promise(async (resolve, reject) => {
-      let fileType = file.type.split('/')[0];
-      if (fileType !== "video" && fileType !== "audio" && fileType !== "image") {
-        reject(new Error("Unsupported file type."));
-      }
-      const type = fileType as App.MediaType
-
-      const src = await assertMIME(file, type);
-      let duration = 7;
-      if (type !== "image") duration = await resolveDuration(src, type);
-
-      let dimensions: [number, number] = [0, 0];
-      if (type === "image") {
-        const img = new Image();
-        img.src = src;
-        await img.decode();
-        dimensions = [img.width, img.height];
-      } else if (type === "video") {
-        const video = document.createElement("video");
-        video.src = src;
-        video.preload = "metadata";
-        video.load();
-        await new Promise((resolve) => video.addEventListener("loadedmetadata", () => {
-          dimensions = [video.videoWidth, video.videoHeight];
-          resolve(null);
-        }));
-      }
-
-      resolve({ uuid, src, duration, title: file.name, type, dimensions });
-    }),
+    media: resolveMedia(file, uuid)
   }
-}
-
-const assertMIME = async (file: File, type: App.MediaType) => {
-  let ext = file.type.split('/')[1];
-
-  if (type === "image") {
-    if (ext !== "jpeg" && ext !== "png") {
-      throw new Error(`Unsupported image type. (Got ${file.type})`);
-    }
-    return URL.createObjectURL(file);
-  }
-
-  // create a template element to check if the browser can play the file
-  const temp = document.createElement(type).canPlayType(file.type);
-
-  // if the browser can play the file, return the file's URL (if the MIME type
-  // is valid)
-  if(temp === "maybe" || temp === "probably") {
-    if (type === "video" && ext !== "mp4" && ext !== "m4v") {
-      throw new Error(`Non MP4 video files are not supported. (Got ${file.type})`);
-    } else if (type === "audio" && ext !== "mpeg") {
-      throw new Error(`Non MP3 audio files are not supported. (Got ${file.type})`);
-    }
-    return URL.createObjectURL(file);
-  }
-  else throw new Error('Your browser does not support this format.');
 };
 
-const resolveDuration = async (src: string, type: Exclude<App.MediaType, "image">) => new Promise<number>((resolve) => {
-  let temp: HTMLVideoElement | HTMLAudioElement = document.createElement(type);
+export const resolveMedia = (file: File, uuid: string): Promise<App.Media> => new Promise(async (resolve, reject) => {
+  // reject if the MIME type is empty (since we can't sus anything out)
+  if(file.type === "") reject("Unsupported file type.");
 
-  temp.src = src;
-  temp.preload = "metadata";
-  temp.load();
+  const mime = file.type.split('/')[0] as App.MediaType;
+  if (mime !== "video" && mime !== "audio" && mime !== "image") reject("Unsupported file type.");
 
-  temp.addEventListener("loadedmetadata", () => resolve(temp.duration));
+  const isSupported = await canMediaPlay(file);
+
+  if (!isSupported) reject("Unsupported file type.");
+
+  const src = URL.createObjectURL(file);
+  const duration = await resolveDuration(src, mime);
+  const dimensions = await resolveDimensions(src, mime);
+
+  resolve({
+    uuid,
+    src,
+    duration,
+    title: file.name,
+    dimensions,
+    type: mime
+  });
+});
+
+/**
+ * Returns a promise that resolves to a boolean indicating whether the browser can decode and play the media file.
+ *
+ * @param file the file to check the mime type of
+ */
+export const canMediaPlay = (file: File): Promise<boolean> => {
+  const supportedVideoType = ["video/mp4", "video/ogg", "video/webm"];
+  const supportedAudioType = ["audio/mpeg", "audio/ogg", "audio/wav"];
+  const supportedImageType = ["image/jpeg", "image/png"];
+
+  return new Promise((resolve) => {
+    const type = file.type;
+    if (![...supportedVideoType, ...supportedAudioType, ...supportedImageType].includes(type)) {
+      resolve(false);
+    }
+
+    if (type.startsWith("image")) {
+      resolve(false);
+    }
+
+    const media = document.createElement(type.split('/')[0] as Exclude<App.MediaType, "image">);
+    resolve(media.canPlayType(type) === "probably");
+  });
+};
+
+
+const resolveDuration = async (src: string, type: App.MediaType) => new Promise<number>((resolve) => {
+  // TODO: don't hardcode the duration for images
+  if (type === "image") resolve(7)
+  else {
+    let temp: HTMLVideoElement | HTMLAudioElement = document.createElement(type);
+
+    temp.src = src;
+    temp.preload = "metadata";
+    temp.load();
+
+    temp.addEventListener("loadedmetadata", () => resolve(temp.duration));
+  }
+});
+
+const resolveDimensions = async (src: string, type: App.MediaType) => new Promise<[number, number]>((resolve) => {
+  switch (type) {
+    case "image":
+      const img = new Image();
+      img.src = src;
+      img.onload = () => resolve([img.width, img.height]);
+      break;
+    case "video":
+      const video = document.createElement("video");
+      video.src = src;
+      video.preload = "metadata";
+      video.load();
+      video.addEventListener("loadedmetadata", () => resolve([video.videoWidth, video.videoHeight]));
+      break;
+    default:
+      resolve([0, 0]);
+  }
 });
