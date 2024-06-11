@@ -1,6 +1,6 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { derived, writable, type Writable } from "svelte/store";
-import type { resolveMedia } from "$lib/loader";
+import type { createMediaFromFile } from "$lib/loader";
 
 // export const ffmpeg: Writable<FFmpeg> = writable(new FFmpeg());
 
@@ -72,6 +72,6 @@ export const pointerMode: Writable<"select" | "slice"> = writable("select");
 /**
  * Media that has been uploaded and fully resolved
  */
-export const uploaded: Writable<Array<ReturnType<typeof resolveMedia>>> = writable([]);
+export const uploaded: Writable<Array<ReturnType<typeof createMediaFromFile>>> = writable([]);
 
 export const volumeMultiplier = writable(1);
