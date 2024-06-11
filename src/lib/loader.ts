@@ -61,7 +61,7 @@ export const canMediaPlay = (file: File): Promise<boolean> => {
 };
 
 
-const resolveDuration = async (src: string, type: App.MediaType) => new Promise<number>((resolve) => {
+export const resolveDuration = async (src: string, type: App.MediaType) => new Promise<number>((resolve) => {
   // TODO: don't hardcode the duration for images
   if (type === "image") resolve(7)
   else {
@@ -75,7 +75,7 @@ const resolveDuration = async (src: string, type: App.MediaType) => new Promise<
   }
 });
 
-const resolveDimensions = async (src: string, type: App.MediaType) => new Promise<[number, number]>((resolve) => {
+export const resolveDimensions = async (src: string, type: App.MediaType) => new Promise<[number, number]>((resolve) => {
   switch (type) {
     case "image":
       const img = new Image();
