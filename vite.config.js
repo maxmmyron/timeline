@@ -14,5 +14,8 @@ export default defineConfig({
 		fs: {
 			allow: ['../..']
 		}
+	},
+	"test": {
+		include: ["/test/**/*.test.{js,ts}"]
 	}
 });
