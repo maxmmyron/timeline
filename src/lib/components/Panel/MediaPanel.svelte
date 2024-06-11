@@ -1,12 +1,12 @@
 <script lang="ts">
   import { audioClips, videoClips, uploaded } from "$lib/stores";
   import { createClip, getClipEndPos } from "$lib/utils";
-  import { resolveMedia } from "$lib/loader";
+  import { createMediaFromFile } from "$lib/loader";
   import IconButton from "../IconButton.svelte";
 
   const upload = async (fileList: FileList) => {
     for (const file of fileList) {
-      $uploaded = [...$uploaded, resolveMedia(file)];
+      $uploaded = [...$uploaded, createMediaFromFile(file)];
     }
   };
 
@@ -23,11 +23,12 @@
 
 <div class="flex flex-col gap-2 p-2 h-full overflow-hidden">
   <label for="upload">
+    <!-- TODO: fix exact import types -->
     <input
       id="upload"
       class="hidden"
       type="file"
-      accept="video/mp4,audio/mp3,image/png,image/jpeg"
+      accept="video/*,audio/*,image/*"
       multiple
       on:change={(e) => e.currentTarget.files && upload(e.currentTarget.files)}
     />
