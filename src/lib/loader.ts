@@ -18,12 +18,16 @@ export const resolveMedia = (file: File, uuid: string): Promise<App.Media> => ne
   if (mime !== "video" && mime !== "audio" && mime !== "image") reject("Unsupported file type.");
 
   const isSupported = await canMediaPlay(file);
+  console.log(isSupported);
 
   if (!isSupported) reject("Unsupported file type.");
 
   const src = URL.createObjectURL(file);
+  console.log(src);
   const duration = await resolveDuration(src, mime);
+  console.log(duration);
   const dimensions = await resolveDimensions(src, mime);
+  console.log(dimensions);
 
   resolve({
     uuid,
@@ -51,9 +55,7 @@ export const canMediaPlay = (file: File): Promise<boolean> => {
       resolve(false);
     }
 
-    if (type.startsWith("image")) {
-      resolve(false);
-    }
+    if (type.startsWith("image")) resolve(true);
 
     const media = document.createElement(type.split('/')[0] as Exclude<App.MediaType, "image">);
     resolve(media.canPlayType(type) === "probably");
@@ -61,7 +63,7 @@ export const canMediaPlay = (file: File): Promise<boolean> => {
 };
 
 
-export const resolveDuration = async (src: string, type: App.MediaType) => new Promise<number>((resolve) => {
+export const resolveDuration = (src: string, type: App.MediaType) => new Promise<number>((resolve) => {
   // TODO: don't hardcode the duration for images
   if (type === "image") resolve(7)
   else {
@@ -75,7 +77,7 @@ export const resolveDuration = async (src: string, type: App.MediaType) => new P
   }
 });
 
-export const resolveDimensions = async (src: string, type: App.MediaType) => new Promise<[number, number]>((resolve) => {
+export const resolveDimensions = (src: string, type: App.MediaType) => new Promise<[number, number]>((resolve) => {
   switch (type) {
     case "image":
       const img = new Image();

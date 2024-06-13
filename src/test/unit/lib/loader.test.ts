@@ -1,3 +1,7 @@
+/**
+ * @vitest-environemnt jsdom
+ */
+
 import { createMediaFromFile, resolveMedia, canMediaPlay, resolveDuration, resolveDimensions } from "$lib/loader";
 import { beforeEach, describe, expect, it, test, vi } from "vitest"
 
@@ -38,18 +42,22 @@ describe("resolveMedia", () => {
     expect(resolveMedia(file, "test")).rejects.toEqual("Unsupported file type.");
   });
 
-  it("resolves to a media object with the correct properties", () => {
+  it("resolves to a media object with the correct properties", async () => {
     const file = new File([], "test.jpg", {type: "image/jpeg"});
-    const media = resolveMedia(file, "test");
+    const media = resolveMedia(file, "0");
 
-    expect(media).resolves.toEqual({
-      uuid: "test",
+    const m = await media;
+
+    expect(m).toEqual({
+      uuid: "0",
       src: expect.any(String),
       duration: expect.any(Number),
       title: "test.jpg",
       dimensions: expect.any(Object),
       type: "image"
     });
+
+    expect(media).toBeInstanceOf(Promise);
   });
 });
 
