@@ -14,20 +14,25 @@ declare global {
 			pan: number,
 		};
 
-		type Media = {
+		type Media<T = MediaType> = {
+			type: T;
 			uuid: string;
 			/**
 			 * The Blob URL of the media
 			 */
 			src: string;
-			duration: number;
 			/**
 			 * The original file name of the media
 			 */
 			title: string;
+		} & (T extends "video" ? {
 			dimensions: [number, number];
-			type: MediaType;
-		};
+			duration: number;
+		} : T extends "audio" ? {
+			duration: number;
+		} : T extends "image" ? {
+			dimensions: [number, number];
+		} : {});
 
 		type Matrix = [Automation<"scale">, number, number, Automation<"scale">, Automation<"position">, Automation<"position">];
 
