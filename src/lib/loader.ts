@@ -53,26 +53,27 @@ export const resolveMedia = (file: File, uuid: string): Promise<App.Media<App.Me
  *
  * @param file the file to check the mime type of
  */
-export const canMediaPlay = (file: File): Promise<boolean> => {
+export const canMediaPlay = (file: File): boolean => {
   const supportedVideoType = ["video/mp4", "video/ogg", "video/webm"];
   const supportedAudioType = ["audio/mpeg", "audio/ogg", "audio/wav"];
   const supportedImageType = ["image/jpeg", "image/png"];
 
-  return new Promise((resolve) => {
-    const type = file.type;
-    if (![...supportedVideoType, ...supportedAudioType, ...supportedImageType].includes(type)) {
-      resolve(false);
-    }
+  const type = file.type;
+  if (![...supportedVideoType, ...supportedAudioType, ...supportedImageType].includes(type)) {
+    return false;
+  }
 
-    if (type.startsWith("image")) resolve(true);
+  // FIXME: shaky
+  if (type.startsWith("image")) return true;
 
-    const media = document.createElement(type.split('/')[0] as Exclude<App.MediaType, "image">);
-    resolve(media.canPlayType(type) === "probably");
-  });
+  const media = document.createElement(type.split('/')[0] as Exclude<App.MediaType, "image">);
+  return media.canPlayType(type) === "probably" || media.canPlayType(type) === "maybe";
 };
 
 
-export const resolveDuration = (src: string, type: Exclude<App.MediaType, "image">) => new Promise<number>((resolve) => {
+export const resolveDuration = (src: string, type: Exclude<App.MediaType, "image">) => new Promise<number>((resolve, reject) => {
+  if (type !== "audio" && type !== "video") reject("Invalid MIME type.");
+
   let temp: HTMLVideoElement | HTMLAudioElement = document.createElement(type);
 
   temp.src = src;

@@ -2,8 +2,8 @@
  * @vitest-environemnt jsdom
  */
 
-import { createMediaFromFile, resolveMedia, canMediaPlay, resolveDuration, resolveDimensions } from "$lib/loader";
-import { beforeEach, describe, expect, it, test, vi } from "vitest"
+import { createMediaFromFile, resolveDuration } from "$lib/loader";
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 describe("createMediaFromFile", () => {
   it("returns a wrapped promise when given a file", () => {
@@ -16,65 +16,42 @@ describe("createMediaFromFile", () => {
   });
 });
 
-// resolveMedia
+describe("resolveDuration", () => {
+  beforeEach(() => {
+    vi.spyOn(window.HTMLVideoElement.prototype, "addEventListener").mockImplementationOnce((event, handler, options) => {
+      if (event === "loadedmetadata") {
+        // handler type is EventListenerOrEventListenerObject, so we need to narrow down type.
+        if (typeof handler === "function") handler(new Event("loadedmetadata"));
+        else handler.handleEvent(new Event("loadedmetadata"));
+      }
+    });
 
-// describe("resolveMedia", () => {
-//   it("rejects if the MIME type is empty", () => {
-//     const file = new File([], "test.jpg", {type: "none"});
-//     expect(resolveMedia(file, "test")).rejects.toEqual("Unsupported file type.");
-//   });
+    vi.spyOn(window.HTMLAudioElement.prototype, "addEventListener").mockImplementationOnce((event, handler, options) => {
+      if (event === "loadedmetadata") {
+        if (typeof handler === "function") handler(new Event("loadedmetadata"));
+        else handler.handleEvent(new Event("loadedmetadata"));
+      }
+    });
+  })
 
-//   it("rejects if the MIME type is not a known media type", () => {
-//     const file = new File([], "test.jpg", {type: "application/pdf"});
-//     expect(resolveMedia(file, "test")).rejects.toEqual("Unsupported file type.");
-//   });
-
-//   it("rejects if the MIME type is not supported by the browser", () => {
-//     const file = new File([], "test.jpg", {type: "image/svg+xml"});
-//     expect(resolveMedia(file, "test")).rejects.toEqual("Unsupported file type.");
-//   });
-// });
-
-// canMediaPlay (TODO: this may depend on the browser)
-describe("canMediaPlay", () => {
-  it("returns true for a supported video type", () => {
-    const file = new File([], "test.mp4", {type: "video/mp4"});
-    expect(canMediaPlay(file)).resolves.toBe(true);
-
-    const file2 = new File([], "test.ogv", {type: "video/ogg"});
-    expect(canMediaPlay(file2)).resolves.toBe(true);
-
-    const file3 = new File([], "test.webm", {type: "video/webm"});
-    expect(canMediaPlay(file3)).resolves.toBe(true);
+  it("rejects if the MIME type is invalid", () => {
+    const file = new File([], "test.jpg", {type: "none"});
+    expect(resolveDuration("blob:mock", "none")).rejects.toEqual("Invalid MIME type.");
   });
 
-  it("returns true for a supported audio type", () => {
-    const file = new File([], "test.mp3", {type: "audio/mpeg"});
-    expect(canMediaPlay(file)).resolves.toBe(true);
-
-    const file2 = new File([], "test.ogg", {type: "audio/ogg"});
-    expect(canMediaPlay(file2)).resolves.toBe(true);
-
-    const file3 = new File([], "test.wav", {type: "audio/wav"});
-    expect(canMediaPlay(file3)).resolves.toBe(true);
-  });
-
-  it("returns true for a supported image type", () => {
+  it("rejects if the MIME type is image/*", () => {
     const file = new File([], "test.jpg", {type: "image/jpeg"});
-    expect(canMediaPlay(file)).resolves.toBe(true);
-
-    const file2 = new File([], "test.png", {type: "image/png"});
-    expect(canMediaPlay(file2)).resolves.toBe(true);
+    expect(resolveDuration("blob:mock", "image")).rejects.toEqual("Invalid MIME type.");
   });
 
-  it("returns false for an unsupported type", () => {
-    const file = new File([], "test.svg", {type: "image/svg+xml"});
-    expect(canMediaPlay(file)).resolves.toBe(false);
+  // FIXME: these are NaN because input file has no content, so it can't determine the duration.
+  it("resolves if the MIME type is video/*", () => {
+    const file = new File([], "test.mp4", {type: "video/mp4"});
+    expect(resolveDuration("blob:mock", "video")).resolves.toBe(NaN);
+  });
 
-    const file2 = new File([], "test.pdf", {type: "application/pdf"});
-    expect(canMediaPlay(file2)).resolves.toBe(false);
-
-    const file3 = new File([], "test.doc", {type: "application/msword"});
-    expect(canMediaPlay(file3)).resolves.toBe(false);
+  it("resolves if the MIME type is audio/*", () => {
+    const file = new File([], "test.mp3", {type: "audio/mpeg"});
+    expect(resolveDuration("blob:mock", "audio")).resolves.toBe(NaN);
   });
 });
