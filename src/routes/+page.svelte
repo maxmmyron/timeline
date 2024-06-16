@@ -80,6 +80,8 @@
   const updatePlayback = async (type: App.MediaType, curr: App.Clip[]) => {
     await tick();
 
+    if (type === "image") return;
+
     const clips = type !== "audio" ? $videoClips : $audioClips;
     const refs = type !== "audio" ? $vRefs : $aRefs;
 
@@ -88,7 +90,9 @@
 
     for (const { uuid } of clips) {
       const el = refs[uuid];
-      const clip = curr.find((c) => c.uuid === uuid);
+      const clip = curr.find((c) => c.uuid === uuid) as
+        | App.Clip<"video">
+        | App.Clip<"audio">;
 
       // if there's no el, continue
       if (!el) continue;
@@ -127,6 +131,8 @@
   const resetPlayback = async (type: App.MediaType, uuids: string[] | null) => {
     await tick();
 
+    if (type === "image") return;
+
     const refs = type !== "audio" ? $vRefs : $aRefs;
     const curr = type !== "audio" ? currVideo : currAudio;
 
@@ -150,7 +156,9 @@
     uuid: string
   ) => {
     const el = refs[uuid];
-    const clip = curr.find((c) => c.uuid === uuid);
+    const clip = curr.find((c) => c.uuid === uuid) as
+      | App.Clip<"video">
+      | App.Clip<"audio">;
 
     if (!el || !clip) return;
 

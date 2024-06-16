@@ -63,7 +63,7 @@
 
     // sort vClips by z index, lowest to highest. we do this so we properly layer
     // the videos.
-    const vClips = $videoClips.sort((a, b) => a.z - b.z);
+    const vClips = $videoClips.sort((a, b) => a.timelineZ - b.timelineZ);
 
     let clips = [...vClips, ...$audioClips];
 
@@ -135,8 +135,8 @@
               .filter((clip) => clip.media.uuid === media.uuid)
               .filter(
                 (clip) =>
-                  clip.matrix[0].curves.length > 0 ||
-                  clip.matrix[3].curves.length > 0
+                  (<App.Clip<"video">>clip).matrix[0].curves.length > 0 ||
+                  (<App.Clip<"video">>clip).matrix[3].curves.length > 0
               ).length > 0
           ) {
             vFilter += `${splitCount},scale=${$safeRes[0] * 4}:-1[${v_outs.join("][")}];`;

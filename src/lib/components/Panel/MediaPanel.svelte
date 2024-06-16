@@ -10,6 +10,19 @@
     }
   };
 
+  const addClip = (media: App.Media) => {
+    const clip = createClip(media);
+    const end = getClipEndPos(clip);
+    if (media.type === "audio") {
+      $audioClips = [...$audioClips, clip as App.Clip<"audio">];
+    } else {
+      $videoClips = [
+        ...$videoClips,
+        clip as App.Clip<"video"> | App.Clip<"image">,
+      ];
+    }
+  };
+
   export let removeMedia = (uuid: string) => {
     // TODO: add confirmation dialog
     if ($videoClips.find((c) => c.media.uuid === uuid))
@@ -59,21 +72,21 @@
             {#await media}
               <p>Loading...</p>
             {:then media}
-              <p>{media.duration.toPrecision(3)}s - {media.type}</p>
+              <p>
+                {#if media.type !== "image"}
+                  <span>
+                    <!-- FIXME: type-error here despite removing image type -->
+                    {media.duration.toPrecision(3)}s -
+                  </span>
+                {/if}
+                {media.type}
+              </p>
             {/await}
           </header>
           <div class="flex flex-col gap-2">
             {#await media then media}
               <button
-                on:click={() => {
-                  const clip = createClip(media);
-                  const end = getClipEndPos(clip);
-                  if (media.type === "audio") {
-                    $audioClips = [...$audioClips, clip];
-                  } else $videoClips = [...$videoClips, clip];
-
-                  // updateScrubberAndScroll(end);
-                }}
+                on:click={() => addClip(media)}
                 class="bg-zinc-800 p-1 w-5 h-5 rounded-md shadow-md flex items-center justify-center border border-zinc-700"
               >
                 +

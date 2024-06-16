@@ -21,7 +21,7 @@
 
   type ResizeMode = "left" | "right";
 
-  export let clip: App.Clip;
+  export let clip: App.Clip<"video"> | App.Clip<"audio"> | App.Clip<"image">;
   // this is set to 9 as a dirty default
   export let timelineOffset: number;
 
@@ -228,7 +228,7 @@
     let arr = clip.media.type === "audio" ? $audioClips : $videoClips;
     return arr.filter((c) => {
       // break if z-index is lower
-      if (c.z < clip.z) return false;
+      if (c.timelineZ < clip.timelineZ) return false;
 
       const cStart = c.offset;
       const cEnd = c.offset + (c.media.duration - c.start - c.end);
@@ -291,35 +291,29 @@
     let splitOffset = splitTime - clip.offset;
     let clipDuration = clip.media.duration - clip.start - clip.end;
 
-    const leftClip = createClip(
-      { ...clip.media },
-      {
-        offset: clip.offset,
-        start: clip.start,
-        end: clip.end + (clipDuration - splitOffset),
-        matrix: [...clip.matrix],
-      }
-    );
+    let leftClip = structuredClone(clip);
+    let rightClip = structuredClone(clip);
 
-    const rightClip = createClip(
-      { ...clip.media },
-      {
-        offset: clip.offset + splitOffset,
-        start: clip.start + splitOffset,
-        end: clip.end,
-        matrix: [...clip.matrix],
-      }
-    );
+    leftClip.end = clip.end + (clipDuration - splitOffset);
 
-    clips = [...clips, leftClip, rightClip];
+    rightClip.offset = clip.offset + splitOffset;
+    rightClip.start = clip.start + splitOffset;
+
     const oldUUID = clip.uuid;
-    // deselect just in case
     $selected = null;
-    clips = clips.filter((c) => c.uuid !== oldUUID);
 
-    // update stores to reflect changes
-    if (clip.media.type !== "audio") $videoClips = clips;
-    else $audioClips = clips;
+    if (clip.type === "video" || clip.type === "image") {
+      clips = [...clips, leftClip, rightClip] as (
+        | App.Clip<"video">
+        | App.Clip<"image">
+      )[];
+      clips = clips.filter((c) => c.uuid !== oldUUID);
+      $videoClips = clips;
+    } else {
+      clips = [...clips, leftClip, rightClip] as App.Clip<"audio">[];
+      clips = clips.filter((c) => c.uuid !== oldUUID);
+      $audioClips = clips;
+    }
   };
 </script>
 
@@ -343,7 +337,7 @@
   class:rounded-bl-none={coverCount > 0}
   style:transform
   style:width
-  style:z-index={clip.z}
+  style:z-index={clip.timelineZ}
   bind:this={clipEl}
   on:mousedown|stopPropagation={(e) => {
     if ($pointerMode === "slice") {
@@ -353,9 +347,11 @@
     }
     canMoveClip = true;
     if (clip.media.type === "audio")
-      clip.z = $audioClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1;
+      clip.timelineZ =
+        $audioClips.reduce((acc, clip) => Math.max(acc, clip.timelineZ), 0) + 1;
     else
-      clip.z = $videoClips.reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1;
+      clip.timelineZ =
+        $videoClips.reduce((acc, clip) => Math.max(acc, clip.timelineZ), 0) + 1;
     moveOffset = e.clientX - clipEl.getBoundingClientRect().left;
   }}
   on:dblclick|stopPropagation={() => {

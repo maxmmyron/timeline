@@ -80,23 +80,33 @@ export const frame = (timestamp: DOMHighResTimeStamp) => {
  * @param opts Optional defaults for the new clip.
  * @returns A new clip object
  */
-export const createClip = (resolved: App.Media, opts?: Partial<App.Clip>): App.Clip => ({
-  media: resolved,
-  offset: opts?.offset ?? get(time),
-  start: opts?.start ?? 0,
-  end: opts?.end ?? 0,
-  uuid: uuidv4(),
-  z: get(videoClips).reduce((acc, clip) => Math.max(acc, clip.z), 0) + 1,
-  matrix: opts?.matrix ?? [
-    createAutomation("scale", resolved.duration),
-    1, 1,
-    createAutomation("scale", resolved.duration),
-    createAutomation("position", resolved.duration, { initial: 0, }),
-    createAutomation("position", resolved.duration, { initial: 0, })
-  ],
-  volume: createAutomation("volume", resolved.duration),
-  pan: 0,
-});
+export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Partial<App.Clip<T>>): App.Clip<T> => {
+  let base = {
+    type: resolved.type,
+    media: resolved,
+    offset: opts?.offset ?? get(time),
+    start: opts?.start ?? 0,
+    end: opts?.end ?? 0,
+    uuid: uuidv4(),
+    timelineZ: get(videoClips).reduce((acc, clip) => Math.max(acc, clip.timelineZ), 0) + 1,
+  } as App.Clip<T>;
+
+  if (resolved.type === "video" || resolved.type === "image") {
+    base = {
+      ...base,
+      matrix: [
+        createAutomation("scale", (<App.Media<"video" | "image">>resolved).dimensions[0]),
+        0, 0,
+        createAutomation("scale", (<App.Media<"video" | "image">>resolved).dimensions[1]),
+        createAutomation("position", resolved.duration, {initial: 0}),
+        createAutomation("position", resolved.duration, {initial: 0})
+      ]};
+  } else if (resolved.type === "audio") {
+    base = {...base, automation: createAutomation("volume", resolved.duration)};
+  }
+
+  return base;
+};
 
 /**
  * cyrb53 (c) 2018 bryc (github.com/bryc)
