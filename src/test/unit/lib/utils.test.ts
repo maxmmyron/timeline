@@ -1,5 +1,5 @@
 import { videoClips } from "$lib/stores";
-import { createAutomation, createClip, getClipDuration, getClipEndPos, getCurrentClips, getLastTimelineClip } from "$lib/utils";
+import { createAutomation, createClip, getClipDuration, getClipEndPos, getCurrentClips, getLastTimelineClip, lerpAutomation } from "$lib/utils";
 import { get } from "svelte/store";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -127,21 +127,36 @@ describe("createClip", () => {
 
 describe("createAutomation", () => {
   it("creates a new automation clip", () => {
-    const clip = createAutomation("scale", 10);
+    const automation = createAutomation("scale", 10);
 
-    expect(clip.type).toBe("scale");
+    expect(automation.type).toBe("scale");
   });
-
-  it("throws an error if the provided type is invalid")
 });
 
 describe("lerpAutomation", () => {
   it("returns the first value if the time is before the first automation point", () => {
+    const automation = createAutomation("scale", 10);
+    automation.curves[0] = [0, 1];
+    automation.curves[1] = [10, 2];
 
+
+    expect(lerpAutomation(automation, 0, -1)).toBe(1);
   });
 
-  it("returns the last value if the time is after the last automation point", () => {});
+  it("returns the last value if the time is after the last automation point", () => {
+    const automation = createAutomation("scale", 10);
+    automation.curves[0] = [0, 1];
+    automation.curves[1] = [10, 2];
 
-  it("lerps between two automation points", () => {});
+    expect(lerpAutomation(automation, 0, 11)).toBe(2);
+  });
+
+  it("lerps between two automation points", () => {
+    const automation = createAutomation("scale", 10);
+    automation.curves[0] = [1, 0];
+    automation.curves[1] = [10, 1];
+
+    expect(lerpAutomation(automation, 0, 5)).toBe(1.5);
+  });
 });
 
