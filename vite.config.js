@@ -14,5 +14,10 @@ export default defineConfig({
 		fs: {
 			allow: ['../..']
 		}
+	},
+	"test": {
+		include: ["src/test/**/*.test.{js,ts}"],
+		environment: "jsdom",
+		setupFiles: ["/src/test/setup.ts"],
 	}
 });

@@ -10,29 +10,42 @@ export const createMediaFromFile = (file: File): {uuid: string, title: string, m
   }
 };
 
-export const resolveMedia = (file: File, uuid: string): Promise<App.Media> => new Promise(async (resolve, reject) => {
+export const resolveMedia = (file: File, uuid: string): Promise<App.Media<App.MediaType>> => new Promise(async (resolve, reject) => {
   // reject if the MIME type is empty (since we can't sus anything out)
-  if(file.type === "") reject("Unsupported file type.");
-
-  const mime = file.type.split('/')[0] as App.MediaType;
+  const mime = file.type.split('/')[0] as string;
   if (mime !== "video" && mime !== "audio" && mime !== "image") reject("Unsupported file type.");
+  const type = mime as App.MediaType;
 
   const isSupported = await canMediaPlay(file);
+  console.log(isSupported);
 
   if (!isSupported) reject("Unsupported file type.");
 
   const src = URL.createObjectURL(file);
-  const duration = await resolveDuration(src, mime);
-  const dimensions = await resolveDimensions(src, mime);
 
-  resolve({
+  let base: App.Media = {
     uuid,
     src,
-    duration,
+    type,
     title: file.name,
-    dimensions,
-    type: mime
-  });
+  } as App.Media;
+
+  if (type === "image") {
+    const dimensions = await resolveDimensions(src, type);
+
+    base = {...base, dimensions} as App.Media<"image">;
+  } else if (type === "video") {
+    const duration = await resolveDuration(src, type);
+    const dimensions = await resolveDimensions(src, type);
+
+    base = {...base, duration, dimensions} as App.Media<"video">;
+  } else if (type === "audio") {
+    const duration = await resolveDuration(src, type);
+
+    base = {...base, duration} as App.Media<"audio">;
+  }
+
+  resolve(base);
 });
 
 /**
@@ -40,42 +53,37 @@ export const resolveMedia = (file: File, uuid: string): Promise<App.Media> => ne
  *
  * @param file the file to check the mime type of
  */
-export const canMediaPlay = (file: File): Promise<boolean> => {
+export const canMediaPlay = (file: File): boolean => {
   const supportedVideoType = ["video/mp4", "video/ogg", "video/webm"];
   const supportedAudioType = ["audio/mpeg", "audio/ogg", "audio/wav"];
   const supportedImageType = ["image/jpeg", "image/png"];
 
-  return new Promise((resolve) => {
-    const type = file.type;
-    if (![...supportedVideoType, ...supportedAudioType, ...supportedImageType].includes(type)) {
-      resolve(false);
-    }
+  const type = file.type;
+  if (![...supportedVideoType, ...supportedAudioType, ...supportedImageType].includes(type)) {
+    return false;
+  }
 
-    if (type.startsWith("image")) {
-      resolve(false);
-    }
+  // FIXME: shaky
+  if (type.startsWith("image")) return true;
 
-    const media = document.createElement(type.split('/')[0] as Exclude<App.MediaType, "image">);
-    resolve(media.canPlayType(type) === "probably");
-  });
+  const media = document.createElement(type.split('/')[0] as Exclude<App.MediaType, "image">);
+  return media.canPlayType(type) === "probably" || media.canPlayType(type) === "maybe";
 };
 
 
-const resolveDuration = async (src: string, type: App.MediaType) => new Promise<number>((resolve) => {
-  // TODO: don't hardcode the duration for images
-  if (type === "image") resolve(7)
-  else {
-    let temp: HTMLVideoElement | HTMLAudioElement = document.createElement(type);
+export const resolveDuration = (src: string, type: Exclude<App.MediaType, "image">) => new Promise<number>((resolve, reject) => {
+  if (type !== "audio" && type !== "video") reject("Invalid MIME type.");
 
-    temp.src = src;
-    temp.preload = "metadata";
-    temp.load();
+  let temp: HTMLVideoElement | HTMLAudioElement = document.createElement(type);
 
-    temp.addEventListener("loadedmetadata", () => resolve(temp.duration));
-  }
+  temp.src = src;
+  temp.preload = "metadata";
+  temp.load();
+
+  temp.addEventListener("loadedmetadata", () => resolve(temp.duration));
 });
 
-const resolveDimensions = async (src: string, type: App.MediaType) => new Promise<[number, number]>((resolve) => {
+export const resolveDimensions = (src: string, type: App.MediaType) => new Promise<[number, number]>((resolve) => {
   switch (type) {
     case "image":
       const img = new Image();

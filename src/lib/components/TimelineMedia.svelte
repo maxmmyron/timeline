@@ -17,7 +17,7 @@
   import { lerpAutomation } from "$lib/utils";
   import { onMount } from "svelte";
 
-  export let clip: App.Clip;
+  export let clip: App.Clip<"video"> | App.Clip<"audio"> | App.Clip<"image">;
 
   export let curr: App.Clip[] = [];
 
@@ -26,14 +26,21 @@
   let panNode: StereoPannerNode = $aCtx!.createStereoPanner();
   let splitter: ChannelSplitterNode = $aCtx!.createChannelSplitter(2);
 
-  $: gainNode.gain.value =
-    lerpAutomation(clip.volume, clip.offset, $time) * $volumeMultiplier;
-  $: panNode.pan.value = clip.pan;
+  $: if (clip.type === "audio")
+    gainNode.gain.value =
+      lerpAutomation(clip.volume, clip.offset, $time) * $volumeMultiplier;
+  $: if (clip.type === "audio") panNode.pan.value = clip.pan;
 
-  $: scaleX = lerpAutomation(clip.matrix[0], clip.offset, $time) * $playerScale;
-  $: scaleY = lerpAutomation(clip.matrix[3], clip.offset, $time) * $playerScale;
-  $: translateX = lerpAutomation(clip.matrix[4], clip.offset, $time);
-  $: translateY = lerpAutomation(clip.matrix[5], clip.offset, $time);
+  let scaleX: number, scaleY: number, translateX: number, translateY: number;
+
+  $: if (clip.type !== "audio")
+    scaleX = lerpAutomation(clip.matrix[0], clip.offset, $time) * $playerScale;
+  $: if (clip.type !== "audio")
+    scaleY = lerpAutomation(clip.matrix[3], clip.offset, $time) * $playerScale;
+  $: if (clip.type !== "audio")
+    translateX = lerpAutomation(clip.matrix[4], clip.offset, $time);
+  $: if (clip.type !== "audio")
+    translateY = lerpAutomation(clip.matrix[5], clip.offset, $time);
 
   $: lerpedMatrix = [scaleX, 0, 0, scaleY, translateX, translateY];
 
@@ -72,7 +79,7 @@
     title={clip.uuid}
     bind:this={$vRefs[clip.uuid]}
     style:transform="translate(-50%, -50%) matrix({lerpedMatrix.join(",")})"
-    style:z-index={clip.z}
+    style:z-index={clip.timelineZ}
     class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
     preload=""
   >
@@ -94,7 +101,7 @@
     alt=""
     bind:this={$iRefs[clip.uuid]}
     style:transform="translate(-50%, -50%) matrix({lerpedMatrix.join(",")})"
-    style:z-index={clip.z}
+    style:z-index={clip.timelineZ}
     class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
   />
 {:else if clip.media.type === "audio"}

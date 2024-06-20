@@ -2,32 +2,43 @@
 // for information about these interfaces
 declare global {
 	namespace App {
-		type Clip = {
-			media: Media;
+		type Clip<T = MediaType> = {
+			type: T;
+			media: Media<T>;
 			offset: number;
 			start: number;
 			end: number;
 			uuid: string;
-			z: number;
+			timelineZ: number;
+		} & (T extends "video" ? {
 			matrix: Matrix;
+		} : T extends "audio" ? {
 			volume: Automation<"volume">;
-			pan: number,
-		};
+			pan: number;
+		} : T extends "image" ? {
+			matrix: Matrix;
+		} : {});
 
-		type Media = {
+		type Media<T = MediaType> = {
+			type: T;
 			uuid: string;
 			/**
 			 * The Blob URL of the media
 			 */
 			src: string;
-			duration: number;
 			/**
 			 * The original file name of the media
 			 */
 			title: string;
+			/**
+			 * The duration of a clip
+			 */
+			duration: number;
+		} & (T extends "video" ? {
 			dimensions: [number, number];
-			type: MediaType;
-		};
+		} : T extends "image" ? {
+			dimensions: [number, number];
+		} : {});
 
 		type Matrix = [Automation<"scale">, number, number, Automation<"scale">, Automation<"position">, Automation<"position">];
 

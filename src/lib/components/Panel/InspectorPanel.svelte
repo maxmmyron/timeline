@@ -13,23 +13,34 @@
 
   const clipArr = type === "audio" ? $audioClips : $videoClips;
   const clipIdx = clipArr.findIndex((c) => c.uuid === uuid);
-  let clip = clipArr[clipIdx];
+  let clip = clipArr[clipIdx] as
+    | App.Clip<"video">
+    | App.Clip<"audio">
+    | App.Clip<"image">;
 
-  let matrix = clip.matrix;
-  let volume = clip.volume;
-  let pan = clip.pan;
+  let matrix = clip.type !== "audio" ? clip.matrix : null;
+  let volume = clip.type === "audio" ? clip.volume : null;
+  let pan = clip.type === "audio" ? clip.pan : null;
 
-  $: updateProp("matrix", matrix);
-  $: updateProp("volume", volume);
-  $: updateProp("pan", pan);
+  $: if (matrix) updateProp<"video" | "image">("matrix", matrix);
+  $: if (volume) updateProp<"audio">("volume", volume);
+  $: if (pan) updateProp<"audio">("pan", pan);
 
-  const updateProp = <T extends keyof typeof clip>(
-    prop: T,
-    val: (typeof clip)[T]
+  /**
+   * Updates a property of the current clip.
+   * @param prop the property to update
+   * @param val the new value
+   * @param __type Internal use only: the type of the clip to update. Used for Typescript narrowing
+   */
+  const updateProp = <T extends App.MediaType>(
+    prop: keyof App.Clip<T>,
+    val: App.Clip<T>[keyof App.Clip<T>]
   ) => {
-    if (type === "video" || type === "image") {
+    if (clip.type !== "audio") {
+      // @ts-ignore
       $videoClips[clipIdx][prop] = val;
     } else {
+      // @ts-ignore
       $audioClips[clipIdx][prop] = val;
     }
   };
@@ -71,17 +82,23 @@
     <h3 class="text-zinc-400">Info</h3>
     <div class="grid grid-cols-3 gap-y-3">
       <p class="text-zinc-500">length</p>
-      <p class="col-span-2">{clip.media.duration.toPrecision(3)}s</p>
-      <p class="text-zinc-500">dimensions</p>
-      <p class="col-span-2">
-        {clip.media.dimensions[0]}px x {clip.media.dimensions[1]}px
-      </p>
+      {#if clip.type !== "image"}
+        <p class="col-span-2">{clip.media.duration.toPrecision(3)}s</p>
+      {:else}
+        <p class="col-span-2">N/A</p>
+      {/if}
+      {#if clip.type !== "audio"}
+        <p class="text-zinc-500">dimensions</p>
+        <p class="col-span-2">
+          {clip.media.dimensions[0]}px x {clip.media.dimensions[1]}px
+        </p>
+      {/if}
       <p class="text-zinc-500">clip uuid</p>
       <p class="col-span-2">{clip.uuid}</p>
     </div>
   </section>
 
-  {#if type === "video" || type === "image"}
+  {#if matrix && (clip.type === "video" || clip.type === "image")}
     <section class="pb-4 mb-3 border-b border-zinc-800 w-full space-y-3">
       <h3 class="text-zinc-400">Transforms</h3>
 
@@ -221,36 +238,40 @@
       </div>
     </section>
   {/if}
-  {#if type !== "image"}
+  {#if clip.type === "audio"}
     <div class="pb-4 mb-3 border-b border-zinc-800 w-full space-y-3">
       <h3 class="text-zinc-400">Audio</h3>
 
-      <div class="grid grid-cols-5 gap-x-3 items-baseline">
-        <h3 class="text-zinc-500">Volume</h3>
-        <ScalarSetting
-          supportsAutomation
-          disabled={volume.curves.length > 0}
-          bind:scalar={volume.staticVal}
-          props={{ min: 0, max: 1, step: 0.01 }}
-          defaultVal={1}
-          bind:automation={volume}
-          bind:isAutomationVisible={isVolumeAutomationVisible}
-        />
-      </div>
+      {#if volume}
+        <div class="grid grid-cols-5 gap-x-3 items-baseline">
+          <h3 class="text-zinc-500">Volume</h3>
+          <ScalarSetting
+            supportsAutomation
+            disabled={volume.curves.length > 0}
+            bind:scalar={volume.staticVal}
+            props={{ min: 0, max: 1, step: 0.01 }}
+            defaultVal={1}
+            bind:automation={volume}
+            bind:isAutomationVisible={isVolumeAutomationVisible}
+          />
+        </div>
+      {/if}
 
-      <div class="grid grid-cols-5 gap-x-3 items-baseline">
-        <h3 class="text-zinc-500">Pan</h3>
-        <StaticRangeSetting
-          class="col-span-3"
-          bind:scalar={pan}
-          props={{ min: -1, max: 1, step: 0.01 }}
-        />
-      </div>
+      {#if pan}
+        <div class="grid grid-cols-5 gap-x-3 items-baseline">
+          <h3 class="text-zinc-500">Pan</h3>
+          <StaticRangeSetting
+            class="col-span-3"
+            bind:scalar={pan}
+            props={{ min: -1, max: 1, step: 0.01 }}
+          />
+        </div>
+      {/if}
     </div>
   {/if}
 </main>
 
-{#if automationOpen}
+{#if automationOpen && matrix && volume}
   <div class="row-start-2 border-t border-zinc-800 pt-2">
     <div class="flex justify-between items-center gap-2">
       <h3 class="text-zinc-400">
