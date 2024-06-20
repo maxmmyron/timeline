@@ -121,10 +121,6 @@ describe("createClip", () => {
   });
 });
 
-// describe("updateScrubberAndScroll", () => {
-//   it("updates the scrubber and scroll position to the provided time", () => {});
-// });
-
 describe("createAutomation", () => {
   it("creates a new automation clip", () => {
     const automation = createAutomation("scale", 10);
@@ -153,10 +149,10 @@ describe("lerpAutomation", () => {
 
   it("lerps between two automation points", () => {
     const automation = createAutomation("scale", 10);
-    automation.curves[0] = [1, 0];
+    automation.curves[0] = [0, 0];
     automation.curves[1] = [10, 1];
 
-    expect(lerpAutomation(automation, 0, 5)).toBe(1.5);
+    expect(lerpAutomation(automation, 0, 5)).toBe(0.5);
   });
 });
 

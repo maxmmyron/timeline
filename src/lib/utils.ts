@@ -45,7 +45,7 @@ export const getLastTimelineClip = (): App.Clip | null => {
 };
 
 export const getClipDuration = (clip: App.Clip): number => {
-  return clip.media.duration - clip.end - clip.start;
+  return Math.max(clip.media.duration - clip.end - clip.start, 0);
 }
 
 export const getClipEndPos = (clip: App.Clip): number => {
@@ -165,7 +165,8 @@ export const lerpAutomation = <T = App.AutomationType>(a: App.Automation<T>, off
   const t = time - offset;
 
   const startIdx = a.curves.findIndex((c,i) => {
-    if (c[0] <= t && a.curves[i + 1][0] >= t) return true;
+    let end = a.curves[i + 1] ? a.curves[i+1][0] : a.duration;
+    if (c[0] <= t && end >= t) return true;
     return false;
   });
 
@@ -174,11 +175,8 @@ export const lerpAutomation = <T = App.AutomationType>(a: App.Automation<T>, off
     if (t > a.curves[a.curves.length - 1][0]) return a.curves[a.curves.length - 1][1];
   }
 
-  const endIdx = startIdx + 1;
-
   const startNode = a.curves[startIdx];
-  const endNode = a.curves[endIdx];
+  const endNode = a.curves[startIdx + 1];
 
-  // lerp between start and end values
-  return startNode[1] + (endNode[1] - startNode[1]) * ((t - startNode[0] * a.duration - a.offset) / (endNode[0] * a.duration - startNode[0] * a.duration));
+  return (startNode[1] * (endNode[0] - startNode[0])) + (endNode[1] * (t - startNode[0])) / (endNode[0] - startNode[0]);
 };
