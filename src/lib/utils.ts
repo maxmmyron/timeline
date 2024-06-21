@@ -4,7 +4,8 @@
 
 import { get } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
-import { paused, scaleFactor, scroll, time, videoClips } from "./stores";
+import { paused, res, scaleFactor, scroll, time, videoClips } from "./stores";
+import VideoToAudio, { convert } from "video-to-audio";
 
 /**
  * Gets the current clips at the given time. This returns a comma-

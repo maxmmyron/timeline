@@ -1,8 +1,9 @@
 <script lang="ts">
   import { audioClips, videoClips, uploaded } from "$lib/stores";
   import { createClip, getClipEndPos } from "$lib/utils";
-  import { createMediaFromFile } from "$lib/loader";
+  import { createMediaFromBlob, createMediaFromFile } from "$lib/loader";
   import IconButton from "../IconButton.svelte";
+  import { convert } from "video-to-audio";
 
   const upload = async (fileList: FileList) => {
     for (const file of fileList) {
@@ -10,9 +11,29 @@
     }
   };
 
-  const addClip = (media: App.Media) => {
+  const addClip = async (media: App.Media) => {
+    if (media.type === "video") {
+      let videoData = await fetch(media.src).then((res) => res.text());
+      const { data } = await (convert(videoData, "mp3") as Promise<{
+        name: string;
+        data: string;
+        format: string;
+      }>);
+
+      let audioData = await fetch(data).then((res) => res.blob());
+      const audioMedia = createMediaFromBlob(audioData, media.title);
+
+      const audioClip = createClip(await audioMedia.media);
+      const videoClip = createClip(media);
+
+      $audioClips = [...$audioClips, audioClip as App.Clip<"audio">];
+      $videoClips = [...$videoClips, videoClip as App.Clip<"video">];
+
+      return;
+    }
+
     const clip = createClip(media);
-    const end = getClipEndPos(clip);
+
     if (media.type === "audio") {
       $audioClips = [...$audioClips, clip as App.Clip<"audio">];
     } else {

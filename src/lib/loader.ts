@@ -1,16 +1,37 @@
 import {v4 as uuidv4} from "uuid";
 
+/**
+ * Creates a promise-wrapped media object from an uploaded file.
+ *
+ * @param file the uploaded File
+ */
 export const createMediaFromFile = (file: File): {uuid: string, title: string, media: Promise<App.Media>} => {
   const uuid = uuidv4();
 
   return {
     uuid,
     title: file.name,
-    media: resolveMedia(file, uuid)
+    media: resolveMedia(file, uuid, file.name)
   }
 };
 
-export const resolveMedia = (file: File, uuid: string): Promise<App.Media<App.MediaType>> => new Promise(async (resolve, reject) => {
+/**
+ * Creates a Promise-wrapped media object from a Blob.
+ *
+ * @param blob the uploaded Blob file
+ * @param title A title for the media. This is necessary because the Blob interface does not have a "name" property
+ */
+export const createMediaFromBlob = (blob: Blob, title: string): {uuid: string, title: string, media: Promise<App.Media>} => {
+  const uuid = uuidv4();
+
+  return {
+    uuid,
+    title,
+    media: resolveMedia(blob, uuid, title)
+  }
+};
+
+export const resolveMedia = (file: File | Blob, uuid: string, title?: string): Promise<App.Media<App.MediaType>> => new Promise(async (resolve, reject) => {
   // reject if the MIME type is empty (since we can't sus anything out)
   const mime = file.type.split('/')[0] as string;
   if (mime !== "video" && mime !== "audio" && mime !== "image") reject("Unsupported file type.");
@@ -27,7 +48,7 @@ export const resolveMedia = (file: File, uuid: string): Promise<App.Media<App.Me
     uuid,
     src,
     type,
-    title: file.name,
+    title,
   } as App.Media;
 
   if (type === "image") {
@@ -53,7 +74,7 @@ export const resolveMedia = (file: File, uuid: string): Promise<App.Media<App.Me
  *
  * @param file the file to check the mime type of
  */
-export const canMediaPlay = (file: File): boolean => {
+export const canMediaPlay = (file: File | Blob): boolean => {
   const supportedVideoType = ["video/mp4", "video/ogg", "video/webm"];
   const supportedAudioType = ["audio/mpeg", "audio/ogg", "audio/wav"];
   const supportedImageType = ["image/jpeg", "image/png"];
