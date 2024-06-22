@@ -1,9 +1,8 @@
 <script lang="ts">
   import { audioClips, videoClips, uploaded } from "$lib/stores";
-  import { createClip, getClipEndPos } from "$lib/utils";
-  import { createMediaFromBlob, createMediaFromFile } from "$lib/loader";
+  import { createClip } from "$lib/utils";
+  import { createMediaFromFile } from "$lib/loader";
   import IconButton from "../IconButton.svelte";
-  import { convert } from "video-to-audio";
 
   const upload = async (fileList: FileList) => {
     for (const file of fileList) {
@@ -19,8 +18,6 @@
         type: "audio",
       });
       const videoClip = createClip<"video">(media);
-
-      console.log(audioClip, videoClip);
 
       $audioClips = [...$audioClips, audioClip];
       $videoClips = [...$videoClips, videoClip];

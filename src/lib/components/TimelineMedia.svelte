@@ -45,15 +45,11 @@
   $: lerpedMatrix = [scaleX, 0, 0, scaleY, translateX, translateY];
 
   onMount(() => {
-    if (clip.media.type === "image") {
+    if (clip.media.type !== "audio") {
       return;
     }
 
-    if (clip.media.type === "video") {
-      sourceNode = $aCtx!.createMediaElementSource($vRefs[clip.uuid]);
-    } else {
-      sourceNode = $aCtx!.createMediaElementSource($aRefs[clip.uuid]);
-    }
+    sourceNode = $aCtx!.createMediaElementSource($aRefs[clip.uuid]);
 
     sourceNode.connect(gainNode);
     gainNode.connect(panNode);
@@ -82,6 +78,7 @@
     style:z-index={clip.timelineZ}
     class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
     preload=""
+    muted
   >
     <track kind="captions" />
   </video>

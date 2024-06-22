@@ -9,7 +9,7 @@
     scale,
     pointerMode,
   } from "$lib/stores";
-  import { createClip, getClipDuration, getClipEndPos } from "$lib/utils";
+  import { getClipDuration, getClipEndPos } from "$lib/utils";
   import { createEventDispatcher, onMount } from "svelte";
 
   onMount(() => {

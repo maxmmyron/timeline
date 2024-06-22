@@ -73,7 +73,7 @@ export const resolveMedia = (file: File | Blob, uuid: string, title?: string): P
       ...base as App.MediaBase<"video">,
       duration,
       dimensions,
-      audioSrc: "",
+      audioSrc: src,
       videoSrc: src,
     } as App.VideoMedia;
   } else {
