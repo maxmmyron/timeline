@@ -22,6 +22,7 @@
   import VolumeMeter from "$lib/components/VolumeMeter.svelte";
   import Panel from "$lib/components/Panel/Panel.svelte";
   import ExportPanel from "$lib/components/Panel/ExportPanel.svelte";
+  import NodePanel from "$lib/components/Panel/NodePanel.svelte";
 
   // get the UUIDs of the current audio clips (we return this as a comma-sep
   // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS
@@ -201,9 +202,7 @@
       </div>
     </div>
   {:else if currentPanel === "Node Editor"}
-    <div class="flex items-center justify-center w-full h-full">
-      <p>coming soon...</p>
-    </div>
+    <NodePanel />
   {:else if currentPanel === "Export"}
     <ExportPanel />
   {:else if currentPanel === "Preferences"}
