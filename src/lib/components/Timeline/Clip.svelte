@@ -21,7 +21,7 @@
 
   type ResizeMode = "left" | "right";
 
-  export let clip: App.Clip<"video"> | App.Clip<"audio"> | App.Clip<"image">;
+  export let clip: App.Clip;
   // this is set to 9 as a dirty default
   export let timelineOffset: number;
 
@@ -304,13 +304,13 @@
 
     if (clip.type === "video" || clip.type === "image") {
       clips = [...clips, leftClip, rightClip] as (
-        | App.Clip<"video">
-        | App.Clip<"image">
+        | App.VideoClip
+        | App.ImageClip
       )[];
       clips = clips.filter((c) => c.uuid !== oldUUID);
       $videoClips = clips;
     } else {
-      clips = [...clips, leftClip, rightClip] as App.Clip<"audio">[];
+      clips = [...clips, leftClip, rightClip] as App.AudioClip[];
       clips = clips.filter((c) => c.uuid !== oldUUID);
       $audioClips = clips;
     }

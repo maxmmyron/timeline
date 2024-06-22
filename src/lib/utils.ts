@@ -80,7 +80,7 @@ export const frame = (timestamp: DOMHighResTimeStamp) => {
  * @param opts Optional defaults for the new clip.
  * @returns A new clip object
  */
-export const createClip = <T = App.MediaType>(resolved: App.Media, opts?: Partial<App.Clip>): App.Clip => {
+export const createClip = (resolved: App.Media, opts?: Partial<App.Clip>): App.Clip => {
   let base = {
     type: resolved.type,
     media: resolved,

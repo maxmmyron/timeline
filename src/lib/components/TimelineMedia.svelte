@@ -17,7 +17,7 @@
   import { lerpAutomation } from "$lib/utils";
   import { onMount } from "svelte";
 
-  export let clip: App.Clip<"video"> | App.Clip<"audio"> | App.Clip<"image">;
+  export let clip: App.Clip;
 
   export let curr: App.Clip[] = [];
 
@@ -75,7 +75,7 @@
 {#if clip.media.type === "video"}
   <video
     class="absolute top-1/2 left-1/2 max-w-none"
-    src={clip.media.src}
+    src={clip.media.videoSrc}
     title={clip.uuid}
     bind:this={$vRefs[clip.uuid]}
     style:transform="translate(-50%, -50%) matrix({lerpedMatrix.join(",")})"
@@ -96,7 +96,7 @@
 {:else if clip.media.type === "image"}
   <img
     class="absolute top-1/2 left-1/2 max-w-none"
-    src={clip.media.src}
+    src={clip.media.videoSrc}
     title={clip.uuid}
     alt=""
     bind:this={$iRefs[clip.uuid]}
@@ -107,7 +107,7 @@
 {:else if clip.media.type === "audio"}
   <audio
     class="hidden"
-    src={clip.media.src}
+    src={clip.media.audioSrc}
     title={clip.uuid}
     bind:this={$aRefs[clip.uuid]}
   />
