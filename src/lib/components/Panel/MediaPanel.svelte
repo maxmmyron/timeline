@@ -12,22 +12,30 @@
   };
 
   const addClip = async (media: App.Media) => {
+    // TODO: fixme
     if (media.type === "video") {
-      let videoData = await fetch(media.src).then((res) => res.text());
-      const { data } = await (convert(videoData, "mp3") as Promise<{
+      let videoData = await fetch(media.videoSrc).then((data) => data.blob());
+      const { data } = await (convert(videoData, "wav") as Promise<{
         name: string;
         data: string;
         format: string;
       }>);
 
       let audioData = await fetch(data).then((res) => res.blob());
+
+      console.log(audioData);
+
       const audioMedia = createMediaFromBlob(audioData, media.title);
+
+      console.log(media, audioMedia);
 
       const audioClip = createClip(await audioMedia.media);
       const videoClip = createClip(media);
 
-      $audioClips = [...$audioClips, audioClip as App.Clip<"audio">];
-      $videoClips = [...$videoClips, videoClip as App.Clip<"video">];
+      console.log(audioClip, videoClip);
+
+      $audioClips = [...$audioClips, audioClip as App.AudioClip];
+      $videoClips = [...$videoClips, videoClip as App.VideoClip];
 
       return;
     }
@@ -35,12 +43,9 @@
     const clip = createClip(media);
 
     if (media.type === "audio") {
-      $audioClips = [...$audioClips, clip as App.Clip<"audio">];
+      $audioClips = [...$audioClips, clip as App.AudioClip];
     } else {
-      $videoClips = [
-        ...$videoClips,
-        clip as App.Clip<"video"> | App.Clip<"image">,
-      ];
+      $videoClips = [...$videoClips, clip as App.VideoClip | App.ImageClip];
     }
   };
 

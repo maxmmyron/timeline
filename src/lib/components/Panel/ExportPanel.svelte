@@ -101,7 +101,10 @@
       const src = `${media.uuid}.${type}`;
 
       if (!loadedMedia.includes(src)) {
-        await ffmpeg.writeFile(src, await fetchFile(media.src));
+        // FIXME: if video, grab audio as well
+        if (media.type === "video" || media.type === "image")
+          await ffmpeg.writeFile(src, await fetchFile(media.videoSrc));
+        else await ffmpeg.writeFile(src, await fetchFile(media.audioSrc));
         loadedMedia.push(src);
 
         // there may be multiple instances of the same media file in the timeline,
@@ -138,8 +141,8 @@
               .filter((clip) => clip.media.uuid === media.uuid)
               .filter(
                 (clip) =>
-                  (<App.Clip<"video">>clip).matrix[0].curves.length > 0 ||
-                  (<App.Clip<"video">>clip).matrix[3].curves.length > 0
+                  (<App.VideoClip>clip).matrix[0].curves.length > 0 ||
+                  (<App.ImageClip>clip).matrix[3].curves.length > 0
               ).length > 0
           ) {
             vFilter += `${splitCount},scale=${$safeRes[0] * 4}:-1[${v_outs.join("][")}];`;

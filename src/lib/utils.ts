@@ -5,7 +5,6 @@
 import { get } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
 import { paused, res, scaleFactor, scroll, time, videoClips } from "./stores";
-import VideoToAudio, { convert } from "video-to-audio";
 
 /**
  * Gets the current clips at the given time. This returns a comma-
@@ -81,7 +80,7 @@ export const frame = (timestamp: DOMHighResTimeStamp) => {
  * @param opts Optional defaults for the new clip.
  * @returns A new clip object
  */
-export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Partial<App.Clip<T>>): App.Clip<T> => {
+export const createClip = <T = App.MediaType>(resolved: App.Media, opts?: Partial<App.Clip>): App.Clip => {
   let base = {
     type: resolved.type,
     media: resolved,
@@ -90,20 +89,20 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
     end: opts?.end ?? 0,
     uuid: uuidv4(),
     timelineZ: get(videoClips).reduce((acc, clip) => Math.max(acc, clip.timelineZ), 0) + 1,
-  } as App.Clip<T>;
+  } as App.Clip;
 
   if (resolved.type === "video" || resolved.type === "image") {
     base = {
       ...base,
       matrix: [
-        createAutomation("scale", (<App.Media<"video" | "image">>resolved).dimensions[0]),
+        createAutomation("scale", (<App.ImageMedia | App.VideoMedia>resolved).dimensions[0]),
         0, 0,
-        createAutomation("scale", (<App.Media<"video" | "image">>resolved).dimensions[1]),
+        createAutomation("scale", (<App.ImageMedia | App.VideoMedia>resolved).dimensions[1]),
         createAutomation("position", resolved.duration, {initial: 0}),
         createAutomation("position", resolved.duration, {initial: 0})
-      ]};
+      ]} as App.VideoClip | App.ImageClip;
   } else if (resolved.type === "audio") {
-    base = {...base, automation: createAutomation("volume", resolved.duration)};
+    base = {...base, volume: createAutomation("volume", resolved.duration), pan: 0,} as App.AudioClip;
   }
 
   return base;
