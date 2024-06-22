@@ -213,7 +213,9 @@
 
 <Panel panels={["Media Inspector"]} bg="bg-zinc-925">
   {#if $selected}
-    <InspectorPanel uuid={$selected[0]} type={$selected[1]} />
+    {#key $selected[0]}
+      <InspectorPanel uuid={$selected[0]} type={$selected[1]} />
+    {/key}
   {:else}
     <div class="w-full h-full flex items-center justify-center">
       <p>No clip selected</p>
