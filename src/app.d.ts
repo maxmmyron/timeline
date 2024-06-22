@@ -33,7 +33,7 @@ declare global {
 			duration: number;
 		} & MediaBase<"image">
 
-		type Media = VideoMedia | AudioMedia | ImageMedia;
+		type Media<T = MediaType> = T extends "video" ? VideoMedia : T extends "image" ? ImageMedia : AudioMedia;
 
 		/**
 		 * The extendable base for all clip types. This interface is used to implement an interactive,
@@ -74,7 +74,7 @@ declare global {
 			matrix: Matrix;
 		}
 
-		type Clip = VideoClip | AudioClip | ImageClip;
+		type Clip<T = MediaType> = T extends "video" ? VideoClip : T extends "image" ? ImageClip : AudioClip;
 
 		type Matrix = [Automation<"scale">, number, number, Automation<"scale">, Automation<"position">, Automation<"position">];
 

@@ -80,7 +80,7 @@ export const frame = (timestamp: DOMHighResTimeStamp) => {
  * @param opts Optional defaults for the new clip.
  * @returns A new clip object
  */
-export const createClip = (resolved: App.Media, opts?: Partial<App.Clip>): App.Clip => {
+export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Partial<App.Clip<T>>): App.Clip<T> => {
   let base = {
     type: resolved.type,
     media: resolved,
@@ -89,7 +89,7 @@ export const createClip = (resolved: App.Media, opts?: Partial<App.Clip>): App.C
     end: opts?.end ?? 0,
     uuid: uuidv4(),
     timelineZ: get(videoClips).reduce((acc, clip) => Math.max(acc, clip.timelineZ), 0) + 1,
-  } as App.Clip;
+  } as App.Clip<T>;
 
   if (resolved.type === "video" || resolved.type === "image") {
     base = {
@@ -100,9 +100,9 @@ export const createClip = (resolved: App.Media, opts?: Partial<App.Clip>): App.C
         createAutomation("scale", (<App.ImageMedia | App.VideoMedia>resolved).dimensions[1]),
         createAutomation("position", resolved.duration, {initial: 0}),
         createAutomation("position", resolved.duration, {initial: 0})
-      ]} as App.VideoClip | App.ImageClip;
+      ]};
   } else if (resolved.type === "audio") {
-    base = {...base, volume: createAutomation("volume", resolved.duration), pan: 0,} as App.AudioClip;
+    base = {...base, volume: createAutomation("volume", resolved.duration), pan:0, };
   }
 
   return base;
