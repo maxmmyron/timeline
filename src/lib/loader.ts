@@ -31,7 +31,7 @@ export const createMediaFromBlob = (blob: Blob, title: string): {uuid: string, t
   }
 };
 
-export const resolveMedia = (file: File | Blob, uuid: string, title?: string): Promise<App.Media<App.MediaType>> => new Promise(async (resolve, reject) => {
+export const resolveMedia = (file: File | Blob, uuid: string, title?: string): Promise<App.Media> => new Promise(async (resolve, reject) => {
   // reject if the MIME type is empty (since we can't sus anything out)
   const mime = file.type.split('/')[0] as string;
   if (mime !== "video" && mime !== "audio" && mime !== "image") reject("Unsupported file type.");
@@ -44,29 +44,49 @@ export const resolveMedia = (file: File | Blob, uuid: string, title?: string): P
 
   const src = URL.createObjectURL(file);
 
-  let base: App.Media = {
+  if (!title && !(<File>file)?.name) reject("No title provided");
+
+  let base: App.MediaBase = {
     uuid,
-    src,
     type,
-    title,
-  } as App.Media;
+    title: title ?? (<File>file)?.name,
+  };
+
+  let media: App.Media;
 
   if (type === "image") {
     const dimensions = await resolveDimensions(src, type);
 
-    base = {...base, dimensions} as App.Media<"image">;
+    media = {
+      ...base as App.MediaBase<"image">,
+      videoSrc: src,
+      dimensions,
+      duration: 7,
+    } as App.ImageMedia;
   } else if (type === "video") {
     const duration = await resolveDuration(src, type);
     const dimensions = await resolveDimensions(src, type);
 
-    base = {...base, duration, dimensions} as App.Media<"video">;
-  } else if (type === "audio") {
+    // const audioSrc = await extractAudio(src, type);
+
+    media = {
+      ...base as App.MediaBase<"video">,
+      duration,
+      dimensions,
+      audioSrc: src,
+      videoSrc: src,
+    } as App.VideoMedia;
+  } else {
     const duration = await resolveDuration(src, type);
 
-    base = {...base, duration} as App.Media<"audio">;
+    media = {
+      ...base as App.MediaBase<"audio">,
+      duration,
+      audioSrc: src,
+    } as App.AudioMedia;
   }
 
-  resolve(base);
+  resolve(media);
 });
 
 /**
@@ -76,7 +96,7 @@ export const resolveMedia = (file: File | Blob, uuid: string, title?: string): P
  */
 export const canMediaPlay = (file: File | Blob): boolean => {
   const supportedVideoType = ["video/mp4", "video/ogg", "video/webm"];
-  const supportedAudioType = ["audio/mpeg", "audio/ogg", "audio/wav"];
+  const supportedAudioType = ["audio/mpeg", "audio/ogg", "audio/wav", "audio/mp3"];
   const supportedImageType = ["image/jpeg", "image/png"];
 
   const type = file.type;

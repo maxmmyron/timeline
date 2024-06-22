@@ -1,9 +1,8 @@
 <script lang="ts">
   import { audioClips, videoClips, uploaded } from "$lib/stores";
-  import { createClip, getClipEndPos } from "$lib/utils";
-  import { createMediaFromBlob, createMediaFromFile } from "$lib/loader";
+  import { createClip } from "$lib/utils";
+  import { createMediaFromFile } from "$lib/loader";
   import IconButton from "../IconButton.svelte";
-  import { convert } from "video-to-audio";
 
   const upload = async (fileList: FileList) => {
     for (const file of fileList) {
@@ -12,35 +11,24 @@
   };
 
   const addClip = async (media: App.Media) => {
+    // TODO: fixme
     if (media.type === "video") {
-      let videoData = await fetch(media.src).then((res) => res.text());
-      const { data } = await (convert(videoData, "mp3") as Promise<{
-        name: string;
-        data: string;
-        format: string;
-      }>);
+      const audioClip = createClip<"audio">({
+        ...media,
+        type: "audio",
+      });
+      const videoClip = createClip<"video">(media);
 
-      let audioData = await fetch(data).then((res) => res.blob());
-      const audioMedia = createMediaFromBlob(audioData, media.title);
-
-      const audioClip = createClip(await audioMedia.media);
-      const videoClip = createClip(media);
-
-      $audioClips = [...$audioClips, audioClip as App.Clip<"audio">];
-      $videoClips = [...$videoClips, videoClip as App.Clip<"video">];
+      $audioClips = [...$audioClips, audioClip];
+      $videoClips = [...$videoClips, videoClip];
 
       return;
     }
 
-    const clip = createClip(media);
-
     if (media.type === "audio") {
-      $audioClips = [...$audioClips, clip as App.Clip<"audio">];
+      $audioClips = [...$audioClips, createClip<"audio">(media)];
     } else {
-      $videoClips = [
-        ...$videoClips,
-        clip as App.Clip<"video"> | App.Clip<"image">,
-      ];
+      $videoClips = [...$videoClips, createClip<"video" | "image">(media)];
     }
   };
 

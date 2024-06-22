@@ -61,8 +61,6 @@
       x,
     });
   };
-
-  $: console.log(timelineOffset);
 </script>
 
 <svelte:window
