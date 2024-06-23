@@ -59,7 +59,7 @@ declare global {
 			 */
 			end: number;
 			timelineZ: number;
-			nodes: Node[];
+			nodes: EditorNode[];
 		}
 
 		interface VideoClip extends ClipBase<"video"> {
@@ -77,8 +77,6 @@ declare global {
 
 		type EditorNode<T extends unknown[], U extends unknown[]> = {
 			transform: (...args: T) => U;
-			in: Parameters<(...args: T) => U>
-			out: ReturnType<(...args: T) => U>
 		}
 
 		type Clip<T = MediaType> = T extends "video" ? VideoClip : T extends "image" ? ImageClip : AudioClip;
