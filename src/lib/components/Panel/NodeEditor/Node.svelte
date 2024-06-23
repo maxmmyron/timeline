@@ -1,7 +1,12 @@
-<script lang="ts">
+<script lang="ts" generics="T extends unknown[], U extends unknown[]">
+  export let transform: (...args: T) => U;
+
+  export let inputs: Parameters<typeof transform>;
+  $: outputs = transform(...inputs);
+
+  export { outputs };
+
   export let title: string;
-  export let inputs: { name: string }[];
-  export let outputs: { name: string }[];
 </script>
 
 <article class="rounded-md shadow-lg border-zinc-900 bg-zinc-925">
@@ -18,7 +23,7 @@
             <div
               class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25"
             ></div>
-            <p>{input.name}</p>
+            <!-- <p>{input.name}</p>? -->
           </li>
         {/each}
       </ul>
@@ -30,7 +35,7 @@
       <ul class="flex-col relative -right-1">
         {#each outputs as output}
           <li class="flex items-center gap-1">
-            <p>{output.name}</p>
+            <!-- <p>{output.name}</p> -->
             <div
               class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25"
             ></div>

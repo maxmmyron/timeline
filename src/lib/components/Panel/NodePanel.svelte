@@ -1,6 +1,7 @@
 <script lang="ts">
   import { selected } from "$lib/stores";
   import { spring } from "svelte/motion";
+  import Node from "./NodeEditor/Node.svelte";
 
   let offset = spring([0, 0], { stiffness: 0.1, damping: 0.3 });
 
@@ -20,6 +21,13 @@
     let newPos = [x - initMouse[0] + initPos[0], y - initMouse[1] + initPos[1]];
     offset.set(newPos, { hard: true });
   };
+
+  const transform = (a: number, b: number) => {
+    return [a + b];
+  };
+
+  let i: [number, number] = [3, 5];
+  let o: [number];
 </script>
 
 <svelte:window
@@ -42,6 +50,8 @@
 {:else}
   <div class="w-full h-full flex items-center justify-center">
     <p>No clip selected</p>
+    <Node {transform} bind:inputs={i} bind:outputs={o} title="x" />
+    {o}
   </div>
 {/if}
 
