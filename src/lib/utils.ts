@@ -91,7 +91,18 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
     timelineZ: get(videoClips).reduce((acc, clip) => Math.max(acc, clip.timelineZ), 0) + 1,
   } as App.Clip<T>;
 
+  const nodeSrc = resolved.type === "audio" ? resolved.audioSrc : resolved.videoSrc;
+
+  const outNode = createNode("Output", (arg: {src: string}) => {});
+  const inNode = createNode(resolved.title, () => ({src: nodeSrc}), {
+      src: {
+        uuid: outNode.uuid,
+        inName: "src",
+      }
+    });
+
   if (resolved.type === "video" || resolved.type === "image") {
+
     base = {
       ...base,
       matrix: [
@@ -100,9 +111,16 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
         createAutomation("scale", (<App.ImageMedia | App.VideoMedia>resolved).dimensions[1]),
         createAutomation("position", resolved.duration, {initial: 0}),
         createAutomation("position", resolved.duration, {initial: 0})
-      ]};
+      ],
+      nodes: [inNode, outNode],
+    };
   } else if (resolved.type === "audio") {
-    base = {...base, volume: createAutomation("volume", resolved.duration), pan:0, };
+    base = {
+      ...base,
+      volume: createAutomation("volume", resolved.duration),
+      pan: 0,
+      nodes: [inNode, outNode],
+    };
   }
 
   return base;
@@ -179,4 +197,16 @@ export const lerpAutomation = <T = App.AutomationType>(a: App.Automation<T>, off
   const endNode = a.curves[startIdx + 1];
 
   return (startNode[1] * (endNode[0] - startNode[0])) + (endNode[1] * (t - startNode[0])) / (endNode[0] - startNode[0]);
+};
+
+export const createNode = <T extends object, U extends object | void>(name: string, transform: (arg: T) => U, connections?: U extends object ? {[key in keyof U]: {
+  uuid: string,
+  inName: string,
+}} : never): App.EditorNode<T, U> =>{
+  return {
+    uuid: uuidv4(),
+    name,
+    transform,
+    connections: connections ?? [],
+  }
 };

@@ -75,8 +75,40 @@ declare global {
 			matrix: Matrix;
 		}
 
-		type EditorNode<T extends unknown[], U extends unknown[]> = {
-			transform: (...args: T) => U;
+		type EditorNode<T extends object, U extends object | void> = {
+			uuid: string;
+			name: string;
+			/**
+			 * An overridable function that performs the node's primary transform
+			 * @param args An object of properties
+			 * @returns
+			 */
+			transform: (args: T) => U;
+			/**
+			 * connections between the node's outputs and other nodes' inputs
+			 *
+			 * @example
+			 * ```json
+			 * {
+			 *   "out_1": {
+			 *     uuid: "1",
+			 *     inputName: "in_1"
+			 *   }
+			 * }
+			 * ```
+			 */
+			connections: {
+				[key: keyof U]: {
+					/**
+					 * The UUID of the receiving node
+					 */
+					uuid: string,
+					/**
+					 * The receiving node's input argument name
+					 */
+					inputName: string
+				}
+			}
 		}
 
 		type Clip<T = MediaType> = T extends "video" ? VideoClip : T extends "image" ? ImageClip : AudioClip;

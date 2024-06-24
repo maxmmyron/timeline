@@ -1,13 +1,22 @@
-<script lang="ts" generics="T extends unknown[], U extends unknown[]">
-  export let transform: (...args: T) => U;
+<script lang="ts" generics="T extends object, U extends object">
+  export let transform: (arg: T) => U;
 
-  export let inputs: Parameters<typeof transform>;
-  $: outputs = transform(...inputs);
+  export let inputs: Parameters<typeof transform>[0];
+  export let outputs: ReturnType<typeof transform>;
 
-  export { outputs };
+  $: outputs = transform(inputs);
 
   export let title: string;
+
+  let drawingEdge = false;
 </script>
+
+<svelte:window
+  on:mouseup={() => (drawingEdge = false)}
+  on:mousemove={(e) => {
+    if (!drawingEdge) return;
+  }}
+/>
 
 <article class="rounded-md shadow-lg border-zinc-900 bg-zinc-925">
   <header class="py-0.5 border-b border-zinc-900">
@@ -18,12 +27,13 @@
   <main class="flex py-1.5 gap-2 relative">
     {#if inputs}
       <ul class="flex-col relative -left-1">
-        {#each inputs as input}
+        {#each Object.entries(inputs) as [key, val]}
           <li class="flex items-center gap-1">
-            <div
+            <button
+              on:mousedown={() => (drawingEdge = true)}
               class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25"
-            ></div>
-            <!-- <p>{input.name}</p>? -->
+            ></button>
+            <p>{key}</p>
           </li>
         {/each}
       </ul>
@@ -33,12 +43,13 @@
     </div>
     {#if outputs}
       <ul class="flex-col relative -right-1">
-        {#each outputs as output}
+        {#each Object.entries(outputs) as [key, val]}
           <li class="flex items-center gap-1">
-            <!-- <p>{output.name}</p> -->
-            <div
+            <p>{key}</p>
+            <button
+              on:mousedown={() => (drawingEdge = true)}
               class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25"
-            ></div>
+            ></button>
           </li>
         {/each}
       </ul>
