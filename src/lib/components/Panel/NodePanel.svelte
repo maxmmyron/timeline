@@ -22,12 +22,19 @@
     offset.set(newPos, { hard: true });
   };
 
-  const transform = (a: number, b: number) => {
-    return [a + b];
+  const transform = (arg: { in_a: number; in_b: number }) => {
+    return {
+      out: arg.in_a + arg.in_b,
+    };
   };
 
-  let i: [number, number] = [3, 5];
-  let o: [number];
+  let i: Parameters<typeof transform>[0] = {
+    in_a: 0,
+    in_b: 0,
+  };
+  let o: ReturnType<typeof transform> = {
+    out: 0,
+  };
 </script>
 
 <svelte:window
@@ -50,8 +57,10 @@
 {:else}
   <div class="w-full h-full flex items-center justify-center">
     <p>No clip selected</p>
+    <input type="range" min="0" max="10" bind:value={i.in_a} />
+    <input type="range" min="0" max="10" bind:value={i.in_b} />
     <Node {transform} bind:inputs={i} bind:outputs={o} title="x" />
-    {o}
+    {o.out}
   </div>
 {/if}
 
