@@ -1,4 +1,15 @@
+<script lang="ts" context="module">
+  /**
+   * True if any existing node is currently hovered over.
+   */
+  let hovering: boolean = false;
+</script>
+
 <script lang="ts" generics="T extends object, U extends object">
+  import { selectedNodeUUID } from "$lib/stores";
+
+  export let uuid: string;
+
   export let transform: (arg: T) => U;
 
   export let inputs: Parameters<typeof transform>[0];
@@ -15,10 +26,18 @@
   on:mouseup={() => (drawingEdge = false)}
   on:mousemove={(e) => {
     if (!drawingEdge) return;
+    if (!hovering) $selectedNodeUUID = null;
   }}
 />
 
-<article class="rounded-md shadow-lg border-zinc-900 bg-zinc-925">
+<article 
+  class="rounded-md shadow-lg border-zinc-900 bg-zinc-925" 
+  on:mouseenter={() => {
+    $selectedNodeUUID = uuid
+    hovering = true;
+  }}
+  on:mouseleave={() => (hovering = false)}
+>
   <header class="py-0.5 border-b border-zinc-900">
     <p class="font-mono uppercase text-zinc-600 text-center">
       {title}

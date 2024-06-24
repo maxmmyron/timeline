@@ -75,3 +75,5 @@ export const pointerMode: Writable<"select" | "slice"> = writable("select");
 export const uploaded: Writable<Array<ReturnType<typeof createMediaFromFile>>> = writable([]);
 
 export const volumeMultiplier = writable(1);
+
+export const selectedNodeUUID: Writable<string|null> = writable(null);
