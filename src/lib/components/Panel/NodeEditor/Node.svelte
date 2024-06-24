@@ -5,7 +5,7 @@
   let hovering: boolean = false;
 </script>
 
-<script lang="ts" generics="T extends object, U extends object">
+<script lang="ts" generics="T extends object, U extends object | void">
   import { selectedNodeUUID } from "$lib/stores";
 
   let node: HTMLElement;
@@ -14,10 +14,17 @@
   let offset: [number, number];
 
   export let uuid: string;
+  export let title: string;
   export let transform: (arg: T) => U;
+  export let connections: {
+    [key in keyof U]: {
+      uuid: string,
+      inputName: string
+    }
+  };
+
   export let inputs: Parameters<typeof transform>[0];
   export let outputs: ReturnType<typeof transform>;
-  export let title: string;
 
   $: outputs = transform(inputs);
 
