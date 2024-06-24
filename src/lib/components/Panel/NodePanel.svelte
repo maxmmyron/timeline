@@ -2,12 +2,16 @@
   import { selected } from "$lib/stores";
   import { spring } from "svelte/motion";
   import Node from "./NodeEditor/Node.svelte";
+  import { getClipByUUID } from "$lib/utils";
 
   let offset = spring([0, 0], { stiffness: 0.1, damping: 0.3 });
 
   let moving: boolean = false;
   let initMouse: [number, number] = [0, 0];
   let initPos: [number, number] = [0, 0];
+
+  // non-null assertion since NodePanel doesn't render w/o $selected null check
+  let current = getClipByUUID($selected![0], $selected![1]);
 
   const startMove = (x: number, y: number) => {
     moving = true;
@@ -59,7 +63,10 @@
     <p>No clip selected</p>
     <input type="range" min="0" max="10" bind:value={i.in_a} />
     <input type="range" min="0" max="10" bind:value={i.in_b} />
-    <Node {transform} bind:inputs={i} bind:outputs={o} title="x" />
+    {#each current.nodes as {uuid, name, connections, transform}}
+      <Node {transform} {connections} title={name} {uuid} />
+    {/each}
+    <!-- <Node {transform} bind:inputs={i} bind:outputs={o} title="x" /> -->
     {o.out}
   </div>
 {/if}

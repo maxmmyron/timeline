@@ -4,7 +4,7 @@
 
 import { get } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
-import { paused, res, scaleFactor, scroll, time, videoClips } from "./stores";
+import { audioClips, paused, res, scaleFactor, scroll, time, videoClips } from "./stores";
 
 /**
  * Gets the current clips at the given time. This returns a comma-
@@ -208,5 +208,13 @@ export const createNode = <T extends object, U extends object | void>(name: stri
     name,
     transform,
     connections: connections ?? [],
+  }
+};
+
+export const getClipByUUID = (uuid: string, type: App.MediaType): App.VideoClip | App.AudioClip | App.ImageClip => {
+  if (type === "audio") {
+    return get(audioClips).find(clip => clip.uuid === uuid) as App.AudioClip;
+  } else {
+    return get(videoClips).find(clip => clip.uuid === uuid) as App.VideoClip | App.ImageClip;
   }
 };
