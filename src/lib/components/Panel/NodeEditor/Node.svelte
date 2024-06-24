@@ -8,35 +8,48 @@
 <script lang="ts" generics="T extends object, U extends object">
   import { selectedNodeUUID } from "$lib/stores";
 
+  let node: HTMLElement;
+
+  let pos: [number, number];
+  let offset: [number, number];
+
   export let uuid: string;
-
   export let transform: (arg: T) => U;
-
   export let inputs: Parameters<typeof transform>[0];
   export let outputs: ReturnType<typeof transform>;
+  export let title: string;
 
   $: outputs = transform(inputs);
 
-  export let title: string;
+  let isDrawingEdge = false;
+  let isMoving = false;
 
-  let drawingEdge = false;
+  const drawEdge = (e: MouseEvent) => {};
+  const move = (e: MouseEvent) => {};
 </script>
 
 <svelte:window
-  on:mouseup={() => (drawingEdge = false)}
+  on:mouseup={() => (isDrawingEdge = false)}
   on:mousemove={(e) => {
-    if (!drawingEdge) return;
     if (!hovering) $selectedNodeUUID = null;
+    if (!isDrawingEdge || !isMoving) return;
+    if (isDrawingEdge) drawEdge(e);
+    if (isMoving) move(e);
   }}
 />
 
-<article 
+<div id="operation" class="hidden">
+  <span>Press spacebar to grab</span>
+</div>
+
+<article
   class="rounded-md shadow-lg border-zinc-900 bg-zinc-925" 
   on:mouseenter={() => {
     $selectedNodeUUID = uuid
     hovering = true;
   }}
   on:mouseleave={() => (hovering = false)}
+  bind:this={node}
 >
   <header class="py-0.5 border-b border-zinc-900">
     <p class="font-mono uppercase text-zinc-600 text-center">
@@ -49,7 +62,7 @@
         {#each Object.entries(inputs) as [key, val]}
           <li class="flex items-center gap-1">
             <button
-              on:mousedown={() => (drawingEdge = true)}
+              on:mousedown|stopPropagation={() => (isDrawingEdge = true)}
               class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25"
             ></button>
             <p>{key}</p>
@@ -66,7 +79,7 @@
           <li class="flex items-center gap-1">
             <p>{key}</p>
             <button
-              on:mousedown={() => (drawingEdge = true)}
+              on:mousedown={() => (isDrawingEdge = true)}
               class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25"
             ></button>
           </li>
@@ -74,4 +87,8 @@
       </ul>
     {/if}
   </main>
+  <button class="w-full h-4" aria-describedby="operation" on:mousedown={(e) => {
+    isMoving = true
+    offset = [e.clientX - node.getBoundingClientRect().left, e.clientY - node.getBoundingClientRect().top];
+  }}></button>
 </article>
