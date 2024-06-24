@@ -59,7 +59,7 @@ declare global {
 			 */
 			end: number;
 			timelineZ: number;
-			nodes: EditorNode[];
+			nodes: App.EditorNode<object, object>[];
 		}
 
 		interface VideoClip extends ClipBase<"video"> {
