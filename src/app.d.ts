@@ -145,3 +145,16 @@ declare global {
 }
 
 export {};
+
+
+// type N<I extends Record, O extends Record> = {
+// 	transform: (arg: I) => O;
+// 	in: I;
+// 	out: O;
+// }
+
+// TODO: get type safety when writing out outputName/inputName... this func should err when out and in differ in type!
+// declare function link<T extends N, K extends N>(outputNode: T, outputName: keyof T["out"], inputNode: K, inputName: keyof K["in"]);
+
+// let x: N<{x: string, y: number, z: string}, {a: string, b: number}>;
+// let y: N<{c: number, d: string, f: number}, {w: number, x: string}>;

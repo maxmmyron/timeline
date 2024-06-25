@@ -16,15 +16,17 @@
   export let uuid: string;
   export let title: string;
   export let transform: (arg: T) => U;
-  export let connections: {
-    [key in keyof U]: {
-      uuid: string,
-      inputName: string
-    }
-  };
+  
+  // export let connections: {
+  //   [key in keyof U]: {
+  //     uuid: string,
+  //     inputName: string
+  //   }
+  // };
+  // export let record: Record<string, object>;
 
-  export let inputs: Parameters<typeof transform>[0];
-  export let outputs: ReturnType<typeof transform>;
+  let inputs: Parameters<typeof transform>[0];
+  let outputs: ReturnType<typeof transform>;
 
   $: outputs = transform(inputs);
 

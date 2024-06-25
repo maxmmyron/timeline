@@ -15,7 +15,7 @@
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import InspectorPanel from "$lib/components/Panel/InspectorPanel.svelte";
-  import { frame, getCurrentClips } from "$lib/utils";
+  import { frame, getClipByUUID, getCurrentClips } from "$lib/utils";
   import MediaPanel from "$lib/components/Panel/MediaPanel.svelte";
   import TimelineMedia from "$lib/components/TimelineMedia.svelte";
   import PreferencesPanel from "$lib/components/Panel/PreferencesPanel.svelte";
@@ -202,7 +202,13 @@
       </div>
     </div>
   {:else if currentPanel === "Node Editor"}
-    <NodePanel />
+    {#if $selected}
+      <NodePanel current={getClipByUUID($selected[0], $selected[1])} />
+    {:else}
+      <div class="w-full h-full flex items-center justify-center">
+        <p>No clip selected</p>
+      </div>
+    {/if}
   {:else if currentPanel === "Export"}
     <ExportPanel />
   {:else if currentPanel === "Preferences"}
