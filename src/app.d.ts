@@ -84,6 +84,8 @@ declare global {
 			 * @returns
 			 */
 			transform: (args: T) => U;
+			in: T;
+			out: U extends object ? U : null;
 			/**
 			 * connections between the node's outputs and other nodes' inputs
 			 *

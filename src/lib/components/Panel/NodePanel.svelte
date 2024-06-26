@@ -1,7 +1,7 @@
 <script lang="ts">
   import { spring } from "svelte/motion";
   import Node from "./NodeEditor/Node.svelte";
-  import { onMount } from "svelte";
+    import { beforeUpdate } from "svelte";
 
   export let current: App.VideoClip | App.AudioClip | App.ImageClip;
 
@@ -30,8 +30,16 @@
     };
   };
 
-  let inputs: Record<string, { [key: string]: any }>;
-  let outputs: Record<string, { [key: string]: any }>;
+  let inputs: Record<string, { [key: string]: any }> = {};
+  let outputs: Record<string, { [key: string]: any }> = {};
+
+  // before we update the component, we need to go through each node and ensure its inputs and outputs are recorded in the relevant records!
+  beforeUpdate(() => {
+    for(const node of current.nodes) {
+      if(!inputs[node.uuid]) inputs[node.uuid] = node.in;
+      if(!outputs[node.uuid]) outputs[node.uuid] = node.out;
+    }
+  });
 </script>
 
 <svelte:window
@@ -52,9 +60,10 @@
 >
   {#each current.nodes as { uuid, name, connections, transform }}
     <Node
-      on:transform={(output) => {
+      on:transform={(e) => {
+        console.log("updating inputs");
         for (const [outputName, input] of Object.entries(connections)) {
-          inputs[input.uuid][input.inputName] = output[outputName];
+          inputs[input.uuid][input.inputName] = e.detail[outputName];
         }
       }}
       {transform}

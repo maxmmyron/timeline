@@ -6,7 +6,7 @@
 </script>
 
 <script lang="ts" generics="T extends object, U extends object | void">
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onMount } from "svelte";
   import { selectedNodeUUID } from "$lib/stores";
 
   let node: HTMLElement;
@@ -18,19 +18,22 @@
   export let title: string;
   export let transform: (arg: T) => U;
 
-  // export let connections: {
-  //   [key in keyof U]: {
-  //     uuid: string;
-  //     inputName: string;
-  //   };
-  // };
-  const dispatch = createEventDispatcher();
-
   export let inputs: Parameters<typeof transform>[0];
   export let outputs: ReturnType<typeof transform>;
 
-  $: outputs = transform(inputs);
-  $: dispatch("transform", outputs);
+  const dispatch = createEventDispatcher<{
+    "transform": ReturnType<typeof transform>
+  }>();
+
+  // accept input arg to keep reactivity
+  const transformWrapper = (_i: typeof inputs) => {
+    console.log(`running transform of ${title}`);
+    return transform(_i);
+  }
+
+  // run transform & dispatcher when output changes
+  $: outputs = transformWrapper(inputs);
+  $: if (typeof outputs === "object") dispatch("transform", outputs);
 
   let isDrawingEdge = false;
   let isMoving = false;
@@ -54,7 +57,7 @@
 </div>
 
 <article
-  class="rounded-md shadow-lg border-zinc-900 bg-zinc-925"
+  class="rounded-md shadow-lg border-zinc-900 bg-zinc-925 absolute"
   on:mouseenter={() => {
     $selectedNodeUUID = uuid;
     hovering = true;
