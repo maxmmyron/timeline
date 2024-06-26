@@ -30,7 +30,8 @@
     };
   };
 
-  let outputRecord: Record<string, object>;
+  let inputs: Record<string, { [key: string]: any }>;
+  let outputs: Record<string, { [key: string]: any }>;
 </script>
 
 <svelte:window
@@ -49,8 +50,19 @@
   class="relative bg-dot -top-1 -left-1 w-[calc(100%_+_.5rem)] h-[calc(100%_+_.5rem)] from-zinc-925 from-25% to-zinc-950 to-25%"
   style="background-position: {$offset[0] % 8}px {$offset[1] % 8}px"
 >
-  {#each current.nodes as {uuid, name, connections, transform}}
-    <Node {transform} {connections} title={name} {uuid} {record}/>
+  {#each current.nodes as { uuid, name, connections, transform }}
+    <Node
+      on:transform={(output) => {
+        for (const [outputName, input] of Object.entries(connections)) {
+          inputs[input.uuid][input.inputName] = output[outputName];
+        }
+      }}
+      {transform}
+      title={name}
+      {uuid}
+      bind:inputs={inputs[uuid]}
+      bind:outputs={outputs[uuid]}
+    />
   {/each}
 </div>
 

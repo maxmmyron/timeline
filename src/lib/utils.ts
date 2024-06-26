@@ -201,13 +201,13 @@ export const lerpAutomation = <T = App.AutomationType>(a: App.Automation<T>, off
 
 export const createNode = <T extends object, U extends object | void>(name: string, transform: (arg: T) => U, connections?: U extends object ? {[key in keyof U]: {
   uuid: string,
-  inName: string,
+  inputName: string,
 }} : never): App.EditorNode<T, U> =>{
   return {
     uuid: uuidv4(),
     name,
     transform,
-    connections: connections ?? [],
+    connections: connections,
   }
 };
 

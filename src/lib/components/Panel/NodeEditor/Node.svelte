@@ -6,6 +6,7 @@
 </script>
 
 <script lang="ts" generics="T extends object, U extends object | void">
+  import { createEventDispatcher } from "svelte";
   import { selectedNodeUUID } from "$lib/stores";
 
   let node: HTMLElement;
@@ -16,19 +17,20 @@
   export let uuid: string;
   export let title: string;
   export let transform: (arg: T) => U;
-  
+
   // export let connections: {
   //   [key in keyof U]: {
-  //     uuid: string,
-  //     inputName: string
-  //   }
+  //     uuid: string;
+  //     inputName: string;
+  //   };
   // };
-  // export let record: Record<string, object>;
+  const dispatch = createEventDispatcher();
 
-  let inputs: Parameters<typeof transform>[0];
-  let outputs: ReturnType<typeof transform>;
+  export let inputs: Parameters<typeof transform>[0];
+  export let outputs: ReturnType<typeof transform>;
 
   $: outputs = transform(inputs);
+  $: dispatch("transform", outputs);
 
   let isDrawingEdge = false;
   let isMoving = false;
@@ -52,9 +54,9 @@
 </div>
 
 <article
-  class="rounded-md shadow-lg border-zinc-900 bg-zinc-925" 
+  class="rounded-md shadow-lg border-zinc-900 bg-zinc-925"
   on:mouseenter={() => {
-    $selectedNodeUUID = uuid
+    $selectedNodeUUID = uuid;
     hovering = true;
   }}
   on:mouseleave={() => (hovering = false)}
@@ -96,8 +98,15 @@
       </ul>
     {/if}
   </main>
-  <button class="w-full h-4" aria-describedby="operation" on:mousedown={(e) => {
-    isMoving = true
-    offset = [e.clientX - node.getBoundingClientRect().left, e.clientY - node.getBoundingClientRect().top];
-  }}></button>
+  <button
+    class="w-full h-4"
+    aria-describedby="operation"
+    on:mousedown={(e) => {
+      isMoving = true;
+      offset = [
+        e.clientX - node.getBoundingClientRect().left,
+        e.clientY - node.getBoundingClientRect().top,
+      ];
+    }}
+  ></button>
 </article>

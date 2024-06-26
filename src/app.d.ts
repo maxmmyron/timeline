@@ -97,8 +97,8 @@ declare global {
 			 * }
 			 * ```
 			 */
-			connections: {
-				[key: keyof U]: {
+			connections: U extends object ? {
+				[key in keyof U]: {
 					/**
 					 * The UUID of the receiving node
 					 */
@@ -108,7 +108,7 @@ declare global {
 					 */
 					inputName: string
 				}
-			}
+			} : never;
 		}
 
 		type Clip<T = MediaType> = T extends "video" ? VideoClip : T extends "image" ? ImageClip : AudioClip;
