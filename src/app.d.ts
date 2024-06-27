@@ -1,5 +1,9 @@
 // See https://kit.svelte.dev/docs/types#app
-// for information about these interfaces
+// for informati on about these interfaces
+type PickByType<T, Value> = {
+	[P in keyof T as T[P] extends Value | undefined ? P : never]: T[P];
+};
+
 declare global {
 	namespace App {
 		/**
@@ -75,7 +79,7 @@ declare global {
 			matrix: Matrix;
 		}
 
-		type EditorNode<T extends object, U extends object | void> = {
+		type EditorNode<T extends (...args: any) => any> = {
 			uuid: string;
 			title: string;
 			/**
@@ -83,36 +87,9 @@ declare global {
 			 * @param args An object of properties
 			 * @returns
 			 */
-			transform: (args: T) => U;
-			in: T;
-			out: U extends object ? U : null;
-			/**
-			 * connections between the node's outputs and other nodes' inputs
-			 *
-			 * @example
-			 * ```json
-			 * {
-			 *   "out_1": {
-			 *     uuid: "1",
-			 *     inputName: "in_1"
-			 *   }
-			 * }
-			 * ```
-			 */
-			connections: U extends object ? {
-				[key in keyof U]: {
-					/**
-					 * The UUID of the receiving node
-					 */
-					uuid: string,
-					/**
-					 * The receiving node's input argument name
-					 */
-					inputName: string
-				}
-			} : never;
-
-			pos: [number, number];
+			transform: T;
+			in: Parameters<T>[0];
+			out: ReturnType<T> extends void ? null : ReturnType<T>;
 		}
 
 		type Clip<T = MediaType> = T extends "video" ? VideoClip : T extends "image" ? ImageClip : AudioClip;
@@ -145,20 +122,11 @@ declare global {
 		| "ClipInspector" | "Close" | "EndSkip" | "Export" | "Import"
 		| "Link" | "MediaPool" | "Pause" | "Play" | "Pointer"
 		| "Reset" | "SplitClip" |  "Unlink" | "ZoomIn" | "ZoomOut";
+
+		connectByNodeRef: <U extends (...args: any) => any, K extends keyof ReturnType<T>>(outName: K, inNode: U, inName: keyof PickByType<Parameters<U>[0], ReturnType<T>[K]>) => boolean;
+
+		__NOT_TYPE_SAFE__connectByNodeUUID: (outName: keyof ReturnType<T>, inUUID: string, inName: string) => boolean;
 	}
 }
 
 export {};
-
-
-// type N<I extends Record, O extends Record> = {
-// 	transform: (arg: I) => O;
-// 	in: I;
-// 	out: O;
-// }
-
-// TODO: get type safety when writing out outputName/inputName... this func should err when out and in differ in type!
-// declare function link<T extends N, K extends N>(outputNode: T, outputName: keyof T["out"], inputNode: K, inputName: keyof K["in"]);
-
-// let x: N<{x: string, y: number, z: string}, {a: string, b: number}>;
-// let y: N<{c: number, d: string, f: number}, {w: number, x: string}>;
