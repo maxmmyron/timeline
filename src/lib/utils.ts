@@ -93,7 +93,7 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
 
   const nodeSrc = resolved.type === "audio" ? resolved.audioSrc : resolved.videoSrc;
 
-  const outNode = createNode("Output", (arg: {src: string}) => {}, {src: ""}, null, {});
+  const outNode = createNode("Output", (arg: {src: string}) => {}, {src: ""}, null, {}, [200, 400]);
   const inNode = createNode(resolved.title, () => ({src: nodeSrc}), {}, {src: nodeSrc}, {
     src: {
       uuid: outNode.uuid,
@@ -199,17 +199,18 @@ export const lerpAutomation = <T = App.AutomationType>(a: App.Automation<T>, off
   return (startNode[1] * (endNode[0] - startNode[0])) + (endNode[1] * (t - startNode[0])) / (endNode[0] - startNode[0]);
 };
 
-export const createNode = <T extends object, U extends object | void>(name: string, transform: (arg: T) => U, input: T, output: U extends object? U : null, connections: U extends object ? {[key in keyof U]: {
+export const createNode = <T extends object, U extends object | void>(title: string, transform: (arg: T) => U, input: T, output: U extends object? U : null, connections: U extends object ? {[key in keyof U]: {
   uuid: string,
   inputName: string,
-}} : never): App.EditorNode<T, U> =>{
+}} : never, pos?: [number, number]): App.EditorNode<T, U> =>{
   return ({
     uuid: uuidv4(),
-    name,
+    title,
     transform,
     connections: connections,
     in: input,
-    out: output
+    out: output,
+    pos: pos ?? [0, 0]
   })
 };
 

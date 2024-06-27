@@ -77,7 +77,7 @@ declare global {
 
 		type EditorNode<T extends object, U extends object | void> = {
 			uuid: string;
-			name: string;
+			title: string;
 			/**
 			 * An overridable function that performs the node's primary transform
 			 * @param args An object of properties
@@ -111,6 +111,8 @@ declare global {
 					inputName: string
 				}
 			} : never;
+
+			pos: [number, number];
 		}
 
 		type Clip<T = MediaType> = T extends "video" ? VideoClip : T extends "image" ? ImageClip : AudioClip;
