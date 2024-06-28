@@ -17,7 +17,7 @@
   let initMouse: [number, number] = [0, 0];
   let initPos: [number, number] = [0, 0];
 
-  let nodeRefs: Record<string, HTMLElement> = {};
+  let connections = {};
 
   let inputs: Record<string, { [key: string]: any }> = {};
   let outputs: Record<string, { [key: string]: any }> = {};

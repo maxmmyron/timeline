@@ -1,11 +1,11 @@
 // See https://kit.svelte.dev/docs/types#app
 // for informati on about these interfaces
-type PickByType<T, Value> = {
-	[P in keyof T as T[P] extends Value | undefined ? P : never]: T[P];
-};
 
 declare global {
 	namespace App {
+		type PickByType<T, Value> = {
+			[P in keyof T as T[P] extends Value | undefined ? P : never]: T[P];
+		};
 		/**
 		 * The extendable base for all media types. This interface is used to implement the properties of an
 		 * uploaded media clip, *before* it is added to the timeline.
@@ -82,6 +82,7 @@ declare global {
 		type EditorNode<T extends (...args: any) => any> = {
 			uuid: string;
 			title: string;
+			pos: [number, number];
 			/**
 			 * An overridable function that performs the node's primary transform
 			 * @param args An object of properties
@@ -90,6 +91,12 @@ declare global {
 			transform: T;
 			in: Parameters<T>[0];
 			out: ReturnType<T> extends void ? null : ReturnType<T>;
+			connections: {
+				[string in keyof ReturnType<T>]?: {
+					uuid: string
+					in: string;
+				}
+			}
 		}
 
 		type Clip<T = MediaType> = T extends "video" ? VideoClip : T extends "image" ? ImageClip : AudioClip;
@@ -123,7 +130,7 @@ declare global {
 		| "Link" | "MediaPool" | "Pause" | "Play" | "Pointer"
 		| "Reset" | "SplitClip" |  "Unlink" | "ZoomIn" | "ZoomOut";
 
-		connectByNodeRef: <U extends (...args: any) => any, K extends keyof ReturnType<T>>(outName: K, inNode: U, inName: keyof PickByType<Parameters<U>[0], ReturnType<T>[K]>) => boolean;
+		type ConnectNodes = <T extends (...args: any) => any, U extends (...args: any) => any, K extends keyof ReturnType<T>>(outName: K, inNode: U, inName: keyof PickByType<Parameters<U>[0], ReturnType<T>[K]>) => boolean;
 
 		__NOT_TYPE_SAFE__connectByNodeUUID: (outName: keyof ReturnType<T>, inUUID: string, inName: string) => boolean;
 	}

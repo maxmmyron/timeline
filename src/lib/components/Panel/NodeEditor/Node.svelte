@@ -5,11 +5,11 @@
   let hovering: boolean = false;
 </script>
 
-<script lang="ts" generics="T extends object, U extends object | void">
+<script lang="ts" generics="T extends (...args: any) => any">
   import { createEventDispatcher, onMount } from "svelte";
   import { selectedNodeUUID } from "$lib/stores";
 
-  export let node: App.EditorNode<T, U>;
+  export let node: App.EditorNode<T>;
   export let panelOffset: [number, number];
   export let inputs: Parameters<typeof transform>[0];
   export let outputs: ReturnType<typeof transform>;

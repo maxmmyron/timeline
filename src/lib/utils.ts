@@ -199,9 +199,11 @@ export const createNode = <T extends (...args: any) => any>(title: string, trans
   return ({
     uuid: uuidv4(),
     title,
+    pos: [0, 0],
     transform,
     in: initialIn,
     out: initialOut,
+    connections: {},
   })
 };
 
@@ -211,4 +213,8 @@ export const getClipByUUID = (uuid: string, type: App.MediaType): App.VideoClip 
   } else {
     return get(videoClips).find(clip => clip.uuid === uuid) as App.VideoClip | App.ImageClip;
   }
+};
+
+export const connectNodes: App.ConnectNodes = <T extends (...args: any) => any, U extends (...args: any) => any, K extends keyof ReturnType<T>>(outName: K, inNode: U, inName: keyof App.PickByType<Parameters<U>[0], ReturnType<T>[K]>) => {
+  return true;
 };
