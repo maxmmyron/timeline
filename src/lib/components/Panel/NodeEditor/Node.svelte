@@ -7,10 +7,9 @@
 
 <script lang="ts" generics="T extends (...args: any) => any">
   import { createEventDispatcher, onMount } from "svelte";
-  import { selectedNodeUUID } from "$lib/stores";
+  import { selectedNodeUUID, panelPos, panelConnections } from "$lib/stores";
 
   export let node: App.EditorNode<T>;
-  export let panelOffset: [number, number];
   export let inputs: Parameters<typeof transform>[0];
   export let outputs: ReturnType<typeof transform>;
 
@@ -51,6 +50,15 @@
 
     pos = [x - initMouse[0] + initPos[0], y - initMouse[1] + initPos[1]];
   };
+
+  onMount(() => {
+    for (const [out, inNode] of Object.entries(node.connections)) {
+      if (!inNode) return;
+      $panelConnections[node.uuid][out] = {
+        ...inNode,
+      };
+    }
+  });
 </script>
 
 <svelte:window
@@ -82,7 +90,7 @@
 
 <article
   class="rounded-md shadow-lg border-zinc-900 bg-zinc-925 absolute min-w-[100px]"
-  style="left: {pos[0] + panelOffset[0]}px; top: {pos[1] + panelOffset[1]}px;"
+  style="left: {pos[0] + $panelPos[0]}px; top: {pos[1] + $panelPos[1]}px;"
   on:mouseenter={() => {
     $selectedNodeUUID = uuid;
     hovering = true;
