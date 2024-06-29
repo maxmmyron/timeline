@@ -48,6 +48,25 @@
       $panelConnections = {};
     };
   });
+
+  const connect = <
+    T extends App.EditorNode<(...args: any) => any>,
+    U extends keyof ReturnType<T["transform"]>,
+    K extends App.EditorNode<(...args: any) => any>,
+  >(
+    nodeA: T,
+    nodeOut: U,
+    nodeB: K,
+    nodeIn: keyof App.PickByType<
+      Parameters<K["transform"]>[0],
+      ReturnType<T["transform"]>[U]
+    >
+  ) => {
+    nodeA.connections[nodeOut] = {
+      uuid: nodeB.uuid,
+      in: <string>nodeIn,
+    };
+  };
 </script>
 
 <svelte:window
