@@ -91,7 +91,7 @@ declare global {
 			transform: T;
 			in: Parameters<T>[0];
 			out: ReturnType<T> extends void ? null : ReturnType<T>;
-			connections: {
+			connectionsOut: {
 				[string in keyof ReturnType<T>]?: {
 					uuid: string
 					in: string;

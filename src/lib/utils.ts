@@ -94,8 +94,9 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
   const nodeSrc = resolved.type === "audio" ? resolved.audioSrc : resolved.videoSrc;
 
 
-  const outNode = createNode("Output", (arg: {src: string}) => {}, {src: ""}, null);
-  const inNode = createNode(resolved.title, () => ({src: nodeSrc}), null, {src: nodeSrc});
+  const outNode = createNode("Output", (arg: {src: string}) => {}, {src: ""}, null, [500, 300]);
+  const inNode = createNode(resolved.title, () => ({src: nodeSrc}), null, {src: nodeSrc}, [100, 200]);
+  connectNodes(inNode, "src", outNode, "src");
 
   if (resolved.type === "video" || resolved.type === "image") {
 
@@ -195,15 +196,15 @@ export const lerpAutomation = <T = App.AutomationType>(a: App.Automation<T>, off
   return (startNode[1] * (endNode[0] - startNode[0])) + (endNode[1] * (t - startNode[0])) / (endNode[0] - startNode[0]);
 };
 
-export const createNode = <T extends (...args: any) => any>(title: string, transform: T, initialIn: Parameters<T>[0] extends undefined ? null : Parameters<T>[0], initialOut: ReturnType<T> extends void ? null : ReturnType<T>): App.EditorNode<T> =>{
+export const createNode = <T extends (...args: any) => any>(title: string, transform: T, initialIn: Parameters<T>[0] extends undefined ? null : Parameters<T>[0], initialOut: ReturnType<T> extends void ? null : ReturnType<T>, pos: [number, number] = [0,0]): App.EditorNode<T> =>{
   return ({
     uuid: uuidv4(),
     title,
-    pos: [0, 0],
+    pos,
     transform,
     in: initialIn,
     out: initialOut,
-    connections: {},
+    connectionsOut: {}
   })
 };
 
@@ -215,6 +216,13 @@ export const getClipByUUID = (uuid: string, type: App.MediaType): App.VideoClip 
   }
 };
 
-export const connectNodes: App.ConnectNodes = <T extends (...args: any) => any, U extends (...args: any) => any, K extends keyof ReturnType<T>>(outName: K, inNode: U, inName: keyof App.PickByType<Parameters<U>[0], ReturnType<T>[K]>) => {
-  return true;
+export const connectNodes = <
+  T extends App.EditorNode<(...args: any) => any>,
+  U extends keyof ReturnType<T["transform"]>,
+  K extends App.EditorNode<(...args: any) => any>
+>(nodeA: T, nodeOut: U, nodeB: K, nodeIn: keyof App.PickByType<Parameters<K["transform"]>[0], ReturnType<T["transform"]>[U]>) => {
+  nodeA.connectionsOut[nodeOut] = {
+    uuid: nodeB.uuid,
+    in: <string>nodeIn,
+  };
 };
