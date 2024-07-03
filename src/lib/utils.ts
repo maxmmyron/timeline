@@ -4,7 +4,7 @@
 
 import { get } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
-import { audioClips, paused, res, scaleFactor, scroll, time, videoClips } from "./stores";
+import { audioClips, panelConnections, paused, res, scaleFactor, scroll, time, videoClips } from "./stores";
 
 /**
  * Gets the current clips at the given time. This returns a comma-
@@ -226,3 +226,27 @@ export const connectNodes = <
     in: <string>nodeIn,
   };
 };
+
+export const getVertexConnection = (nodeUUID: string, nodeVertex: string, isOutputVertex: boolean) => {
+  const connections = get(panelConnections);
+  if (isOutputVertex) {
+    if (connections[nodeUUID]) return {
+      uuid: connections[nodeUUID][nodeVertex].uuid,
+      vertex: connections[nodeUUID][nodeVertex].in,
+    };
+  } else {
+    // FIXME: fine for now but could prob remove a loop and use map/reduce
+    for (const [uuid, nodeConnections] of Object.entries(connections)) {
+      for (const [vertex, vertexConnection] of Object.entries(nodeConnections)) {
+        if (vertexConnection.in === nodeVertex && nodeUUID === vertexConnection.uuid) {
+          return {
+            uuid: uuid,
+            vertex: vertex
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
