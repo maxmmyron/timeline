@@ -203,7 +203,9 @@
     </div>
   {:else if currentPanel === "Node Editor"}
     {#if $selected}
-      <NodePanel current={getClipByUUID($selected[0], $selected[1])} />
+      {#key $selected[0]}
+        <NodePanel current={getClipByUUID($selected[0], $selected[1])} />
+      {/key}
     {:else}
       <div class="w-full h-full flex items-center justify-center">
         <p>No clip selected</p>
