@@ -4,7 +4,7 @@
 
 import { get } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
-import { audioClips, panelConnections, paused, res, scaleFactor, scroll, time, videoClips } from "./stores";
+import { audioClips, nodeInConnections, nodeOutConnections, paused, res, scaleFactor, scroll, time, videoClips } from "./stores";
 
 /**
  * Gets the current clips at the given time. This returns a comma-
@@ -92,7 +92,6 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
   } as App.Clip<T>;
 
   const nodeSrc = resolved.type === "audio" ? resolved.audioSrc : resolved.videoSrc;
-
 
   const outNode = createNode("Output", (arg: {src: string}) => {}, {src: ""}, null, [500, 300]);
   const inNode = createNode(resolved.title, () => ({src: nodeSrc}), null, {src: nodeSrc}, [100, 200]);
@@ -197,6 +196,19 @@ export const lerpAutomation = <T = App.AutomationType>(a: App.Automation<T>, off
 };
 
 export const createNode = <T extends (...args: any) => any>(title: string, transform: T, initialIn: Parameters<T>[0] extends undefined ? null : Parameters<T>[0], initialOut: ReturnType<T> extends void ? null : ReturnType<T>, pos: [number, number] = [0,0]): App.EditorNode<T> =>{
+  let connectionsOut: { [key: string]: [string, string] | null; } = {};
+  let connectionsIn: { [key: string]: [string, string] | null; } = {};
+
+  if (initialOut) {
+    for (const outVertex of Object.keys(initialOut)) connectionsOut[outVertex] = null;
+  }
+
+  if (initialIn) {
+    for (const inVertex of Object.keys(initialIn)) connectionsOut[inVertex] = null;
+  }
+
+  console.log(connectionsOut, connectionsIn);
+
   return ({
     uuid: uuidv4(),
     title,
@@ -204,7 +216,8 @@ export const createNode = <T extends (...args: any) => any>(title: string, trans
     transform,
     in: initialIn,
     out: initialOut,
-    connectionsOut: {}
+    connectionsIn: connectionsIn as { [key in keyof Parameters<T>[0]]: [string, string] | null},
+    connectionsOut: connectionsOut as { [key in keyof ReturnType<T>]: [string, string] | null}
   })
 };
 
@@ -221,32 +234,23 @@ export const connectNodes = <
   U extends keyof ReturnType<T["transform"]>,
   K extends App.EditorNode<(...args: any) => any>
 >(nodeA: T, nodeOut: U, nodeB: K, nodeIn: keyof App.PickByType<Parameters<K["transform"]>[0], ReturnType<T["transform"]>[U]>) => {
-  nodeA.connectionsOut[nodeOut] = {
-    uuid: nodeB.uuid,
-    in: <string>nodeIn,
-  };
+  nodeA.connectionsOut[nodeOut] = [nodeB.uuid, nodeIn.toString()];
+  nodeB.connectionsIn[nodeIn] = [nodeA.uuid, nodeOut.toString()];
 };
 
-export const getVertexConnection = (nodeUUID: string, nodeVertex: string, isOutputVertex: boolean) => {
-  const connections = get(panelConnections);
-  if (isOutputVertex) {
-    if (connections[nodeUUID]) return {
-      uuid: connections[nodeUUID][nodeVertex].uuid,
-      vertex: connections[nodeUUID][nodeVertex].in,
-    };
-  } else {
-    // FIXME: fine for now but could prob remove a loop and use map/reduce
-    for (const [uuid, nodeConnections] of Object.entries(connections)) {
-      for (const [vertex, vertexConnection] of Object.entries(nodeConnections)) {
-        if (vertexConnection.in === nodeVertex && nodeUUID === vertexConnection.uuid) {
-          return {
-            uuid: uuid,
-            vertex: vertex
-          }
-        }
-      }
-    }
-  }
+export const disconnectNodes = <
+  T extends App.EditorNode<(...args: any) => any>,
+  U extends keyof ReturnType<T["transform"]>,
+  K extends App.EditorNode<(...args: any) => any>
+>(nodeA: T, nodeOut: U, nodeB: K, nodeIn: keyof App.PickByType<Parameters<K["transform"]>[0], ReturnType<T["transform"]>[U]>) => {
+  nodeA.connectionsOut[nodeOut] = null;
+  nodeB.connectionsIn[nodeIn] = null;
+}
 
-  return null;
+export const getNodeConnectionData = (vertexType: "in" | "out", nodeUUID: string, vertex: string): [string, string] | null => {
+  const outConns = get(nodeOutConnections);
+  const inConns = get(nodeInConnections);
+
+  if (vertexType === "out") return outConns[nodeUUID][vertex]
+  else return inConns[nodeUUID][vertex]
 }
