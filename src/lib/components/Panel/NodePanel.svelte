@@ -1,7 +1,8 @@
 <script lang="ts">
   import Node from "./NodeEditor/Node.svelte";
-  import { panelConnections, panelPos } from "$lib/stores";
+  import { panelPos, nodeInConnections, nodeOutConnections } from "$lib/stores";
   import { beforeUpdate, onMount } from "svelte";
+  import { connectNodes } from "$lib/utils";
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D;
@@ -13,11 +14,17 @@
   let initPos: [number, number] = [0, 0];
 
   let refs: Record<string, HTMLElement> = {};
+
+  // TODO: remove these
   let inputs: Record<string, { [key: string]: any }> = {};
   let outputs: Record<string, { [key: string]: any }> = {};
 
+  let frameID: number;
+
   // before we update the component, we need to go through each node and ensure its inputs and outputs are recorded in the relevant records!
   beforeUpdate(() => {
+    recalcPanelConnections();
+
     for (const node of current.nodes) {
       if (!inputs[node.uuid]) inputs[node.uuid] = node.in;
       if (!outputs[node.uuid]) outputs[node.uuid] = node.out;
@@ -38,14 +45,22 @@
     window.addEventListener("resize", resize);
 
     isRerenderNeeded = true;
-    requestAnimationFrame(frame);
+    frameID = requestAnimationFrame(frame);
+    recalcPanelConnections();
 
     return () => {
       window.removeEventListener("resize", resize);
       panelPos.set([0, 0], { hard: true });
-      $panelConnections = {};
+      cancelAnimationFrame(frameID);
     };
   });
+
+  const recalcPanelConnections = () => {
+    for (const node of current.nodes) {
+      $nodeOutConnections[node.uuid] = node.connectionsOut;
+      $nodeInConnections[node.uuid] = node.connectionsIn;
+    }
+  };
 
   const startMove = (x: number, y: number) => {
     moving = true;
@@ -71,31 +86,41 @@
   // ---------------------
 
   let isRerenderNeeded = false;
-  let startEdgeNode: App.EditorNode<(...args: any) => any>;
-  let startEdgeVertex: keyof Parameters<(typeof startEdgeNode)["transform"]>[0];
   let isDrawingNewEdge = false;
-  let isDrawingFromOutput = true;
+
+  /**
+   * The type of vertex that received the "mousedown" event
+   */
+  let initialVertexType: "in" | "out";
+  let initialEdgeNode: App.EditorNode<(...args: any) => any>;
+  let initialEdgeVertex: keyof Parameters<
+    (typeof initialEdgeNode)["transform"]
+  >[0];
+  /**
+   * The type of vertex that receive the "mouseup" event
+   */
+  let finalVertexType: "in" | "out";
 
   const frame = (timestamp: DOMHighResTimeStamp) => {
-    requestAnimationFrame(frame);
+    frameID = requestAnimationFrame(frame);
+
+    // break early (helps during remounts)
+    // TODO: remove this when better fix
+    if (!canvas) return;
 
     if (isRerenderNeeded) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawEdges();
+
+      $outer: for (const [oUUID, oData] of Object.entries(
+        $nodeOutConnections
+      )) {
+        for (const [vertex, data] of Object.entries(oData)) {
+          if (data === null) continue $outer;
+          drawEdge(oUUID, vertex, ...data);
+        }
+      }
+
       isRerenderNeeded = false;
-    }
-  };
-
-  const drawEdges = () => {
-    for (const [outUUID, outData] of Object.entries($panelConnections)) {
-      if (JSON.stringify(outData) === "{}") continue;
-      const outVertexName = Object.keys(outData)[0];
-      const [inUUID, inVertexName] = [
-        outData[outVertexName].uuid,
-        outData[outVertexName].in,
-      ];
-
-      drawEdge(outUUID, outVertexName, inUUID, inVertexName);
     }
   };
 
@@ -143,17 +168,25 @@
    * @param pos
    */
   const drawNewEdge = (x: number, y: number) => {
-    let ref = refs[startEdgeNode.uuid];
+    let ref = refs[initialEdgeNode.uuid];
     let vertexEl;
-    if (isDrawingFromOutput) {
-      vertexEl = ref.querySelector(`#output-${String(startEdgeVertex)}`);
+    let query;
+    if (initialVertexType === "out") {
+      query = `#output-${String(initialEdgeVertex)}`;
     } else {
-      vertexEl = ref.querySelector(`#input-${String(startEdgeVertex)}`);
+      query = `#input-${String(initialEdgeVertex)}`;
     }
+    vertexEl = ref.querySelector(query);
+
+    console.log(
+      query,
+      JSON.stringify($nodeOutConnections),
+      initialEdgeNode.uuid
+    );
 
     if (!vertexEl)
       throw new Error(
-        `Error drawing edge: vertex with name ${String(startEdgeVertex)} does not exist on node ${startEdgeNode.uuid}`
+        `Error drawing edge: ${query} does not exist on node ${initialEdgeNode.uuid}`
       );
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -214,54 +247,64 @@
             node.connectionsOut
           )) {
             if (!input) continue;
-            inputs[input.uuid][input.in] = e.detail[outputName];
+            inputs[input[0]][input[1]] = e.detail[outputName];
           }
         }}
         on:startedge={(e) => {
+          // get the node
           if (typeof e.detail.node === "string") {
             const node = current.nodes.find((n) => n.uuid === e.detail.node);
             if (!node) {
               throw new Error(`No node with uuid ${e.detail.node} found.`);
             }
-            startEdgeNode = node;
+            initialEdgeNode = node;
           } else {
-            startEdgeNode = e.detail.node;
+            initialEdgeNode = e.detail.node;
           }
 
+          // start drawing a new edge from this vertex
           isDrawingNewEdge = true;
-          startEdgeVertex = e.detail.vertex;
-          isDrawingFromOutput = e.detail.isOutputVertex;
+          initialEdgeVertex = e.detail.vertex;
+          initialVertexType = e.detail.vertexType;
+
+          recalcPanelConnections();
         }}
         on:endedge={(e) => {
           if (!isDrawingNewEdge) return;
+
+          // if we're trying to connect two like vertex type (like in -> in or out -> out) then break early.
+          if (e.detail.vertexType === initialVertexType) {
+            return;
+          }
 
           const uuid =
             typeof e.detail.node === "string"
               ? e.detail.node
               : e.detail.node.uuid;
 
-          let node;
-          if (e.detail.isOutputVertex) {
-            node = current.nodes.find((n) => n.uuid === uuid);
-          } else {
-            node = current.nodes.find((n) => n.uuid === startEdgeNode.uuid);
+          // if we're attempting to draw to the same node, then break early!
+          if (uuid === initialEdgeNode.uuid) {
+            return;
           }
 
-          if (!node) throw new Error(`No node found.`);
+          const endNode = current.nodes.find((n) => n.uuid === uuid);
+          if (!endNode) throw new Error("Could not find node");
 
-          if (e.detail.isOutputVertex) {
-            node.connectionsOut[e.detail.vertex.toString()] = {
-              uuid: startEdgeNode.uuid,
-              in: startEdgeVertex.toString(),
-            };
-          } else {
-            node.connectionsOut[startEdgeVertex.toString()] = {
-              uuid,
-              in: e.detail.vertex.toString(),
-            };
-          }
+          console.log(
+            `connect ${initialEdgeNode.uuid}:${initialEdgeVertex} to ${uuid}:${e.detail.vertex}`
+          );
 
+          connectNodes(
+            initialEdgeNode,
+            initialEdgeVertex,
+            endNode,
+            e.detail.vertex.toString()
+          );
+
+          finalVertexType = e.detail.vertexType;
           isRerenderNeeded = true;
+
+          recalcPanelConnections();
         }}
         on:nodemove={(e) => {
           // TODO: only rerender iff moved node has connections
@@ -276,6 +319,14 @@
   bind:this={canvas}
   class="pointer-events-none absolute -top-1 -left-1 w-[calc(100%_+_.5rem)] h-[calc(100%_+_.5rem)]"
 ></canvas>
+
+<button
+  class="absolute bottom-1 right-1 border border-zinc-900 bg-zinc-925 rounded-sm px-2 py-1 uppercase"
+  on:click={() => {
+    console.log($nodeOutConnections);
+    console.log($nodeInConnections);
+  }}>LOG</button
+>
 
 <style>
   .bg-dot {

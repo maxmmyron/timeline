@@ -91,12 +91,8 @@ declare global {
 			transform: T;
 			in: Parameters<T>[0];
 			out: ReturnType<T> extends void ? null : ReturnType<T>;
-			connectionsOut: {
-				[string in keyof ReturnType<T>]?: {
-					uuid: string
-					in: string;
-				}
-			}
+			connectionsIn: { [string in keyof Parameters<T>[0]]: [string, string] | null }
+			connectionsOut: { [string in keyof ReturnType<T>]: [string, string] | null }
 		}
 
 		type Clip<T = MediaType> = T extends "video" ? VideoClip : T extends "image" ? ImageClip : AudioClip;

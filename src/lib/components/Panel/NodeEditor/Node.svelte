@@ -7,9 +7,20 @@
 </script>
 
 <script lang="ts" generics="T extends (...args: any) => any">
+  import {
+    disconnectNodes,
+    getNodeConnectionData,
+    getClipByUUID,
+  } from "$lib/utils";
+
   import { createEventDispatcher, onMount } from "svelte";
-  import { selectedNodeUUID, panelPos, panelConnections } from "$lib/stores";
-  import { getVertexConnection } from "$lib/utils";
+  import {
+    selectedNodeUUID,
+    panelPos,
+    nodeInConnections,
+    nodeOutConnections,
+    selected,
+  } from "$lib/stores";
 
   export let node: App.EditorNode<T>;
   export let inputs: Parameters<typeof transform>[0];
@@ -25,14 +36,14 @@
   const dispatch = createEventDispatcher<{
     transform: ReturnType<typeof transform>;
     startedge: {
-      isOutputVertex: boolean;
+      vertexType: "in" | "out";
       node: App.EditorNode<T> | string;
       vertex:
         | keyof ReturnType<typeof transform>
         | keyof Parameters<typeof transform>[0];
     };
     endedge: {
-      isOutputVertex: boolean;
+      vertexType: "in" | "out";
       node: App.EditorNode<T> | string;
       vertex:
         | keyof ReturnType<typeof transform>
@@ -43,7 +54,7 @@
 
   // accept input arg to keep reactivity
   const transformWrapper = (_i: typeof inputs) => {
-    console.log(`running transform of ${title}`);
+    // console.log(`running transform of ${title}`);
     return transform(_i);
   };
 
@@ -52,19 +63,6 @@
   $: if (typeof outputs === "object") dispatch("transform", outputs);
 
   let isMoving = false;
-
-  onMount(() => {
-    for (const [out, inNode] of Object.entries(node.connectionsOut)) {
-      if (!inNode) return;
-      // if there exists
-      if (!Object.keys($panelConnections).find((u) => u === node.uuid)) {
-        $panelConnections[node.uuid] = {};
-      }
-      $panelConnections[node.uuid][out] = {
-        ...inNode,
-      };
-    }
-  });
 
   const initMoveNode = (x: number, y: number) => {
     isMoving = true;
@@ -85,7 +83,7 @@
    * Initializes a new input-anchored or output-anchored edge
    */
   const initEdge = (
-    isOutputVertex: boolean,
+    vertexType: "in" | "out",
     vertex:
       | keyof ReturnType<typeof transform>
       | keyof Parameters<typeof transform>[0]
@@ -93,26 +91,27 @@
     isDrawingNewEdge = true;
 
     // check for existing connections and delete if it exists
+    const connData = getNodeConnectionData(vertexType, uuid, vertex.toString());
 
-    const vertexConnection = getVertexConnection(
-      node.uuid,
-      vertex.toString(),
-      isOutputVertex
-    );
+    if (connData) {
+      // if we have an existing connection, remove it and start an edge from the opposite node/vertex pair.
+      $nodeOutConnections[node.uuid][vertex.toString()] = null;
+      $nodeInConnections[connData[0]][connData[1]] = null;
 
-    if (vertexConnection) {
-      delete $panelConnections[vertexConnection.uuid][vertexConnection.vertex];
+      disconnectNodes(
+        node,
+        vertex.toString(),
+        getClipByUUID(...$selected!).nodes.find((n) => n.uuid === connData[0])!,
+        connData[1]
+      );
 
-      // create a new output-anchored edge, since we're essentially
-      // "disconnecting" the existing edge at the output vertex.
       dispatch("startedge", {
-        isOutputVertex: false,
-        node: vertexConnection.uuid,
-        vertex: vertexConnection.vertex,
+        vertexType: vertexType === "in" ? "out" : "in",
+        node: connData[0],
+        vertex: connData[1],
       });
     } else {
-      // if this node has no connection, then we need to start an input-anchored phantom edge.
-      dispatch("startedge", { isOutputVertex, node, vertex });
+      dispatch("startedge", { vertexType, node, vertex });
     }
   };
 
@@ -121,26 +120,39 @@
    * If checks pass, then connects the given vertex to another node's vertex.
    */
   const connectEdge = (
-    isOutputVertex: boolean,
+    vertexType: "in" | "out",
     vertex:
       | keyof ReturnType<typeof transform>
       | keyof Parameters<typeof transform>[0]
   ) => {
     if (!isDrawingNewEdge) return;
 
-    // if the node has a connection then remove it
-    const vertexConnection = getVertexConnection(
-      node.uuid,
-      vertex.toString(),
-      isOutputVertex
-    );
-    if (vertexConnection) {
-      delete $panelConnections[vertexConnection.uuid][vertexConnection.vertex];
+    // if the node has a connection, then remove it
+    const connData = getNodeConnectionData(vertexType, uuid, vertex.toString());
+    const existingNodes = getClipByUUID(...$selected!).nodes;
+
+    if (connData) {
+      // if we have an existing connection, remove it
+      if (vertexType === "in") {
+        disconnectNodes(
+          existingNodes.find((n) => n.uuid === connData[0])!,
+          connData[1],
+          existingNodes.find((n) => n.uuid === uuid)!,
+          vertex.toString()
+        );
+      } else {
+        disconnectNodes(
+          existingNodes.find((n) => n.uuid === uuid)!,
+          vertex.toString(),
+          existingNodes.find((n) => n.uuid === connData[0])!,
+          connData[1]
+        );
+      }
     }
 
     // TODO: if we're drawing an output-anchored one, then
     // create a new connection via the endedge event
-    dispatch("endedge", { isOutputVertex, node, vertex });
+    dispatch("endedge", { vertexType, node, vertex });
   };
 </script>
 
@@ -188,10 +200,10 @@
         {#each Object.entries(inputs) as [key, val]}
           <li class="flex items-center gap-1">
             <button
-              on:mousedown={() => initEdge(false, key)}
-              on:touchstart={() => initEdge(false, key)}
-              on:mouseup={() => connectEdge(false, key)}
-              on:touchend={() => connectEdge(false, key)}
+              on:mousedown|stopPropagation={() => initEdge("in", key)}
+              on:touchstart|stopPropagation={() => initEdge("in", key)}
+              on:mouseup={() => connectEdge("in", key)}
+              on:touchend={() => connectEdge("in", key)}
               class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25 input"
               id="input-{key}"
             ></button>
@@ -209,10 +221,10 @@
           <li class="flex items-center gap-1">
             <p>{key}</p>
             <button
-              on:mousedown|stopPropagation={() => initEdge(true, key)}
-              on:touchstart|stopPropagation={() => initEdge(true, key)}
-              on:mouseup={() => connectEdge(true, key)}
-              on:touchend={() => connectEdge(true, key)}
+              on:mousedown|stopPropagation={() => initEdge("out", key)}
+              on:touchstart|stopPropagation={() => initEdge("out", key)}
+              on:mouseup={() => connectEdge("out", key)}
+              on:touchend={() => connectEdge("out", key)}
               class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25 output"
               id="output-{key}"
             ></button>
@@ -221,6 +233,7 @@
       </ul>
     {/if}
   </main>
+  <p class="text-center">{uuid.slice(-6)}</p>
   <button
     class="w-full h-4 bg-white/10"
     aria-describedby="operation"
