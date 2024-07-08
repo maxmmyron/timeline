@@ -88,20 +88,12 @@
   let isRerenderNeeded = false;
   let isDrawingNewEdge = false;
 
+  let initNode: App.EditorNode<(...args: any) => any>;
+  let initVertex: keyof Parameters<(typeof initNode)["transform"]>[0];
   /**
    * The type of vertex that received the "mousedown" event
    */
-  let initialVertexType: "in" | "out";
-  let initialEdgeNode: App.EditorNode<(...args: any) => any>;
-  let initialEdgeVertex: keyof Parameters<
-    (typeof initialEdgeNode)["transform"]
-  >[0];
-
-  /**
-   * The type of vertex that receive the "mouseup" event
-   * FIXME: remove
-   */
-  let finalVertexType: "in" | "out";
+  let initVertexType: "in" | "out";
 
   const frame = (timestamp: DOMHighResTimeStamp) => {
     frameID = requestAnimationFrame(frame);
@@ -113,12 +105,10 @@
     if (isRerenderNeeded) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      $outer: for (const [oUUID, oData] of Object.entries(
-        $nodeOutConnections
-      )) {
-        for (const [vertex, data] of Object.entries(oData)) {
-          if (data === null) continue $outer;
-          drawEdge(oUUID, vertex, ...data);
+      $outer: for (const [uuid, outer] of Object.entries($nodeOutConnections)) {
+        for (const [vertex, inner] of Object.entries(outer)) {
+          if (inner === null) continue $outer;
+          drawEdge(uuid, vertex, ...inner);
         }
       }
 
@@ -142,8 +132,9 @@
     let inRef = refs[inUUID];
     let inVertexEl = inRef.querySelector(`#input-${String(inVertex)}`);
 
-    if (!outVertexEl || !inVertexEl)
+    if (!outVertexEl || !inVertexEl) {
       throw new Error("Error drawing edge: Cannot find vertex element");
+    }
 
     let { left, top } = canvas.getBoundingClientRect();
 
@@ -152,14 +143,22 @@
 
     ctx.beginPath();
 
-    ctx.moveTo(
+    let [outX, outY] = [
       outVertexEl.getBoundingClientRect().left + 4.5 - left,
-      outVertexEl.getBoundingClientRect().top + 4.5 - top
-    );
-    ctx.lineTo(
+      outVertexEl.getBoundingClientRect().top + 4.5 - top,
+    ];
+    let [inX, inY] = [
       inVertexEl.getBoundingClientRect().left + 4.5 - left,
-      inVertexEl.getBoundingClientRect().top + 4.5 - top
-    );
+      inVertexEl.getBoundingClientRect().top + 4.5 - top,
+    ];
+
+    ctx.moveTo(outX, outY);
+
+    let horzDist = Math.abs((inX - outX) * 0.35);
+
+    ctx.bezierCurveTo(outX + horzDist, outY, inX - horzDist, inY, inX, inY);
+
+    // ctx.lineTo();
 
     ctx.stroke();
   };
@@ -170,19 +169,19 @@
    * @param pos
    */
   const drawNewEdge = (x: number, y: number) => {
-    let ref = refs[initialEdgeNode.uuid];
+    let ref = refs[initNode.uuid];
     let vertexEl;
     let query;
-    if (initialVertexType === "out") {
-      query = `#output-${String(initialEdgeVertex)}`;
+    if (initVertexType === "out") {
+      query = `#output-${String(initVertex)}`;
     } else {
-      query = `#input-${String(initialEdgeVertex)}`;
+      query = `#input-${String(initVertex)}`;
     }
     vertexEl = ref.querySelector(query);
 
     if (!vertexEl)
       throw new Error(
-        `Error drawing edge: ${query} does not exist on node ${initialEdgeNode.uuid}`
+        `Error drawing edge: ${query} does not exist on node ${initNode.uuid}`
       );
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -193,12 +192,38 @@
     ctx.strokeStyle = "orange";
 
     ctx.beginPath();
-    ctx.moveTo(
-      vertexEl.getBoundingClientRect().left + 4.5 - left,
-      vertexEl.getBoundingClientRect().top + 4.5 - top
-    );
 
-    ctx.lineTo(x - left, y - top);
+    let outX: number, outY: number, inX: number, inY: number;
+
+    if (initVertexType === "out") {
+      [outX, outY] = [
+        vertexEl.getBoundingClientRect().left + 4.5 - left,
+        vertexEl.getBoundingClientRect().top + 4.5 - top,
+      ];
+      [inX, inY] = [x - left, y - top];
+    } else {
+      [outX, outY] = [x - left, y - top];
+      [inX, inY] = [
+        vertexEl.getBoundingClientRect().left + 4.5 - left,
+        vertexEl.getBoundingClientRect().top + 4.5 - top,
+      ];
+    }
+
+    ctx.moveTo(outX, outY);
+
+    let control = Math.abs((inX - outX) * 0.35);
+
+    /**
+     * We don't want mouse's control point to "snap ahead" of mouse if mouse x is behind/ahead other node
+     */
+    let mControl = (inX - outX) * 0.35;
+
+    if (initVertexType === "out") {
+      ctx.bezierCurveTo(outX + control, outY, inX - mControl, inY, inX, inY);
+    } else {
+      ctx.bezierCurveTo(outX + mControl, outY, inX - control, inY, inX, inY);
+    }
+
     ctx.stroke();
   };
 </script>
@@ -253,15 +278,15 @@
             if (!node) {
               throw new Error(`No node with uuid ${e.detail.node} found.`);
             }
-            initialEdgeNode = node;
+            initNode = node;
           } else {
-            initialEdgeNode = e.detail.node;
+            initNode = e.detail.node;
           }
 
           // start drawing a new edge from this vertex
           isDrawingNewEdge = true;
-          initialEdgeVertex = e.detail.vertex;
-          initialVertexType = e.detail.vertexType;
+          initVertex = e.detail.vertex;
+          initVertexType = e.detail.vertexType;
 
           recalcPanelConnections();
         }}
@@ -269,40 +294,34 @@
           if (!isDrawingNewEdge) return;
 
           // if we're trying to connect two like vertex type (like in -> in or out -> out) then break early.
-          if (e.detail.vertexType === initialVertexType) {
+          if (e.detail.vertexType === initVertexType) {
             return;
           }
 
-          const uuid =
-            typeof e.detail.node === "string"
-              ? e.detail.node
-              : e.detail.node.uuid;
+          let eventUUID;
+          if (typeof e.detail.node === "string") {
+            eventUUID = e.detail.node;
+          } else {
+            eventUUID = e.detail.node.uuid;
+          }
 
           // if we're attempting to draw to the same node, then break early!
-          if (uuid === initialEdgeNode.uuid) {
+          if (eventUUID === initNode.uuid) {
             return;
           }
 
-          const endNode = current.nodes.find((n) => n.uuid === uuid);
-          if (!endNode) throw new Error("Could not find node");
+          // get terminal node/vertex pair
+          const termNode = current.nodes.find((n) => n.uuid === eventUUID);
+          const termVertex = e.detail.vertex.toString();
 
-          if (initialVertexType === "out") {
-            connectNodes(
-              initialEdgeNode,
-              initialEdgeVertex,
-              endNode,
-              e.detail.vertex.toString()
-            );
+          if (!termNode) throw new Error("Could not find node");
+
+          if (initVertexType === "out") {
+            connectNodes(initNode, initVertex, termNode, termVertex);
           } else {
-            connectNodes(
-              endNode,
-              e.detail.vertex.toString(),
-              initialEdgeNode,
-              initialEdgeVertex.toString()
-            );
+            connectNodes(termNode, termVertex, initNode, initVertex.toString());
           }
 
-          finalVertexType = e.detail.vertexType;
           isRerenderNeeded = true;
 
           recalcPanelConnections();
