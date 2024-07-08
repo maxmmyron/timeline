@@ -243,6 +243,7 @@ export const disconnectNodes = <
   U extends keyof ReturnType<T["transform"]>,
   K extends App.EditorNode<(...args: any) => any>
 >(nodeA: T, nodeOut: U, nodeB: K, nodeIn: keyof App.PickByType<Parameters<K["transform"]>[0], ReturnType<T["transform"]>[U]>) => {
+  console.log(`disconnecting ${nodeA.uuid}:${nodeOut.toString()} from ${nodeB.uuid}:${nodeIn.toString()}`);
   nodeA.connectionsOut[nodeOut] = null;
   nodeB.connectionsIn[nodeIn] = null;
 }

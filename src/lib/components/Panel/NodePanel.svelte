@@ -96,8 +96,10 @@
   let initialEdgeVertex: keyof Parameters<
     (typeof initialEdgeNode)["transform"]
   >[0];
+
   /**
    * The type of vertex that receive the "mouseup" event
+   * FIXME: remove
    */
   let finalVertexType: "in" | "out";
 
@@ -177,12 +179,6 @@
       query = `#input-${String(initialEdgeVertex)}`;
     }
     vertexEl = ref.querySelector(query);
-
-    console.log(
-      query,
-      JSON.stringify($nodeOutConnections),
-      initialEdgeNode.uuid
-    );
 
     if (!vertexEl)
       throw new Error(
@@ -290,16 +286,21 @@
           const endNode = current.nodes.find((n) => n.uuid === uuid);
           if (!endNode) throw new Error("Could not find node");
 
-          console.log(
-            `connect ${initialEdgeNode.uuid}:${initialEdgeVertex} to ${uuid}:${e.detail.vertex}`
-          );
-
-          connectNodes(
-            initialEdgeNode,
-            initialEdgeVertex,
-            endNode,
-            e.detail.vertex.toString()
-          );
+          if (initialVertexType === "out") {
+            connectNodes(
+              initialEdgeNode,
+              initialEdgeVertex,
+              endNode,
+              e.detail.vertex.toString()
+            );
+          } else {
+            connectNodes(
+              endNode,
+              e.detail.vertex.toString(),
+              initialEdgeNode,
+              initialEdgeVertex.toString()
+            );
+          }
 
           finalVertexType = e.detail.vertexType;
           isRerenderNeeded = true;

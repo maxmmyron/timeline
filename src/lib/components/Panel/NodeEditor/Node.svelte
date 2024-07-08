@@ -99,10 +99,10 @@
       $nodeInConnections[connData[0]][connData[1]] = null;
 
       disconnectNodes(
-        node,
-        vertex.toString(),
         getClipByUUID(...$selected!).nodes.find((n) => n.uuid === connData[0])!,
-        connData[1]
+        connData[1],
+        node,
+        vertex.toString()
       );
 
       dispatch("startedge", {
@@ -133,21 +133,12 @@
 
     if (connData) {
       // if we have an existing connection, remove it
-      if (vertexType === "in") {
-        disconnectNodes(
-          existingNodes.find((n) => n.uuid === connData[0])!,
-          connData[1],
-          existingNodes.find((n) => n.uuid === uuid)!,
-          vertex.toString()
-        );
-      } else {
-        disconnectNodes(
-          existingNodes.find((n) => n.uuid === uuid)!,
-          vertex.toString(),
-          existingNodes.find((n) => n.uuid === connData[0])!,
-          connData[1]
-        );
-      }
+      disconnectNodes(
+        existingNodes.find((n) => n.uuid === connData[0])!,
+        connData[1],
+        existingNodes.find((n) => n.uuid === uuid)!,
+        vertex.toString()
+      );
     }
 
     // TODO: if we're drawing an output-anchored one, then
