@@ -93,8 +93,8 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
 
   const nodeSrc = resolved.type === "audio" ? resolved.audioSrc : resolved.videoSrc;
 
-  const outNode = createNode("Output", (arg: {src: string}) => {}, {src: ""}, null, [500, 300]);
-  const inNode = createNode(resolved.title, () => ({src: nodeSrc}), null, {src: nodeSrc}, [100, 200]);
+  const outNode = createNode("Output", (arg: {src: string}) => [null, {src: arg.src}], {src: ""}, [null, {src: ""}], [500, 300]);
+  const inNode = createNode(resolved.title, () => [{src: nodeSrc}, null], null, [{src: nodeSrc}, null], [100, 200]);
   connectNodes(inNode, "src", outNode, "src");
 
   if (resolved.type === "video" || resolved.type === "image") {
@@ -195,7 +195,7 @@ export const lerpAutomation = <T = App.AutomationType>(a: App.Automation<T>, off
   return (startNode[1] * (endNode[0] - startNode[0])) + (endNode[1] * (t - startNode[0])) / (endNode[0] - startNode[0]);
 };
 
-export const createNode = <T extends (...args: any) => any>(title: string, transform: T, initialIn: Parameters<T>[0] extends undefined ? null : Parameters<T>[0], initialOut: ReturnType<T> extends void ? null : ReturnType<T>, pos: [number, number] = [0,0]): App.EditorNode<T> =>{
+export const createNode = <T extends (...args: any) => [any, any]>(title: string, transform: T, initialIn: Parameters<T>[0] extends undefined ? null : Parameters<T>[0], initialOut: ReturnType<T> extends void ? null : ReturnType<T>, pos: [number, number] = [0,0]): App.EditorNode<T> =>{
   let connectionsOut: { [key: string]: [string, string] | null; } = {};
   let connectionsIn: { [key: string]: [string, string] | null; } = {};
 
@@ -215,7 +215,8 @@ export const createNode = <T extends (...args: any) => any>(title: string, trans
     pos,
     transform,
     in: initialIn,
-    out: initialOut,
+    out: initialOut === null ? null : initialOut[0],
+    internalOut: initialOut === null ? null : initialOut[1],
     connectionsIn: connectionsIn as { [key in keyof Parameters<T>[0]]: [string, string] | null},
     connectionsOut: connectionsOut as { [key in keyof ReturnType<T>]: [string, string] | null}
   })
@@ -230,19 +231,19 @@ export const getClipByUUID = (uuid: string, type: App.MediaType): App.VideoClip 
 };
 
 export const connectNodes = <
-  T extends App.EditorNode<(...args: any) => any>,
-  U extends keyof ReturnType<T["transform"]>,
-  K extends App.EditorNode<(...args: any) => any>
->(nodeA: T, nodeOut: U, nodeB: K, nodeIn: keyof App.PickByType<Parameters<K["transform"]>[0], ReturnType<T["transform"]>[U]>) => {
+  T extends App.EditorNode<(...args: any) => [any, any]>,
+  U extends keyof ReturnType<T["transform"]>[0],
+  K extends App.EditorNode<(...args: any) => [any, any]>
+>(nodeA: T, nodeOut: U, nodeB: K, nodeIn: keyof App.PickByType<Parameters<K["transform"]>[0], ReturnType<T["transform"]>[0][U]>) => {
   nodeA.connectionsOut[nodeOut] = [nodeB.uuid, nodeIn.toString()];
   nodeB.connectionsIn[nodeIn] = [nodeA.uuid, nodeOut.toString()];
 };
 
 export const disconnectNodes = <
-  T extends App.EditorNode<(...args: any) => any>,
-  U extends keyof ReturnType<T["transform"]>,
-  K extends App.EditorNode<(...args: any) => any>
->(nodeA: T, nodeOut: U, nodeB: K, nodeIn: keyof App.PickByType<Parameters<K["transform"]>[0], ReturnType<T["transform"]>[U]>) => {
+  T extends App.EditorNode<(...args: any) => [any, any]>,
+  U extends keyof ReturnType<T["transform"]>[0],
+  K extends App.EditorNode<(...args: any) => [any, any]>
+>(nodeA: T, nodeOut: U, nodeB: K, nodeIn: keyof App.PickByType<Parameters<K["transform"]>[0], ReturnType<T["transform"]>[0][U]>) => {
   console.log(`disconnecting ${nodeA.uuid}:${nodeOut.toString()} from ${nodeB.uuid}:${nodeIn.toString()}`);
   nodeA.connectionsOut[nodeOut] = null;
   nodeB.connectionsIn[nodeIn] = null;

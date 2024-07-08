@@ -6,7 +6,7 @@
   let isDrawingNewEdge: boolean = false;
 </script>
 
-<script lang="ts" generics="T extends (...args: any) => any">
+<script lang="ts" generics="T extends (...args: any) => [any, any]">
   import {
     disconnectNodes,
     getNodeConnectionData,
@@ -24,7 +24,8 @@
 
   export let node: App.EditorNode<T>;
   export let inputs: Parameters<typeof transform>[0];
-  export let outputs: ReturnType<typeof transform>;
+  export let outputs: ReturnType<typeof transform>[0];
+  export let internalOutputs: ReturnType<typeof transform>[1];
 
   export let ref: HTMLElement;
   let initMouse: [number, number] = [0, 0];
@@ -34,7 +35,10 @@
   const { uuid, title, transform } = node;
 
   const dispatch = createEventDispatcher<{
-    transform: ReturnType<typeof transform>;
+    transform: [
+      ReturnType<typeof transform>[0],
+      ReturnType<typeof transform>[1],
+    ];
     startedge: {
       vertexType: "in" | "out";
       node: App.EditorNode<T> | string;
@@ -55,12 +59,15 @@
   // accept input arg to keep reactivity
   const transformWrapper = (_i: typeof inputs) => {
     // console.log(`running transform of ${title}`);
-    return transform(_i);
+    let [out, internalOut] = transform(_i);
+    node.out = out;
+    node.internalOut = out;
+    return [out, internalOut];
   };
 
   // run transform & dispatcher when output changes
-  $: outputs = transformWrapper(inputs);
-  $: if (typeof outputs === "object") dispatch("transform", outputs);
+  $: [outputs, internalOutputs] = transformWrapper(inputs);
+  $: dispatch("transform", [outputs, internalOutputs]);
 
   let isMoving = false;
 
@@ -225,6 +232,9 @@
     {/if}
   </main>
   <p class="text-center">{uuid.slice(-6)}</p>
+  {#if outputs}
+    <p class="text-center">{Object.values(outputs)}</p>
+  {/if}
   <button
     class="w-full h-4 bg-white/10"
     aria-describedby="operation"

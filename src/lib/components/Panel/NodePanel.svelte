@@ -18,6 +18,7 @@
   // TODO: remove these
   let inputs: Record<string, { [key: string]: any }> = {};
   let outputs: Record<string, { [key: string]: any }> = {};
+  let internalOutputs: Record<string, { [key: string]: any }> = {};
 
   let frameID: number;
 
@@ -255,6 +256,11 @@
   class="relative bg-dot -top-1 -left-1 w-[calc(100%_+_.5rem)] h-[calc(100%_+_.5rem)] from-zinc-925 from-25% to-zinc-950 to-25%"
   style="background-position: {$panelPos[0] % 8}px {$panelPos[1] % 8}px"
 >
+  <canvas
+    bind:this={canvas}
+    class="pointer-events-none absolute -top-1 -left-1 w-[calc(100%_+_.5rem)] h-[calc(100%_+_.5rem)]"
+  ></canvas>
+
   {#each current.nodes as node}
     {@const uuid = node.uuid}
     {#key node.uuid}
@@ -263,12 +269,13 @@
         bind:ref={refs[node.uuid]}
         bind:inputs={inputs[uuid]}
         bind:outputs={outputs[uuid]}
+        bind:internalOutputs={internalOutputs[uuid]}
         on:transform={(e) => {
           for (const [outputName, input] of Object.entries(
             node.connectionsOut
           )) {
             if (!input) continue;
-            inputs[input[0]][input[1]] = e.detail[outputName];
+            inputs[input[0]][input[1]] = e.detail[0][outputName];
           }
         }}
         on:startedge={(e) => {
@@ -334,11 +341,6 @@
     {/key}
   {/each}
 </div>
-
-<canvas
-  bind:this={canvas}
-  class="pointer-events-none absolute -top-1 -left-1 w-[calc(100%_+_.5rem)] h-[calc(100%_+_.5rem)]"
-></canvas>
 
 <button
   class="absolute bottom-1 right-1 border border-zinc-900 bg-zinc-925 rounded-sm px-2 py-1 uppercase"

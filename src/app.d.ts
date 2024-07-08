@@ -63,7 +63,11 @@ declare global {
 			 */
 			end: number;
 			timelineZ: number;
-			nodes: Array<EditorNode<(...args: any) => any>>;
+			nodes: Array<EditorNode<(...args: any) => [any, any]>>;
+			/**
+			 * The node used to render the clip
+			 */
+			outputNode: EditorNode<(...args: any) => [any, {src: string}]>;
 		}
 
 		interface VideoClip extends ClipBase<"video"> {
@@ -79,7 +83,7 @@ declare global {
 			matrix: Matrix;
 		}
 
-		type EditorNode<T extends (...args: any) => any> = {
+		type EditorNode<T extends (...args: any) => [any, any]> = {
 			uuid: string;
 			title: string;
 			pos: [number, number];
@@ -90,9 +94,16 @@ declare global {
 			 */
 			transform: T;
 			in: Parameters<T>[0];
-			out: ReturnType<T> extends void ? null : ReturnType<T>;
+			out: ReturnType<T> extends void ? null : ReturnType<T>[0];
+
+			/**
+			 * Internal transform output that will not show up in the UI
+			 * e.g. Final output in node chain, which is used by audio/video node for display
+			 */
+			internalOut: ReturnType<T> extends void ? null : ReturnType<T>[1];
+
 			connectionsIn: { [string in keyof Parameters<T>[0]]: [string, string] | null }
-			connectionsOut: { [string in keyof ReturnType<T>]: [string, string] | null }
+			connectionsOut: { [string in keyof ReturnType<T>[0]]: [string, string] | null }
 		}
 
 		type Clip<T = MediaType> = T extends "video" ? VideoClip : T extends "image" ? ImageClip : AudioClip;
@@ -126,9 +137,7 @@ declare global {
 		| "Link" | "MediaPool" | "Pause" | "Play" | "Pointer"
 		| "Reset" | "SplitClip" |  "Unlink" | "ZoomIn" | "ZoomOut";
 
-		type ConnectNodes = <T extends (...args: any) => any, U extends (...args: any) => any, K extends keyof ReturnType<T>>(outName: K, inNode: U, inName: keyof PickByType<Parameters<U>[0], ReturnType<T>[K]>) => boolean;
-
-		__NOT_TYPE_SAFE__connectByNodeUUID: (outName: keyof ReturnType<T>, inUUID: string, inName: string) => boolean;
+		type ConnectNodes = <T extends (...args: any) => [any, any], U extends (...args: any) => [any, any], K extends keyof ReturnType<T>>(outName: K, inNode: U, inName: keyof PickByType<Parameters<U>[0], ReturnType<T>[K][0]>) => boolean;
 	}
 }
 

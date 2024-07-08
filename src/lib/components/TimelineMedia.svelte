@@ -68,21 +68,22 @@
   });
 </script>
 
-{#if clip.media.type === "video"}
-  <video
-    class="absolute top-1/2 left-1/2 max-w-none"
-    src={clip.media.videoSrc}
-    title={clip.uuid}
-    bind:this={$vRefs[clip.uuid]}
-    style:transform="translate(-50%, -50%) matrix({lerpedMatrix.join(",")})"
-    style:z-index={clip.timelineZ}
-    class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
-    preload=""
-    muted
-  >
-    <track kind="captions" />
-  </video>
-  <!-- <div class="absolute top-1/2 left-1/2 w-4 h-4 bg-red-500 z-10" />
+{#if clip.outputNode.internalOut.src !== ""}
+  {#if clip.media.type === "video"}
+    <video
+      class="absolute top-1/2 left-1/2 max-w-none"
+      src={clip.outputNode.internalOut.src}
+      title={clip.uuid}
+      bind:this={$vRefs[clip.uuid]}
+      style:transform="translate(-50%, -50%) matrix({lerpedMatrix.join(",")})"
+      style:z-index={clip.timelineZ}
+      class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
+      preload=""
+      muted
+    >
+      <track kind="captions" />
+    </video>
+    <!-- <div class="absolute top-1/2 left-1/2 w-4 h-4 bg-red-500 z-10" />
   <div
     class="absolute top-1/2 left-1/2 w-4 h-4 bg-blue-400 z-20"
     style="transform: translateX({gainNode.gain.value * 250}px);"
@@ -90,22 +91,23 @@
   <div
     class="absolute top-1/2 left-1/2 w-4 h-4 bg-green-400 transform translate-x-[250px] z-10"
   /> -->
-{:else if clip.media.type === "image"}
-  <img
-    class="absolute top-1/2 left-1/2 max-w-none"
-    src={clip.media.videoSrc}
-    title={clip.uuid}
-    alt=""
-    bind:this={$iRefs[clip.uuid]}
-    style:transform="translate(-50%, -50%) matrix({lerpedMatrix.join(",")})"
-    style:z-index={clip.timelineZ}
-    class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
-  />
-{:else if clip.media.type === "audio"}
-  <audio
-    class="hidden"
-    src={clip.media.audioSrc}
-    title={clip.uuid}
-    bind:this={$aRefs[clip.uuid]}
-  />
+  {:else if clip.media.type === "image"}
+    <img
+      class="absolute top-1/2 left-1/2 max-w-none"
+      src={clip.outputNode.internalOut.src}
+      title={clip.uuid}
+      alt=""
+      bind:this={$iRefs[clip.uuid]}
+      style:transform="translate(-50%, -50%) matrix({lerpedMatrix.join(",")})"
+      style:z-index={clip.timelineZ}
+      class:hidden={curr.findIndex((c) => c.uuid === clip.uuid) === -1}
+    />
+  {:else if clip.media.type === "audio"}
+    <audio
+      class="hidden"
+      src={clip.outputNode.internalOut.src}
+      title={clip.uuid}
+      bind:this={$aRefs[clip.uuid]}
+    />
+  {/if}
 {/if}
