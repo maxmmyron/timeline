@@ -194,10 +194,14 @@
         style:height="{$safeRes[1] * $playerScale}px"
       >
         {#each $videoClips as clip (clip.uuid)}
-          <TimelineMedia {clip} curr={currVideo} />
+          {#if clip.outputNode.internalOut && clip.outputNode.internalOut.src !== ""}
+            <TimelineMedia {clip} curr={currVideo} />
+          {/if}
         {/each}
         {#each $audioClips as clip (clip.uuid)}
-          <TimelineMedia {clip} />
+          {#if clip.outputNode.internalOut && clip.outputNode.internalOut.src !== ""}
+            <TimelineMedia {clip} />
+          {/if}
         {/each}
       </div>
     </div>

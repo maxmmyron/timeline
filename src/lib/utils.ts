@@ -93,12 +93,11 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
 
   const nodeSrc = resolved.type === "audio" ? resolved.audioSrc : resolved.videoSrc;
 
-  const outNode = createNode("Output", (arg: {src: string}) => [null, {src: arg.src}], {src: ""}, [null, {src: ""}], [500, 300]);
+  const outNode = createNode("Output", (arg: {src: string}) => [null, {src: arg.src}], {src: ""}, [null, {src: nodeSrc}], [500, 300]);
   const inNode = createNode(resolved.title, () => [{src: nodeSrc}, null], null, [{src: nodeSrc}, null], [100, 200]);
   connectNodes(inNode, "src", outNode, "src");
 
   if (resolved.type === "video" || resolved.type === "image") {
-
     base = {
       ...base,
       matrix: [
@@ -109,6 +108,7 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
         createAutomation("position", resolved.duration, {initial: 0})
       ],
       nodes: [inNode, outNode],
+      outputNode: outNode,
     };
   } else if (resolved.type === "audio") {
     base = {
@@ -116,6 +116,7 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
       volume: createAutomation("volume", resolved.duration),
       pan: 0,
       nodes: [inNode, outNode],
+      outputNode: outNode,
     };
   }
 
@@ -199,8 +200,8 @@ export const createNode = <T extends (...args: any) => [any, any]>(title: string
   let connectionsOut: { [key: string]: [string, string] | null; } = {};
   let connectionsIn: { [key: string]: [string, string] | null; } = {};
 
-  if (initialOut) {
-    for (const outVertex of Object.keys(initialOut)) connectionsOut[outVertex] = null;
+  if (initialOut && initialOut[0]) {
+    for (const outVertex of Object.keys(initialOut[0])) connectionsOut[outVertex] = null;
   }
 
   if (initialIn) {
@@ -218,7 +219,7 @@ export const createNode = <T extends (...args: any) => [any, any]>(title: string
     out: initialOut === null ? null : initialOut[0],
     internalOut: initialOut === null ? null : initialOut[1],
     connectionsIn: connectionsIn as { [key in keyof Parameters<T>[0]]: [string, string] | null},
-    connectionsOut: connectionsOut as { [key in keyof ReturnType<T>]: [string, string] | null}
+    connectionsOut: connectionsOut as { [key in keyof ReturnType<T>[0]]: [string, string] | null}
   })
 };
 
