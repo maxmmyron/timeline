@@ -93,8 +93,30 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
 
   const nodeSrc = resolved.type === "audio" ? resolved.audioSrc : resolved.videoSrc;
 
-  const outNode = createNode("Output", (arg: {src: string}) => [null, {src: arg.src}], {src: ""}, [null, {src: nodeSrc}], [500, 300]);
-  const inNode = createNode(resolved.title, () => [{src: nodeSrc}, null], null, [{src: nodeSrc}, null], [100, 200]);
+  const inNode = createNode(
+    resolved.title,
+    (arg0: null) => [{src: nodeSrc}, {filter: ""}],
+    [null],
+    [{src: nodeSrc}, {filter: ""}],
+    [100, 200]
+  );
+
+  const greyscaleNode = createNode(
+    "Greyscale",
+    (arg0: {src: string, value: number}, arg1: {filter: ""}) => [{src: arg0.src}, {filter: `greyscale(${arg0.value}) ${arg1.filter}`}],
+    [{src: "", value: 0.0}, {filter: ""}],
+    [{src: nodeSrc}, {filter: "grayscale(0.0)"}],
+    [300, 400]
+  );
+
+  const outNode = createNode(
+    "Output",
+    (arg0: {src: string}, arg1: {filter: ""}) => [null, {src: arg0.src, filter: arg1.filter}],
+    [{src: ""}, {filter: ""}],
+    [null, {src: nodeSrc, filter: ""}],
+    [500, 300]
+  );
+
   connectNodes(inNode, "src", outNode, "src");
 
   if (resolved.type === "video" || resolved.type === "image") {
@@ -107,7 +129,7 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
         createAutomation("position", resolved.duration, {initial: 0}),
         createAutomation("position", resolved.duration, {initial: 0})
       ],
-      nodes: [inNode, outNode],
+      nodes: [inNode, greyscaleNode, outNode],
       outputNode: outNode,
     };
   } else if (resolved.type === "audio") {
@@ -196,7 +218,7 @@ export const lerpAutomation = <T = App.AutomationType>(a: App.Automation<T>, off
   return (startNode[1] * (endNode[0] - startNode[0])) + (endNode[1] * (t - startNode[0])) / (endNode[0] - startNode[0]);
 };
 
-export const createNode = <T extends (...args: any) => [any, any]>(title: string, transform: T, initialIn: Parameters<T>[0] extends undefined ? null : Parameters<T>[0], initialOut: ReturnType<T> extends void ? null : ReturnType<T>, pos: [number, number] = [0,0]): App.EditorNode<T> =>{
+export const createNode = <T extends (arg0: any, arg1?: any) => [any, any]>(title: string, transform: T, initialIn: Parameters<T> extends undefined ? null : Parameters<T>, initialOut: ReturnType<T> extends void ? null : ReturnType<T>, pos: [number, number] = [0,0]): App.EditorNode<T> =>{
   let connectionsOut: { [key: string]: [string, string] | null; } = {};
   let connectionsIn: { [key: string]: [string, string] | null; } = {};
 
@@ -217,6 +239,7 @@ export const createNode = <T extends (...args: any) => [any, any]>(title: string
     transform,
     in: initialIn,
     out: initialOut === null ? null : initialOut[0],
+    internalIn: initialIn === null ? null : initialIn[1],
     internalOut: initialOut === null ? null : initialOut[1],
     connectionsIn: connectionsIn as { [key in keyof Parameters<T>[0]]: [string, string] | null},
     connectionsOut: connectionsOut as { [key in keyof ReturnType<T>[0]]: [string, string] | null}

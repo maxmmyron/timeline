@@ -63,11 +63,11 @@ declare global {
 			 */
 			end: number;
 			timelineZ: number;
-			nodes: Array<EditorNode<(...args: any) => [any, any]>>;
+			nodes: Array<EditorNode<(arg0: any, arg1:any) => [any, any]>>;
 			/**
 			 * The node used to render the clip
 			 */
-			outputNode: EditorNode<(...args: any) => [any, {src: string}]>;
+			outputNode: EditorNode<(arg0: any, arg1:any) => [any, {src: string, filter: string}]>;
 		}
 
 		interface VideoClip extends ClipBase<"video"> {
@@ -83,7 +83,7 @@ declare global {
 			matrix: Matrix;
 		}
 
-		type EditorNode<T extends (...args: any) => [any, any]> = {
+		type EditorNode<T extends (arg0: any, arg1: any) => [any, any]> = {
 			uuid: string;
 			title: string;
 			pos: [number, number];
@@ -93,9 +93,14 @@ declare global {
 			 * @returns
 			 */
 			transform: T;
-			in: Parameters<T>[0];
+			in: Parameters<T> extends undefined ? null : Parameters<T>[0];
 			out: ReturnType<T> extends void ? null : ReturnType<T>[0];
 
+			/**
+			 * Internal transform input that will not show up in the UI
+			 * e.g. the input/output values for a filter chain.
+			 */
+			internalIn: Parameters<T> extends undefined ? null : Parameters<T>[1];
 			/**
 			 * Internal transform output that will not show up in the UI
 			 * e.g. Final output in node chain, which is used by audio/video node for display

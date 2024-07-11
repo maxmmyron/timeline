@@ -9,9 +9,9 @@
 
   export let current: App.VideoClip | App.AudioClip | App.ImageClip;
 
-  let moving: boolean = false;
   let initMouse: [number, number] = [0, 0];
   let initPos: [number, number] = [0, 0];
+  let mousePos: [number, number] = [0, 0];
 
   /**
    * Stores refs for existing node elements.
@@ -36,7 +36,10 @@
 
   let frameID: number;
 
+  let isMovingCanvas = false;
   let isMounted = false;
+  let isDrawingNewEdge = false;
+  let isRerenderNeeded = false;
 
   // before we update the component, we need to go through each node and ensure its inputs and outputs are recorded in the relevant records!
   beforeUpdate(() => {
@@ -90,31 +93,24 @@
     }
   };
 
-  const startMove = (x: number, y: number) => {
-    moving = true;
+  const startCanvasMove = (x: number, y: number) => {
+    isMovingCanvas = true;
     initPos = [$panelPos[0], $panelPos[1]];
     initMouse = [x, y];
   };
 
-  const move = (x: number, y: number) => {
-    if (!moving) return;
-
+  const moveCanvas = (x: number, y: number) => {
     let newPos: [number, number] = [
       x - initMouse[0] + initPos[0],
       y - initMouse[1] + initPos[1],
     ];
 
     panelPos.set(newPos, { hard: true });
-
-    isRerenderNeeded = true;
   };
 
   // ---------------------
   // Drawing
   // ---------------------
-
-  let isRerenderNeeded = false;
-  let isDrawingNewEdge = false;
 
   let initNode: App.EditorNode<(...args: any) => any>;
   let initVertex: keyof Parameters<(typeof initNode)["transform"]>[0];
@@ -138,6 +134,10 @@
           if (inner === null) continue $outer;
           drawEdge(uuid, vertex, ...inner);
         }
+      }
+
+      if (isDrawingNewEdge) {
+        drawNewEdge(...mousePos);
       }
 
       isRerenderNeeded = false;
@@ -196,6 +196,7 @@
     let ref = refs[initNode.uuid];
     let vertexEl;
     let query;
+
     if (initVertexType === "out") {
       query = `#output-${String(initVertex)}`;
     } else {
@@ -207,8 +208,6 @@
       throw new Error(
         `Error drawing edge: ${query} does not exist on node ${initNode.uuid}`
       );
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     let { left, top } = canvas.getBoundingClientRect();
 
@@ -249,20 +248,19 @@
 
     ctx.stroke();
   };
+
+  const handleMove = (x: number, y: number) => {
+    isRerenderNeeded = true;
+    if (isDrawingNewEdge) mousePos = [x, y];
+    if (isMovingCanvas) moveCanvas(x, y);
+  };
 </script>
 
 <svelte:window
-  on:mouseup={() => (moving = false)}
-  on:touchend={() => (moving = false)}
-  on:touchmove={(e) => {
-    if (isDrawingNewEdge)
-      drawNewEdge(e.touches[0].clientX, e.touches[0].clientY);
-    move(e.touches[0].clientX, e.touches[0].clientY);
-  }}
-  on:mousemove={(e) => {
-    if (isDrawingNewEdge) drawNewEdge(e.clientX, e.clientY);
-    move(e.clientX, e.clientY);
-  }}
+  on:mouseup={() => (isMovingCanvas = false)}
+  on:touchend={() => (isMovingCanvas = false)}
+  on:touchmove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)}
+  on:mousemove={(e) => handleMove(e.clientX, e.clientY)}
   on:mouseup={(e) => {
     isDrawingNewEdge = false;
     isRerenderNeeded = true;
@@ -271,8 +269,9 @@
 
 <div
   on:dblclick={() => panelPos.set([0, 0])}
-  on:mousedown={(e) => startMove(e.clientX, e.clientY)}
-  on:touchstart={(e) => startMove(e.touches[0].clientX, e.touches[0].clientY)}
+  on:mousedown={(e) => startCanvasMove(e.clientX, e.clientY)}
+  on:touchstart={(e) =>
+    startCanvasMove(e.touches[0].clientX, e.touches[0].clientY)}
   role="grid"
   tabindex="0"
   class="relative bg-dot -top-1 -left-1 w-[calc(100%_+_.5rem)] h-[calc(100%_+_.5rem)] from-zinc-925 from-25% to-zinc-950 to-25%"
