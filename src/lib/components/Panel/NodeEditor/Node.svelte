@@ -13,7 +13,7 @@
     getClipByUUID,
   } from "$lib/utils";
 
-  import { createEventDispatcher, onMount } from "svelte";
+  import { createEventDispatcher } from "svelte";
   import {
     selectedNodeUUID,
     panelPos,

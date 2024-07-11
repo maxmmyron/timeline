@@ -13,26 +13,45 @@
   let initMouse: [number, number] = [0, 0];
   let initPos: [number, number] = [0, 0];
 
+  /**
+   * Stores refs for existing node elements.
+   * Used when drawing connections
+   */
   let refs: Record<string, HTMLElement> = {};
 
-  // TODO: remove these
+  /**
+   * A record of node UUIDs and key/value pairs. Used to trigger transform function reactively.
+   */
   let inputs: Record<string, { [key: string]: any }> = {};
+
+  /**
+   * A record of node UUIDs and key/value pairs. Used to trigger transform function reactively.
+   */
   let outputs: Record<string, { [key: string]: any }> = {};
+
+  /**
+   * A record of node UUIDs and key/value pairs. Used to track and store internal outputs of nodes.
+   */
   let internalOutputs: Record<string, { [key: string]: any }> = {};
 
   let frameID: number;
+
+  let isMounted = false;
 
   // before we update the component, we need to go through each node and ensure its inputs and outputs are recorded in the relevant records!
   beforeUpdate(() => {
     recalcPanelConnections();
 
-    for (const node of current.nodes) {
-      if (!inputs[node.uuid]) inputs[node.uuid] = node.in;
-      if (!outputs[node.uuid]) outputs[node.uuid] = node.out;
+    if (!isMounted) {
+      for (const node of current.nodes) {
+        if (!inputs[node.uuid]) inputs[node.uuid] = node.in;
+        if (!outputs[node.uuid]) outputs[node.uuid] = node.out;
+      }
     }
   });
 
   onMount(() => {
+    // setup canvas settings on mount
     ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
 
     canvas.width = canvas.clientWidth;
@@ -45,14 +64,22 @@
 
     window.addEventListener("resize", resize);
 
-    isRerenderNeeded = true;
-    frameID = requestAnimationFrame(frame);
+    // recalc panel connections since we remount when current UUID changes
     recalcPanelConnections();
 
+    // we've recalculated UUID changes, so request a rerender and start the render cycle
+    isRerenderNeeded = true;
+    frameID = requestAnimationFrame(frame);
+
+    isMounted = true;
+
+    // on dismount, we want to reset panel settings, stop any render cycles, and reset the connections
     return () => {
       window.removeEventListener("resize", resize);
       panelPos.set([0, 0], { hard: true });
       cancelAnimationFrame(frameID);
+      $nodeOutConnections = {};
+      $nodeInConnections = {};
     };
   });
 
@@ -128,9 +155,11 @@
     inVertex: string
   ) => {
     let outRef = refs[outUUID];
+    if (!outRef) return;
     let outVertexEl = outRef.querySelector(`#output-${String(outVertex)}`);
 
     let inRef = refs[inUUID];
+    if (!inRef) return;
     let inVertexEl = inRef.querySelector(`#input-${String(inVertex)}`);
 
     if (!outVertexEl || !inVertexEl) {
@@ -142,8 +171,6 @@
     ctx.lineWidth = 2;
     ctx.strokeStyle = "orange";
 
-    ctx.beginPath();
-
     let [outX, outY] = [
       outVertexEl.getBoundingClientRect().left + 4.5 - left,
       outVertexEl.getBoundingClientRect().top + 4.5 - top,
@@ -152,15 +179,11 @@
       inVertexEl.getBoundingClientRect().left + 4.5 - left,
       inVertexEl.getBoundingClientRect().top + 4.5 - top,
     ];
-
-    ctx.moveTo(outX, outY);
-
     let horzDist = Math.abs((inX - outX) * 0.35);
 
+    ctx.beginPath();
+    ctx.moveTo(outX, outY);
     ctx.bezierCurveTo(outX + horzDist, outY, inX - horzDist, inY, inX, inY);
-
-    // ctx.lineTo();
-
     ctx.stroke();
   };
 
@@ -192,8 +215,6 @@
     ctx.lineWidth = 2;
     ctx.strokeStyle = "orange";
 
-    ctx.beginPath();
-
     let outX: number, outY: number, inX: number, inY: number;
 
     if (initVertexType === "out") {
@@ -210,14 +231,15 @@
       ];
     }
 
-    ctx.moveTo(outX, outY);
-
     let control = Math.abs((inX - outX) * 0.35);
 
     /**
      * We don't want mouse's control point to "snap ahead" of mouse if mouse x is behind/ahead other node
      */
     let mControl = (inX - outX) * 0.35;
+
+    ctx.beginPath();
+    ctx.moveTo(outX, outY);
 
     if (initVertexType === "out") {
       ctx.bezierCurveTo(outX + control, outY, inX - mControl, inY, inX, inY);
