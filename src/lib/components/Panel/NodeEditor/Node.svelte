@@ -232,9 +232,6 @@
     {/if}
   </main>
   <p class="text-center">{uuid.slice(-6)}</p>
-  {#if outputs}
-    <p class="text-center">{Object.values(outputs)}</p>
-  {/if}
   <button
     class="w-full h-4 bg-white/10"
     aria-describedby="operation"
