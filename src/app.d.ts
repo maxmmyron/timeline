@@ -63,11 +63,11 @@ declare global {
 			 */
 			end: number;
 			timelineZ: number;
-			nodes: Array<EditorNode<(arg0: any, arg1:any) => [any, any]>>;
+			filterGraph: App.FilterGraph;
 			/**
 			 * The node used to render the clip
 			 */
-			outputNode: EditorNode<(arg0: any, arg1:any) => [any, {src: string, filter: string}]>;
+			outputNode: EditorNode<(extern: any, intern: any) => [any, {src: string, filter: string}]>;
 		}
 
 		interface VideoClip extends ClipBase<"video"> {
@@ -83,7 +83,23 @@ declare global {
 			matrix: Matrix;
 		}
 
-		type EditorNode<T extends (arg0: any, arg1: any) => [any, any]> = {
+		interface FilterGraph {
+			nodes: Array<EditorNode<(args: any) => Record<string, any>>>;
+			edges: Array<GraphEdge>;
+		};
+
+		type GraphEdge = {
+			outVertex: Connection<(args: any) => Record<string, any>>;
+			inVertex: Connection<(args: any) => Record<string, any>>;
+			unsubscriber: Unsubscriber;
+		};
+
+		type Connection<T extends (args: any) => Record<string, any>> = {
+			node: App.EditorNode<T>;
+			key: keyof Parameters<T>[0];
+		};
+
+		type EditorNode<T extends (args: any) => Record<string, any>> = {
 			uuid: string;
 			title: string;
 			pos: [number, number];
@@ -93,22 +109,9 @@ declare global {
 			 * @returns
 			 */
 			transform: T;
-			in: Parameters<T> extends undefined ? null : Parameters<T>[0];
-			out: ReturnType<T> extends void ? null : ReturnType<T>[0];
-
-			/**
-			 * Internal transform input that will not show up in the UI
-			 * e.g. the input/output values for a filter chain.
-			 */
-			internalIn: Parameters<T> extends undefined ? null : Parameters<T>[1];
-			/**
-			 * Internal transform output that will not show up in the UI
-			 * e.g. Final output in node chain, which is used by audio/video node for display
-			 */
-			internalOut: ReturnType<T> extends void ? null : ReturnType<T>[1];
-
-			connectionsIn: { [string in keyof Parameters<T>[0]]: [string, string] | null }
-			connectionsOut: { [string in keyof ReturnType<T>[0]]: [string, string] | null }
+			ref: HTMLElement | null;
+			inputs: Writable<Paramters<T>[0]>;
+			outputs: Writable<ReturnType<T>>;
 		}
 
 		type Clip<T = MediaType> = T extends "video" ? VideoClip : T extends "image" ? ImageClip : AudioClip;

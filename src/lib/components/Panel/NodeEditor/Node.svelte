@@ -6,26 +6,15 @@
   let isDrawingNewEdge: boolean = false;
 </script>
 
-<script lang="ts" generics="T extends (...args: any) => [any, any]">
-  import {
-    disconnectNodes,
-    getNodeConnectionData,
-    getClipByUUID,
-  } from "$lib/utils";
+<script lang="ts" generics="T extends (args: any) => Record<string, any>">
+  import { getNodeConnectionData, getClipByUUID } from "$lib/utils";
 
   import { createEventDispatcher } from "svelte";
-  import {
-    selectedNodeUUID,
-    panelPos,
-    nodeInConnections,
-    nodeOutConnections,
-    selected,
-  } from "$lib/stores";
+  import { selectedNodeUUID, panelPos, selected } from "$lib/stores";
 
   export let node: App.EditorNode<T>;
   export let inputs: Parameters<typeof transform>[0];
-  export let outputs: ReturnType<typeof transform>[0];
-  export let internalOutputs: ReturnType<typeof transform>[1];
+  export let outputs: ReturnType<typeof transform>;
 
   export let ref: HTMLElement;
   let initMouse: [number, number] = [0, 0];
@@ -35,10 +24,7 @@
   const { uuid, title, transform } = node;
 
   const dispatch = createEventDispatcher<{
-    transform: [
-      ReturnType<typeof transform>[0],
-      ReturnType<typeof transform>[1],
-    ];
+    transform: ReturnType<typeof transform>;
     startedge: {
       vertexType: "in" | "out";
       node: App.EditorNode<T> | string;
@@ -57,17 +43,15 @@
   }>();
 
   // accept input arg to keep reactivity
-  const transformWrapper = (_i: typeof inputs) => {
-    // console.log(`running transform of ${title}`);
-    let [out, internalOut] = transform(_i);
-    node.out = out;
-    node.internalOut = out;
-    return [out, internalOut];
+  const transformWrapper = (transformInputs: typeof inputs) => {
+    let out = transform(transformInputs);
+    node.outputs = out;
+    return out;
   };
 
   // run transform & dispatcher when output changes
-  $: [outputs, internalOutputs] = transformWrapper(inputs);
-  $: dispatch("transform", [outputs, internalOutputs]);
+  $: outputs = transformWrapper(inputs) as ReturnType<T>;
+  $: dispatch("transform", outputs);
 
   let isMoving = false;
 

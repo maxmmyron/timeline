@@ -2,9 +2,9 @@
  * Common utility functions.
  */
 
-import { get } from "svelte/store";
+import { get, writable } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
-import { audioClips, nodeInConnections, nodeOutConnections, paused, res, scaleFactor, scroll, time, videoClips } from "./stores";
+import { audioClips, paused, scaleFactor, scroll, time, videoClips } from "./stores";
 
 /**
  * Gets the current clips at the given time. This returns a comma-
@@ -93,31 +93,39 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
 
   const nodeSrc = resolved.type === "audio" ? resolved.audioSrc : resolved.videoSrc;
 
-  const inNode = createNode(
-    resolved.title,
-    (arg0: null) => [{src: nodeSrc}, {filter: ""}],
-    [null],
-    [{src: nodeSrc}, {filter: ""}],
-    [100, 200]
-  );
+  // const inNode = createNode(
+  //   resolved.title,
+  //   (extern: null) => [{src: nodeSrc}, {filter: ""}],
+  //   [null],
+  //   [{src: nodeSrc}, {filter: ""}],
+  //   [100, 200]
+  // );
 
-  const greyscaleNode = createNode(
-    "Greyscale",
-    (arg0: {src: string, value: number}, arg1: {filter: ""}) => [{src: arg0.src}, {filter: `greyscale(${arg0.value}) ${arg1.filter}`}],
-    [{src: "", value: 0.0}, {filter: ""}],
-    [{src: nodeSrc}, {filter: "grayscale(0.0)"}],
-    [300, 400]
-  );
+  // const greyscaleNode = createNode(
+  //   "Greyscale",
+  //   (extern: {src: string, value: number}, intern: {filter: string}) => [{src: extern.src}, {filter: `greyscale(${extern.value}) ${intern.filter}`}],
+  //   [{src: "", value: 0.0}, {filter: ""}],
+  //   [{src: nodeSrc}, {filter: "grayscale(0.0)"}],
+  //   [300, 400]
+  // );
 
-  const outNode = createNode(
-    "Output",
-    (arg0: {src: string}, arg1: {filter: ""}) => [null, {src: arg0.src, filter: arg1.filter}],
-    [{src: ""}, {filter: ""}],
-    [null, {src: nodeSrc, filter: ""}],
-    [500, 300]
-  );
+  // const valueNode = createNode(
+  //   "Static Value",
+  //   ({},{}) => [{value: 0.5}, null],
+  //   [null, null], [{value: 1}, null]
+  // );
 
-  connectNodes(inNode, "src", outNode, "src");
+  // console.log(greyscaleNode);
+
+  // const outNode = createNode(
+  //   "Output",
+  //   (extern: {src: string}, intern: {filter: ""}) => [null, {src: extern.src, filter: intern.filter}],
+  //   [{src: ""}, {filter: ""}],
+  //   [null, {src: nodeSrc, filter: ""}],
+  //   [500, 300]
+  // );
+
+  // connectNodes(inNode, "src", outNode, "src");
 
   if (resolved.type === "video" || resolved.type === "image") {
     base = {
@@ -129,16 +137,16 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
         createAutomation("position", resolved.duration, {initial: 0}),
         createAutomation("position", resolved.duration, {initial: 0})
       ],
-      nodes: [inNode, greyscaleNode, outNode],
-      outputNode: outNode,
+      // nodes: [inNode, greyscaleNode, outNode],
+      // outputNode: outNode,
     };
   } else if (resolved.type === "audio") {
     base = {
       ...base,
       volume: createAutomation("volume", resolved.duration),
       pan: 0,
-      nodes: [inNode, outNode],
-      outputNode: outNode,
+      // nodes: [inNode, outNode],
+      // outputNode: outNode,
     };
   }
 
@@ -218,33 +226,30 @@ export const lerpAutomation = <T = App.AutomationType>(a: App.Automation<T>, off
   return (startNode[1] * (endNode[0] - startNode[0])) + (endNode[1] * (t - startNode[0])) / (endNode[0] - startNode[0]);
 };
 
-export const createNode = <T extends (arg0: any, arg1?: any) => [any, any]>(title: string, transform: T, initialIn: Parameters<T> extends undefined ? null : Parameters<T>, initialOut: ReturnType<T> extends void ? null : ReturnType<T>, pos: [number, number] = [0,0]): App.EditorNode<T> =>{
-  let connectionsOut: { [key: string]: [string, string] | null; } = {};
-  let connectionsIn: { [key: string]: [string, string] | null; } = {};
+export const createNode = <T extends (args: any) => Record<string, any>>(
+    title: string,
+    transform: T,
+    inputs: Parameters<T>[0],
+    outputs: ReturnType<T>,
+    pos?: [number, number]
+  ): App.EditorNode<T> => {
+    let node: App.EditorNode<T> = {
+      title,
+      uuid: uuidv4(),
+      transform,
+      inputs: writable(inputs),
+      outputs: writable(outputs),
+      pos: pos ?? [0, 0],
+      ref: null,
+    };
 
-  if (initialOut && initialOut[0]) {
-    for (const outVertex of Object.keys(initialOut[0])) connectionsOut[outVertex] = null;
-  }
+    node.inputs.subscribe((s: any) => {
+      const transformed = transform(s) as ReturnType<T>;
+      node.outputs.set(transformed);
+    });
 
-  if (initialIn) {
-    for (const inVertex of Object.keys(initialIn)) connectionsOut[inVertex] = null;
-  }
-
-  console.log(connectionsOut, connectionsIn);
-
-  return ({
-    uuid: uuidv4(),
-    title,
-    pos,
-    transform,
-    in: initialIn,
-    out: initialOut === null ? null : initialOut[0],
-    internalIn: initialIn === null ? null : initialIn[1],
-    internalOut: initialOut === null ? null : initialOut[1],
-    connectionsIn: connectionsIn as { [key in keyof Parameters<T>[0]]: [string, string] | null},
-    connectionsOut: connectionsOut as { [key in keyof ReturnType<T>[0]]: [string, string] | null}
-  })
-};
+    return node;
+  };
 
 export const getClipByUUID = (uuid: string, type: App.MediaType): App.VideoClip | App.AudioClip | App.ImageClip => {
   if (type === "audio") {
@@ -253,30 +258,3 @@ export const getClipByUUID = (uuid: string, type: App.MediaType): App.VideoClip 
     return get(videoClips).find(clip => clip.uuid === uuid) as App.VideoClip | App.ImageClip;
   }
 };
-
-export const connectNodes = <
-  T extends App.EditorNode<(...args: any) => [any, any]>,
-  U extends keyof ReturnType<T["transform"]>[0],
-  K extends App.EditorNode<(...args: any) => [any, any]>
->(nodeA: T, nodeOut: U, nodeB: K, nodeIn: keyof App.PickByType<Parameters<K["transform"]>[0], ReturnType<T["transform"]>[0][U]>) => {
-  nodeA.connectionsOut[nodeOut] = [nodeB.uuid, nodeIn.toString()];
-  nodeB.connectionsIn[nodeIn] = [nodeA.uuid, nodeOut.toString()];
-};
-
-export const disconnectNodes = <
-  T extends App.EditorNode<(...args: any) => [any, any]>,
-  U extends keyof ReturnType<T["transform"]>[0],
-  K extends App.EditorNode<(...args: any) => [any, any]>
->(nodeA: T, nodeOut: U, nodeB: K, nodeIn: keyof App.PickByType<Parameters<K["transform"]>[0], ReturnType<T["transform"]>[0][U]>) => {
-  console.log(`disconnecting ${nodeA.uuid}:${nodeOut.toString()} from ${nodeB.uuid}:${nodeIn.toString()}`);
-  nodeA.connectionsOut[nodeOut] = null;
-  nodeB.connectionsIn[nodeIn] = null;
-}
-
-export const getNodeConnectionData = (vertexType: "in" | "out", nodeUUID: string, vertex: string): [string, string] | null => {
-  const outConns = get(nodeOutConnections);
-  const inConns = get(nodeInConnections);
-
-  if (vertexType === "out") return outConns[nodeUUID][vertex]
-  else return inConns[nodeUUID][vertex]
-}

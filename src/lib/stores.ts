@@ -83,15 +83,3 @@ export const panelPos = spring<[number, number]>([0, 0], {
   stiffness: 0.1,
   damping: 0.3,
 });
-
-export const nodeOutConnections = writable<{
-  [uuid: string]: {
-    [vertex: string]: [string, string] | null
-  }
-}>({});
-
-export const nodeInConnections = writable<{
-  [uuid: string]: {
-    [vertex: string]: [string, string] | null
-  }
-}>({});
