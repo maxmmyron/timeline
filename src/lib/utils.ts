@@ -89,43 +89,21 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
     end: opts?.end ?? 0,
     uuid: uuidv4(),
     timelineZ: get(videoClips).reduce((acc, clip) => Math.max(acc, clip.timelineZ), 0) + 1,
+    filterGraph: {
+      edges: new Array(),
+      nodes: new Array(),
+    }
   } as App.Clip<T>;
 
   const nodeSrc = resolved.type === "audio" ? resolved.audioSrc : resolved.videoSrc;
 
-  // const inNode = createNode(
-  //   resolved.title,
-  //   (extern: null) => [{src: nodeSrc}, {filter: ""}],
-  //   [null],
-  //   [{src: nodeSrc}, {filter: ""}],
-  //   [100, 200]
-  // );
+  const inNode = createNode(resolved.title, () => ({src: nodeSrc}), undefined, {src: nodeSrc}, [100, 200]);
+  const outNode = createNode("Output", (arg: {src: string}) => ({src: arg.src}), {src: ""}, {src: nodeSrc}, [500, 300]);
 
-  // const greyscaleNode = createNode(
-  //   "Greyscale",
-  //   (extern: {src: string, value: number}, intern: {filter: string}) => [{src: extern.src}, {filter: `greyscale(${extern.value}) ${intern.filter}`}],
-  //   [{src: "", value: 0.0}, {filter: ""}],
-  //   [{src: nodeSrc}, {filter: "grayscale(0.0)"}],
-  //   [300, 400]
-  // );
+  base.filterGraph.edges = [...base.filterGraph.edges, createEdge({node: inNode, key: "src"}, {node: outNode, key: "src"})]
+  base.filterGraph.nodes = [inNode, outNode];
 
-  // const valueNode = createNode(
-  //   "Static Value",
-  //   ({},{}) => [{value: 0.5}, null],
-  //   [null, null], [{value: 1}, null]
-  // );
-
-  // console.log(greyscaleNode);
-
-  // const outNode = createNode(
-  //   "Output",
-  //   (extern: {src: string}, intern: {filter: ""}) => [null, {src: extern.src, filter: intern.filter}],
-  //   [{src: ""}, {filter: ""}],
-  //   [null, {src: nodeSrc, filter: ""}],
-  //   [500, 300]
-  // );
-
-  // connectNodes(inNode, "src", outNode, "src");
+  base.outputNode = outNode;
 
   if (resolved.type === "video" || resolved.type === "image") {
     base = {
@@ -137,16 +115,12 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
         createAutomation("position", resolved.duration, {initial: 0}),
         createAutomation("position", resolved.duration, {initial: 0})
       ],
-      // nodes: [inNode, greyscaleNode, outNode],
-      // outputNode: outNode,
     };
   } else if (resolved.type === "audio") {
     base = {
       ...base,
       volume: createAutomation("volume", resolved.duration),
       pan: 0,
-      // nodes: [inNode, outNode],
-      // outputNode: outNode,
     };
   }
 
@@ -257,4 +231,19 @@ export const getClipByUUID = (uuid: string, type: App.MediaType): App.VideoClip 
   } else {
     return get(videoClips).find(clip => clip.uuid === uuid) as App.VideoClip | App.ImageClip;
   }
+};
+
+export const createEdge = <
+  T extends (args: any) => Record<string, any>,
+  U extends (args: any) => Record<string, any>
+>(
+  outVertex: App.EdgeVertex<T, "out">,
+  inVertex: App.EdgeVertex<U, "in">
+) => {
+  const unsubscribe = outVertex.node.outputs.subscribe((e: any) => {
+    let out = e[outVertex.key];
+    inVertex.node.inputs.update((e: any) => ({ ...e, [inVertex.key]: out }));
+  });
+
+  return { outVertex, inVertex, unsubscribe, };
 };

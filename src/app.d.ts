@@ -67,7 +67,7 @@ declare global {
 			/**
 			 * The node used to render the clip
 			 */
-			outputNode: EditorNode<(extern: any, intern: any) => [any, {src: string, filter: string}]>;
+			outputNode: EditorNode<(args: any) => Record<string, any>>;
 		}
 
 		interface VideoClip extends ClipBase<"video"> {
@@ -89,14 +89,14 @@ declare global {
 		};
 
 		type GraphEdge = {
-			outVertex: Connection<(args: any) => Record<string, any>>;
-			inVertex: Connection<(args: any) => Record<string, any>>;
+			outVertex: EdgeVertex<(args: any) => Record<string, any>, "out">;
+			inVertex: EdgeVertex<(args: any) => Record<string, any>, "in">;
 			unsubscribe: Unsubscriber;
 		};
 
-		type Connection<T extends (args: any) => Record<string, any>> = {
+		type EdgeVertex<T extends (args: any) => Record<string, any>, K extends "in" | "out"> = {
 			node: App.EditorNode<T>;
-			key: keyof Parameters<T>[0];
+			key: K extends "out" ? keyof ReturnType<T>: keyof Parameters<T>[0];
 		};
 
 		type EditorNode<T extends (args: any) => Record<string, any>> = {

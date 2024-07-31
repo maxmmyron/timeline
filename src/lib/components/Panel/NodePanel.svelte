@@ -1,5 +1,6 @@
 <script lang="ts">
   import { panelPos } from "$lib/stores";
+  import { createEdge } from "$lib/utils";
   import { onMount } from "svelte";
   import { get } from "svelte/store";
 
@@ -25,8 +26,9 @@
   let isRerenderNeeded = false;
   let isMovingEdge = false;
 
-  let tempConnection: App.Connection<
-    (args: any) => Record<string, any>
+  let tempConnection: App.EdgeVertex<
+    (args: any) => Record<string, any>,
+    "in" | "out"
   > | null = null;
   let tempOrigin: "in" | "out";
 
@@ -71,11 +73,6 @@
     nodeB: App.EditorNode<U>,
     keyB: V
   ) => {
-    const unsubscribe = nodeA.outputs.subscribe((e: any) => {
-      let out: ReturnType<T>[K] = e[keyA];
-      nodeB.inputs.update((e: any) => ({ ...e, [keyB]: out }));
-    });
-
     // if there exists an edge from nodeA/keyA -> nodeB/keyB, return
     if (
       filterGraph.edges.find(
@@ -89,15 +86,12 @@
       return;
     }
 
-    filterGraph.edges = [
-      ...filterGraph.edges,
-      {
-        outVertex: { node: nodeA, key: keyA },
-        inVertex: { node: nodeB, key: keyB },
-        unsubscribe,
-      },
-    ];
+    const edge = createEdge(
+      { node: nodeA, key: keyA.toString() },
+      { node: nodeB, key: keyB }
+    );
 
+    filterGraph.edges = [...filterGraph.edges, edge];
     tempConnection = null;
   };
 
@@ -120,7 +114,7 @@
         inVertex.key === keyB
     );
 
-    // if an edge exists, call the unsubscriber method and remove it from the graph.
+    // if an edge exists, call the unsubscribe method and remove it from the graph.
     if (edge) {
       edge.unsubscribe();
       filterGraph.edges = filterGraph.edges.filter((e) => e !== edge);
@@ -152,7 +146,10 @@
     connection: App.GraphEdge | undefined
   ) => {
     let oppositeVertex:
-      | App.Connection<(args: any) => Record<string, any>>
+      | App.EdgeVertex<
+          (args: any) => Record<string, any>,
+          typeof side extends "out" ? "in" : "out"
+        >
       | undefined;
 
     if (side === "in") {
@@ -181,16 +178,22 @@
    * If the end vertex has an edge connected to it, then disconnect it.
    */
   const endPhantomEdge = (
+    side: "in" | "out",
     node: App.EditorNode<(args: any) => Record<string, any>>,
     key: string,
     connection: App.GraphEdge | undefined
   ) => {
+    // if there doesn't exist a temporary connection, break early
     if (!tempConnection) return;
-
+    // if we're connection to same side that we started from, break early
+    if (tempOrigin === side) return;
     // if we're attempting to connect to the same node, break early
     if (tempConnection.node.uuid === node.uuid) return;
 
-    if (connection) {
+    // if there exists a connection *and* the origin is from an out vertex
+    // (i.e. passed-in connection is for an in-vertex), then remove the
+    // connection
+    if (connection && tempOrigin == "out") {
       disconnectConnection(connection);
     }
 
@@ -351,11 +354,13 @@
 
   // #region util
   const getConnections = (
-    inConnection: App.Connection<
-      (args: any) => Record<string, any>
+    inConnection: App.EdgeVertex<
+      (args: any) => Record<string, any>,
+      "in"
     > | null = null,
-    outConnection: App.Connection<
-      (args: any) => Record<string, any>
+    outConnection: App.EdgeVertex<
+      (args: any) => Record<string, any>,
+      "out"
     > | null = null
   ) => {
     if (inConnection && !outConnection) {
@@ -412,11 +417,13 @@
 
   {#each filterGraph.nodes as node}
     {@const uuid = node.uuid}
+    {@const pos = node.pos}
     {@const __inputs = get(node.inputs)}
     {@const __outputs = get(node.outputs)}
     <div
       class="absolute border border-black rounded-md flex flex-col p-1 min-w-52"
-      style="top: {node.pos[1]}px; left:{node.pos[0]}px;"
+      style="left: {pos[0] + $panelPos[0]}px; top: {pos[1] + $panelPos[1]}px;"
+      bind:this={refs[uuid]}
     >
       <header class="border-b">
         <p class="text-center">{node.uuid}</p>
@@ -434,12 +441,12 @@
                     startPhantomEdge("in", node, key, connections[0])}
                   on:mouseup={() => {
                     if (tempOrigin === "out") {
-                      endPhantomEdge(node, key, connections[0]);
+                      endPhantomEdge("in", node, key, connections[0]);
                     }
                   }}
                   on:touchend={() => {
                     if (tempOrigin === "out") {
-                      endPhantomEdge(node, key, connections[0]);
+                      endPhantomEdge("in", node, key, connections[0]);
                     }
                   }}
                   class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25 input"
@@ -478,48 +485,25 @@
                     }}
                   />
                 {/if}
-                <div class="flex flex-col gap-0.5">
-                  {#each connections as connection}
-                    <button
-                      on:mousedown|stopPropagation={() =>
-                        startPhantomEdge("out", node, key, connection)}
-                      on:touchstart|stopPropagation={() =>
-                        startPhantomEdge("out", node, key, connection)}
-                      on:mouseup={() => {
-                        if (tempOrigin === "in") {
-                          endPhantomEdge(node, key, connection);
-                        }
-                      }}
-                      on:touchend={() => {
-                        if (tempOrigin === "in") {
-                          endPhantomEdge(node, key, connection);
-                        }
-                      }}
-                      class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25 input"
-                      id="input-{key}"
-                    ></button>
-                  {/each}
-
-                  <!-- Default button, this connects to no node by default. -->
-                  <button
-                    on:mousedown|stopPropagation={() =>
-                      startPhantomEdge("out", node, key, undefined)}
-                    on:touchstart|stopPropagation={() =>
-                      startPhantomEdge("out", node, key, undefined)}
-                    on:mouseup={() => {
-                      if (tempOrigin === "in") {
-                        endPhantomEdge(node, key, undefined);
-                      }
-                    }}
-                    on:touchend={() => {
-                      if (tempOrigin === "in") {
-                        endPhantomEdge(node, key, undefined);
-                      }
-                    }}
-                    class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25 input"
-                    id="input-{key}"
-                  ></button>
-                </div>
+                <!-- TODO: add listed nodes -->
+                <button
+                  on:mousedown|stopPropagation={() =>
+                    startPhantomEdge("out", node, key, undefined)}
+                  on:touchstart|stopPropagation={() =>
+                    startPhantomEdge("out", node, key, undefined)}
+                  on:mouseup={() => {
+                    if (tempOrigin === "in") {
+                      endPhantomEdge("out", node, key, undefined);
+                    }
+                  }}
+                  on:touchend={() => {
+                    if (tempOrigin === "in") {
+                      endPhantomEdge("out", node, key, undefined);
+                    }
+                  }}
+                  class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25 input"
+                  id="output-{key}"
+                ></button>
               </li>
             {/each}
           </ul>
