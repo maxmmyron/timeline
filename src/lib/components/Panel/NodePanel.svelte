@@ -1,8 +1,7 @@
 <script lang="ts">
-  import Node from "./NodeEditor/Node.svelte";
   import { panelPos } from "$lib/stores";
-  import { beforeUpdate, onMount } from "svelte";
-  import { invalidate } from "$app/navigation";
+  import { onMount } from "svelte";
+  import { get } from "svelte/store";
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D;
@@ -22,8 +21,14 @@
   let frameID: number;
 
   let isMovingCanvas = false;
-  let isDrawingNewEdge = false;
+  let isDrawingTempEdge = false;
   let isRerenderNeeded = false;
+  let isMovingEdge = false;
+
+  let tempConnection: App.Connection<
+    (args: any) => Record<string, any>
+  > | null = null;
+  let tempOrigin: "in" | "out";
 
   $: filterGraph = current.filterGraph;
 
@@ -53,6 +58,151 @@
     };
   });
 
+  // #region node handling
+
+  const connect = <
+    T extends (args: any) => Record<string, any>,
+    K extends keyof ReturnType<T>,
+    U extends (args: any) => Record<string, any>,
+    V extends keyof Parameters<U>[0],
+  >(
+    nodeA: App.EditorNode<T>,
+    keyA: K,
+    nodeB: App.EditorNode<U>,
+    keyB: V
+  ) => {
+    const unsubscribe = nodeA.outputs.subscribe((e: any) => {
+      let out: ReturnType<T>[K] = e[keyA];
+      nodeB.inputs.update((e: any) => ({ ...e, [keyB]: out }));
+    });
+
+    // if there exists an edge from nodeA/keyA -> nodeB/keyB, return
+    if (
+      filterGraph.edges.find(
+        ({ outVertex, inVertex }) =>
+          outVertex.node === nodeA &&
+          outVertex.key === keyA &&
+          inVertex.node === nodeB &&
+          inVertex.key === keyB
+      )
+    ) {
+      return;
+    }
+
+    filterGraph.edges = [
+      ...filterGraph.edges,
+      {
+        outVertex: { node: nodeA, key: keyA },
+        inVertex: { node: nodeB, key: keyB },
+        unsubscribe,
+      },
+    ];
+
+    tempConnection = null;
+  };
+
+  const disconnect = <
+    T extends (args: any) => Record<string, any>,
+    K extends keyof ReturnType<T>,
+    U extends (args: any) => Record<string, any>,
+    V extends keyof Parameters<U>[0],
+  >(
+    nodeA: App.EditorNode<T>,
+    keyA: K,
+    nodeB: App.EditorNode<U>,
+    keyB: V
+  ) => {
+    const edge = filterGraph.edges.find(
+      ({ outVertex, inVertex }) =>
+        outVertex.node === nodeA &&
+        outVertex.key === keyA &&
+        inVertex.node === nodeB &&
+        inVertex.key === keyB
+    );
+
+    // if an edge exists, call the unsubscriber method and remove it from the graph.
+    if (edge) {
+      edge.unsubscribe();
+      filterGraph.edges = filterGraph.edges.filter((e) => e !== edge);
+    }
+  };
+
+  const disconnectConnection = (connection: App.GraphEdge) => {
+    disconnect(
+      connection.outVertex.node,
+      connection.outVertex.key.toString(),
+      connection.inVertex.node,
+      connection.inVertex.key
+    );
+  };
+
+  /**
+   * Starts a new temporary edge from an input element.
+   *
+   * If the input elements already has a connection (which is passed in via the connection param),
+   * then that connection is removed and replaced with a phantom edge starting from the removed connection's *output.*
+   * @param node
+   * @param key
+   * @param connection
+   */
+  const startPhantomEdge = (
+    side: "in" | "out",
+    node: App.EditorNode<(args: any) => Record<string, any>>,
+    key: string,
+    connection: App.GraphEdge | undefined
+  ) => {
+    let oppositeVertex:
+      | App.Connection<(args: any) => Record<string, any>>
+      | undefined;
+
+    if (side === "in") {
+      oppositeVertex = connection?.outVertex;
+    } else {
+      oppositeVertex = connection?.inVertex;
+    }
+
+    if (oppositeVertex) {
+      tempOrigin = side === "in" ? "out" : "in";
+      tempConnection = {
+        node: oppositeVertex.node,
+        key: oppositeVertex.key,
+      };
+      isDrawingTempEdge = true;
+    } else {
+      tempOrigin = side;
+      tempConnection = { node, key };
+      isDrawingTempEdge = true;
+    }
+  };
+
+  /**
+   * Ends a phantom edge and adds it as an edge to the filter graph.
+   *
+   * If the end vertex has an edge connected to it, then disconnect it.
+   */
+  const endPhantomEdge = (
+    node: App.EditorNode<(args: any) => Record<string, any>>,
+    key: string,
+    connection: App.GraphEdge | undefined
+  ) => {
+    if (!tempConnection) return;
+
+    // if we're attempting to connect to the same node, break early
+    if (tempConnection.node.uuid === node.uuid) return;
+
+    if (connection) {
+      disconnectConnection(connection);
+    }
+
+    if (tempOrigin === "out") {
+      connect(tempConnection.node, tempConnection.key.toString(), node, key);
+    } else {
+      connect(node, key, tempConnection.node, tempConnection.key.toString());
+    }
+  };
+
+  // #region canvas
+
   const startCanvasMove = (x: number, y: number) => {
     isMovingCanvas = true;
     initPos = [$panelPos[0], $panelPos[1]];
@@ -67,17 +217,6 @@
 
     panelPos.set(newPos, { hard: true });
   };
-
-  // ---------------------
-  // Drawing
-  // ---------------------
-
-  let initNode: App.EditorNode<(args: any) => Record<string, any>>;
-  let initVertex: keyof Parameters<(typeof initNode)["transform"]>[0];
-  /**
-   * The type of vertex that received the "mousedown" event
-   */
-  let initVertexType: "in" | "out";
 
   const frame = (timestamp: DOMHighResTimeStamp) => {
     frameID = requestAnimationFrame(frame);
@@ -98,18 +237,14 @@
         );
       }
 
-      if (isDrawingNewEdge) {
-        drawNewEdge(...mousePos);
+      if (isDrawingTempEdge) {
+        drawTempEdge(...mousePos);
       }
 
       isRerenderNeeded = false;
     }
   };
 
-  /**
-   *
-   * Draws the edge between two node input/outputs
-   */
   const drawEdge = (
     outUUID: string,
     outVertex: string,
@@ -149,26 +284,23 @@
     ctx.stroke();
   };
 
-  /**
-   * Draws an edge that connects to the mouse cursor/touch target.
-   *
-   * @param pos
-   */
-  const drawNewEdge = (x: number, y: number) => {
-    let ref = refs[initNode.uuid];
+  const drawTempEdge = (x: number, y: number) => {
+    if (!tempConnection) return;
+
+    let ref = refs[tempConnection.node.uuid];
     let vertexEl;
     let query;
 
-    if (initVertexType === "out") {
-      query = `#output-${String(initVertex)}`;
+    if (tempOrigin === "out") {
+      query = `#output-${String(tempConnection.key)}`;
     } else {
-      query = `#input-${String(initVertex)}`;
+      query = `#input-${String(tempConnection.key)}`;
     }
     vertexEl = ref.querySelector(query);
 
     if (!vertexEl)
       throw new Error(
-        `Error drawing edge: ${query} does not exist on node ${initNode.uuid}`
+        `Error drawing edge: ${query} does not exist on node ${tempConnection.node.uuid}`
       );
 
     let { left, top } = canvas.getBoundingClientRect();
@@ -178,7 +310,7 @@
 
     let outX: number, outY: number, inX: number, inY: number;
 
-    if (initVertexType === "out") {
+    if (tempOrigin === "out") {
       [outX, outY] = [
         vertexEl.getBoundingClientRect().left + 4.5 - left,
         vertexEl.getBoundingClientRect().top + 4.5 - top,
@@ -202,7 +334,7 @@
     ctx.beginPath();
     ctx.moveTo(outX, outY);
 
-    if (initVertexType === "out") {
+    if (tempOrigin === "out") {
       ctx.bezierCurveTo(outX + control, outY, inX - mControl, inY, inX, inY);
     } else {
       ctx.bezierCurveTo(outX + mControl, outY, inX - control, inY, inX, inY);
@@ -213,8 +345,42 @@
 
   const handleMove = (x: number, y: number) => {
     isRerenderNeeded = true;
-    if (isDrawingNewEdge) mousePos = [x, y];
+    if (isDrawingTempEdge) mousePos = [x, y];
     if (isMovingCanvas) moveCanvas(x, y);
+  };
+
+  // #region util
+  const getConnections = (
+    inConnection: App.Connection<
+      (args: any) => Record<string, any>
+    > | null = null,
+    outConnection: App.Connection<
+      (args: any) => Record<string, any>
+    > | null = null
+  ) => {
+    if (inConnection && !outConnection) {
+      return filterGraph.edges.filter(
+        ({ inVertex }) =>
+          inVertex.node === inConnection.node &&
+          inVertex.key === inConnection.key
+      );
+    } else if (!inConnection && outConnection) {
+      return filterGraph.edges.filter(
+        ({ inVertex }) =>
+          inVertex.node === outConnection.node &&
+          inVertex.key === outConnection.key
+      );
+    } else if (inConnection && outConnection) {
+      return filterGraph.edges.filter(
+        ({ inVertex, outVertex }) =>
+          inVertex.node === inConnection.node &&
+          inVertex.key === inConnection.key &&
+          outVertex.node === outConnection.node &&
+          outVertex.key === outConnection.key
+      );
+    }
+
+    return [];
   };
 </script>
 
@@ -224,7 +390,7 @@
   on:touchmove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)}
   on:mousemove={(e) => handleMove(e.clientX, e.clientY)}
   on:mouseup={(e) => {
-    isDrawingNewEdge = false;
+    isDrawingTempEdge = false;
     isRerenderNeeded = true;
   }}
 />
@@ -246,69 +412,120 @@
 
   {#each filterGraph.nodes as node}
     {@const uuid = node.uuid}
-    {#key node.uuid}
-      <Node
-        {node}
-        bind:ref={refs[node.uuid]}
-        on:startedge={(e) => {
-          // get the node
-          if (typeof e.detail.node === "string") {
-            const node = filterGraph.nodes.find(
-              (n) => n.uuid === e.detail.node
-            );
-            if (!node) {
-              throw new Error(`No node with uuid ${e.detail.node} found.`);
-            }
-            initNode = node;
-          } else {
-            initNode = e.detail.node;
-          }
+    {@const __inputs = get(node.inputs)}
+    {@const __outputs = get(node.outputs)}
+    <div
+      class="absolute border border-black rounded-md flex flex-col p-1 min-w-52"
+      style="top: {node.pos[1]}px; left:{node.pos[0]}px;"
+    >
+      <header class="border-b">
+        <p class="text-center">{node.uuid}</p>
+      </header>
+      <main class="flex">
+        {#if __inputs}
+          <ul class="relative -left-1">
+            {#each Object.entries(__inputs) as [key, val]}
+              {@const connections = getConnections({ node, key }, null)}
+              <li class="flex items-center gap-1">
+                <button
+                  on:mousedown|stopPropagation={() =>
+                    startPhantomEdge("in", node, key, connections[0])}
+                  on:touchstart|stopPropagation={() =>
+                    startPhantomEdge("in", node, key, connections[0])}
+                  on:mouseup={() => {
+                    if (tempOrigin === "out") {
+                      endPhantomEdge(node, key, connections[0]);
+                    }
+                  }}
+                  on:touchend={() => {
+                    if (tempOrigin === "out") {
+                      endPhantomEdge(node, key, connections[0]);
+                    }
+                  }}
+                  class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25 input"
+                  id="input-{key}"
+                ></button>
+                <p>{key}</p>
+                {#if connections.length === 0}
+                  <input
+                    type="range"
+                    on:input={(e) => {
+                      const newValue = e.currentTarget.valueAsNumber;
+                      node.inputs.set({ ...__inputs, [key]: newValue });
+                    }}
+                  />
+                {/if}
+              </li>
+            {/each}
+          </ul>
+        {/if}
+        <div class="flex-grow"></div>
+        {#if __outputs}
+          <ul class="relative -right-1">
+            {#each Object.entries(__outputs) as [key, value] (node.uuid + key)}
+              {@const connections = getConnections(null, { node, key })}
+              <li class="flex items-center gap-1">
+                <p>{key}</p>
+                <!-- If there are *no* inputs on this node, then render an input
+              value to modify the output (since it can't be transformed by some
+              function) TODO: very temporary behavior! -->
+                {#if !__inputs}
+                  <input
+                    type="range"
+                    on:input={(e) => {
+                      const newValue = e.currentTarget.valueAsNumber;
+                      node.outputs.set({ ...__outputs, [key]: newValue });
+                    }}
+                  />
+                {/if}
+                <div class="flex flex-col gap-0.5">
+                  {#each connections as connection}
+                    <button
+                      on:mousedown|stopPropagation={() =>
+                        startPhantomEdge("out", node, key, connection)}
+                      on:touchstart|stopPropagation={() =>
+                        startPhantomEdge("out", node, key, connection)}
+                      on:mouseup={() => {
+                        if (tempOrigin === "in") {
+                          endPhantomEdge(node, key, connection);
+                        }
+                      }}
+                      on:touchend={() => {
+                        if (tempOrigin === "in") {
+                          endPhantomEdge(node, key, connection);
+                        }
+                      }}
+                      class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25 input"
+                      id="input-{key}"
+                    ></button>
+                  {/each}
 
-          // start drawing a new edge from this vertex
-          isDrawingNewEdge = true;
-          initVertex = e.detail.vertex;
-          initVertexType = e.detail.vertexType;
-        }}
-        on:endedge={(e) => {
-          if (!isDrawingNewEdge) return;
-
-          // if we're trying to connect two like vertex type (like in -> in or out -> out) then break early.
-          if (e.detail.vertexType === initVertexType) {
-            return;
-          }
-
-          let eventUUID;
-          if (typeof e.detail.node === "string") {
-            eventUUID = e.detail.node;
-          } else {
-            eventUUID = e.detail.node.uuid;
-          }
-
-          // if we're attempting to draw to the same node, then break early!
-          if (eventUUID === initNode.uuid) {
-            return;
-          }
-
-          // get terminal node/vertex pair
-          const termNode = filterGraph.nodes.find((n) => n.uuid === eventUUID);
-          const termVertex = e.detail.vertex.toString();
-
-          if (!termNode) throw new Error("Could not find node");
-
-          if (initVertexType === "out") {
-            connectNodes(initNode, initVertex, termNode, termVertex);
-          } else {
-            connectNodes(termNode, termVertex, initNode, initVertex.toString());
-          }
-
-          isRerenderNeeded = true;
-        }}
-        on:nodemove={(e) => {
-          // TODO: only rerender iff moved node has connections
-          isRerenderNeeded = true;
-        }}
-      />
-    {/key}
+                  <!-- Default button, this connects to no node by default. -->
+                  <button
+                    on:mousedown|stopPropagation={() =>
+                      startPhantomEdge("out", node, key, undefined)}
+                    on:touchstart|stopPropagation={() =>
+                      startPhantomEdge("out", node, key, undefined)}
+                    on:mouseup={() => {
+                      if (tempOrigin === "in") {
+                        endPhantomEdge(node, key, undefined);
+                      }
+                    }}
+                    on:touchend={() => {
+                      if (tempOrigin === "in") {
+                        endPhantomEdge(node, key, undefined);
+                      }
+                    }}
+                    class="w-[9px] h-[9px] rounded-full bg-blue-400 border border-blue-400/25 input"
+                    id="input-{key}"
+                  ></button>
+                </div>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </main>
+    </div>
   {/each}
 </div>
 

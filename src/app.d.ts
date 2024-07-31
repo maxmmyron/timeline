@@ -91,7 +91,7 @@ declare global {
 		type GraphEdge = {
 			outVertex: Connection<(args: any) => Record<string, any>>;
 			inVertex: Connection<(args: any) => Record<string, any>>;
-			unsubscriber: Unsubscriber;
+			unsubscribe: Unsubscriber;
 		};
 
 		type Connection<T extends (args: any) => Record<string, any>> = {
