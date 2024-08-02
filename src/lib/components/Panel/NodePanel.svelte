@@ -158,6 +158,10 @@
       oppositeVertex = connection?.inVertex;
     }
 
+    if (connection && side === "in") {
+      disconnectConnection(connection);
+    }
+
     if (oppositeVertex) {
       tempOrigin = side === "in" ? "out" : "in";
       tempConnection = {
@@ -205,12 +209,6 @@
   };
 
   // #region canvas
-
-  const startCanvasMove = (x: number, y: number) => {
-    isMovingCanvas = true;
-    initPos = [$panelPos[0], $panelPos[1]];
-    initMouse = [x, y];
-  };
 
   const moveCanvas = (x: number, y: number) => {
     let newPos: [number, number] = [
@@ -346,13 +344,58 @@
     ctx.stroke();
   };
 
-  const handleMove = (x: number, y: number) => {
-    isRerenderNeeded = true;
-    if (isDrawingTempEdge) mousePos = [x, y];
-    if (isMovingCanvas) moveCanvas(x, y);
+  // #region movement
+
+  const initCanvasMove = (x: number, y: number) => {
+    isMovingCanvas = true;
+    initPos = [$panelPos[0], $panelPos[1]];
+    initMouse = [x, y];
   };
 
+  const handleCanvasMove = (x: number, y: number) => {
+    if (isDrawingTempEdge) mousePos = [x, y];
+    if (isMovingCanvas) {
+      let newPos: [number, number] = [
+        x - initMouse[0] + initPos[0],
+        y - initMouse[1] + initPos[1],
+      ];
+
+      panelPos.set(newPos, { hard: true });
+    }
+
+    isRerenderNeeded = true;
+  };
+
+  let movingNode: App.EditorNode<(args: any) => Record<string, any>> | null =
+    null;
+
+  const initNodeMove = (
+    node: App.EditorNode<(args: any) => Record<string, any>>,
+    x: number,
+    y: number
+  ) => {
+    movingNode = node;
+    initPos = node.pos;
+    initMouse = [x, y];
+  };
+
+  const handleNodeMove = (x: number, y: number) => {
+    if (!movingNode) return;
+
+    movingNode.pos = [
+      x - initMouse[0] + initPos[0],
+      y - initMouse[1] + initPos[1],
+    ];
+
+    filterGraph = filterGraph;
+    isRerenderNeeded = true;
+  };
+
+  // Trigger reactivity whenever panel pos updates (i.e. during reset pos, which is spring-based)
+  panelPos.subscribe(() => (isRerenderNeeded = true));
+
   // #region util
+
   const getConnections = (
     inConnection: App.EdgeVertex<
       (args: any) => Record<string, any>,
@@ -392,9 +435,16 @@
 <svelte:window
   on:mouseup={() => (isMovingCanvas = false)}
   on:touchend={() => (isMovingCanvas = false)}
-  on:touchmove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)}
-  on:mousemove={(e) => handleMove(e.clientX, e.clientY)}
+  on:touchmove={(e) => {
+    if (movingNode) handleNodeMove(e.touches[0].clientX, e.touches[0].clientY);
+    else handleCanvasMove(e.touches[0].clientX, e.touches[0].clientY);
+  }}
+  on:mousemove={(e) => {
+    if (movingNode) handleNodeMove(e.clientX, e.clientY);
+    handleCanvasMove(e.clientX, e.clientY);
+  }}
   on:mouseup={(e) => {
+    movingNode = null;
     isDrawingTempEdge = false;
     isRerenderNeeded = true;
   }}
@@ -402,9 +452,9 @@
 
 <div
   on:dblclick={() => panelPos.set([0, 0])}
-  on:mousedown={(e) => startCanvasMove(e.clientX, e.clientY)}
+  on:mousedown={(e) => initCanvasMove(e.clientX, e.clientY)}
   on:touchstart={(e) =>
-    startCanvasMove(e.touches[0].clientX, e.touches[0].clientY)}
+    initCanvasMove(e.touches[0].clientX, e.touches[0].clientY)}
   role="grid"
   tabindex="0"
   class="relative bg-dot -top-1 -left-1 w-[calc(100%_+_.5rem)] h-[calc(100%_+_.5rem)] from-zinc-925 from-25% to-zinc-950 to-25%"
@@ -420,10 +470,13 @@
     {@const pos = node.pos}
     {@const __inputs = get(node.inputs)}
     {@const __outputs = get(node.outputs)}
+    <!-- svelte-ignore a11y-interactive-supports-focus -->
     <div
       class="absolute border border-black rounded-md flex flex-col p-1 min-w-52"
       style="left: {pos[0] + $panelPos[0]}px; top: {pos[1] + $panelPos[1]}px;"
       bind:this={refs[uuid]}
+      on:mousedown|stopPropagation
+      role="button"
     >
       <header class="border-b">
         <p class="text-center">{node.uuid}</p>
@@ -509,6 +562,14 @@
           </ul>
         {/if}
       </main>
+      <button
+        class="w-full h-4 bg-white/10"
+        aria-describedby="operation"
+        on:mousedown|stopPropagation={(e) =>
+          initNodeMove(node, e.clientX, e.clientY)}
+        on:touchstart|stopPropagation={(e) =>
+          initNodeMove(node, e.touches[0].clientX, e.touches[0].clientY)}
+      ></button>
     </div>
   {/each}
 </div>
