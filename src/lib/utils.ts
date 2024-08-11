@@ -212,6 +212,7 @@ export const createNode = <T extends (args: any) => Record<string, any>>(
       uuid: uuidv4(),
       transform,
       inputs: writable(inputs),
+      initialInputs: inputs,
       outputs: writable(outputs),
       pos: pos ?? [0, 0],
       ref: null,
@@ -245,5 +246,13 @@ export const createEdge = <
     inVertex.node.inputs.update((e: any) => ({ ...e, [inVertex.key]: out }));
   });
 
-  return { outVertex, inVertex, unsubscribe, };
+  // wrapper method to reset input to initial value after we unsubscribe
+  const _unsubscribe = () => {
+    console.log("unsub");
+    unsubscribe();
+    const initialInputVal = inVertex.node.initialInputs[inVertex.key];
+    inVertex.node.inputs.update((e:any) => ({ ...e, [inVertex.key]: initialInputVal }));
+  };
+
+  return { outVertex, inVertex, unsubscribe: _unsubscribe };
 };

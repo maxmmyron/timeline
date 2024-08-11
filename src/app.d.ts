@@ -111,6 +111,12 @@ declare global {
 			transform: T;
 			ref: HTMLElement | null;
 			inputs: Writable<Paramters<T>[0]>;
+			/**
+			 * The initial inputs used when creating this node.
+			 * We store these to "reset" a node's input on disconnect, which
+			 * will then propagate the reset through the filter graph.
+			 */
+			initialInputs: Paramters<T>[0];
 			outputs: Writable<ReturnType<T>>;
 		}
 

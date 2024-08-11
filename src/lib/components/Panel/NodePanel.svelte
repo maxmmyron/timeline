@@ -114,7 +114,6 @@
         inVertex.key === keyB
     );
 
-    // if an edge exists, call the unsubscribe method and remove it from the graph.
     if (edge) {
       edge.unsubscribe();
       filterGraph.edges = filterGraph.edges.filter((e) => e !== edge);
