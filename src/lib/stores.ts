@@ -1,6 +1,7 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { derived, writable, type Writable } from "svelte/store";
 import type { createMediaFromFile } from "$lib/loader";
+import { spring } from "svelte/motion";
 
 // export const ffmpeg: Writable<FFmpeg> = writable(new FFmpeg());
 
@@ -75,3 +76,10 @@ export const pointerMode: Writable<"select" | "slice"> = writable("select");
 export const uploaded: Writable<Array<ReturnType<typeof createMediaFromFile>>> = writable([]);
 
 export const volumeMultiplier = writable(1);
+
+export const selectedNodeUUID: Writable<string|null> = writable(null);
+
+export const panelPos = spring<[number, number]>([0, 0], {
+  stiffness: 0.1,
+  damping: 0.3,
+});

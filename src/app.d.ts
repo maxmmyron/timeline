@@ -1,7 +1,11 @@
 // See https://kit.svelte.dev/docs/types#app
-// for information about these interfaces
+// for informati on about these interfaces
+
 declare global {
 	namespace App {
+		type PickByType<T, Value> = {
+			[P in keyof T as T[P] extends Value | undefined ? P : never]: T[P];
+		};
 		/**
 		 * The extendable base for all media types. This interface is used to implement the properties of an
 		 * uploaded media clip, *before* it is added to the timeline.
@@ -59,6 +63,11 @@ declare global {
 			 */
 			end: number;
 			timelineZ: number;
+			filterGraph: App.FilterGraph;
+			/**
+			 * The node used to render the clip
+			 */
+			outputNode: EditorNode<(args: any) => Record<string, any>>;
 		}
 
 		interface VideoClip extends ClipBase<"video"> {
@@ -72,6 +81,43 @@ declare global {
 
 		interface ImageClip extends ClipBase<"image"> {
 			matrix: Matrix;
+		}
+
+		interface FilterGraph {
+			nodes: Array<EditorNode<(args: any) => Record<string, any>>>;
+			edges: Array<GraphEdge>;
+		};
+
+		type GraphEdge = {
+			outVertex: EdgeVertex<(args: any) => Record<string, any>, "out">;
+			inVertex: EdgeVertex<(args: any) => Record<string, any>, "in">;
+			unsubscribe: Unsubscriber;
+		};
+
+		type EdgeVertex<T extends (args: any) => Record<string, any>, K extends "in" | "out"> = {
+			node: App.EditorNode<T>;
+			key: K extends "out" ? keyof ReturnType<T>: keyof Parameters<T>[0];
+		};
+
+		type EditorNode<T extends (args: any) => Record<string, any>> = {
+			uuid: string;
+			title: string;
+			pos: [number, number];
+			/**
+			 * An overridable function that performs the node's primary transform
+			 * @param args An object of properties
+			 * @returns
+			 */
+			transform: T;
+			ref: HTMLElement | null;
+			inputs: Writable<Paramters<T>[0]>;
+			/**
+			 * The initial inputs used when creating this node.
+			 * We store these to "reset" a node's input on disconnect, which
+			 * will then propagate the reset through the filter graph.
+			 */
+			initialInputs: Paramters<T>[0];
+			outputs: Writable<ReturnType<T>>;
 		}
 
 		type Clip<T = MediaType> = T extends "video" ? VideoClip : T extends "image" ? ImageClip : AudioClip;
@@ -104,6 +150,8 @@ declare global {
 		| "ClipInspector" | "Close" | "EndSkip" | "Export" | "Import"
 		| "Link" | "MediaPool" | "Pause" | "Play" | "Pointer"
 		| "Reset" | "SplitClip" |  "Unlink" | "ZoomIn" | "ZoomOut";
+
+		type ConnectNodes = <T extends (...args: any) => [any, any], U extends (...args: any) => [any, any], K extends keyof ReturnType<T>>(outName: K, inNode: U, inName: keyof PickByType<Parameters<U>[0], ReturnType<T>[K][0]>) => boolean;
 	}
 }
 

@@ -15,13 +15,14 @@
   import TimelineRibbon from "$lib/components/TimelineRibbon/TimelineRibbon.svelte";
   import Timeline from "$lib/components/Timeline/Timeline.svelte";
   import InspectorPanel from "$lib/components/Panel/InspectorPanel.svelte";
-  import { frame, getCurrentClips } from "$lib/utils";
+  import { frame, getClipByUUID, getCurrentClips } from "$lib/utils";
   import MediaPanel from "$lib/components/Panel/MediaPanel.svelte";
   import TimelineMedia from "$lib/components/TimelineMedia.svelte";
   import PreferencesPanel from "$lib/components/Panel/PreferencesPanel.svelte";
   import VolumeMeter from "$lib/components/VolumeMeter.svelte";
   import Panel from "$lib/components/Panel/Panel.svelte";
   import ExportPanel from "$lib/components/Panel/ExportPanel.svelte";
+  import NodePanel from "$lib/components/Panel/NodePanel.svelte";
 
   // get the UUIDs of the current audio clips (we return this as a comma-sep
   // string to prevent reactivity issues) FIXME: THIS KIND OF SUCKS ASS
@@ -193,17 +194,27 @@
         style:height="{$safeRes[1] * $playerScale}px"
       >
         {#each $videoClips as clip (clip.uuid)}
-          <TimelineMedia {clip} curr={currVideo} />
+          {#if clip.outputNode && clip.outputNode.outputs.src !== ""}
+            <TimelineMedia {clip} curr={currVideo} />
+          {/if}
         {/each}
         {#each $audioClips as clip (clip.uuid)}
-          <TimelineMedia {clip} />
+          {#if clip.outputNode && clip.outputNode.outputs.src !== ""}
+            <TimelineMedia {clip} />
+          {/if}
         {/each}
       </div>
     </div>
   {:else if currentPanel === "Node Editor"}
-    <div class="flex items-center justify-center w-full h-full">
-      <p>coming soon...</p>
-    </div>
+    {#if $selected}
+      {#key $selected[0]}
+        <NodePanel current={getClipByUUID($selected[0], $selected[1])} />
+      {/key}
+    {:else}
+      <div class="w-full h-full flex items-center justify-center">
+        <p>No clip selected</p>
+      </div>
+    {/if}
   {:else if currentPanel === "Export"}
     <ExportPanel />
   {:else if currentPanel === "Preferences"}

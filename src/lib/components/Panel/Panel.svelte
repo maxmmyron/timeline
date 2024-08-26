@@ -18,7 +18,7 @@
     {/each}
   </div>
   <div
-    class="flex-grow rounded-sm rounded-tl-none {bg} border border-zinc-800 p-1 overflow-hidden"
+    class="flex-grow rounded-sm rounded-tl-none {bg} border border-zinc-800 p-1 overflow-hidden relative"
   >
     <slot />
   </div>

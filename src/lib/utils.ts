@@ -2,9 +2,9 @@
  * Common utility functions.
  */
 
-import { get } from "svelte/store";
+import { get, writable } from "svelte/store";
 import { v4 as uuidv4 } from "uuid";
-import { paused, res, scaleFactor, scroll, time, videoClips } from "./stores";
+import { audioClips, paused, scaleFactor, scroll, time, videoClips } from "./stores";
 
 /**
  * Gets the current clips at the given time. This returns a comma-
@@ -89,7 +89,21 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
     end: opts?.end ?? 0,
     uuid: uuidv4(),
     timelineZ: get(videoClips).reduce((acc, clip) => Math.max(acc, clip.timelineZ), 0) + 1,
+    filterGraph: {
+      edges: new Array(),
+      nodes: new Array(),
+    }
   } as App.Clip<T>;
+
+  const nodeSrc = resolved.type === "audio" ? resolved.audioSrc : resolved.videoSrc;
+
+  const inNode = createNode(resolved.title, () => ({src: nodeSrc}), undefined, {src: nodeSrc}, [100, 200]);
+  const outNode = createNode("Output", (arg: {src: string}) => ({src: arg.src}), {src: ""}, {src: nodeSrc}, [500, 300]);
+
+  base.filterGraph.edges = [...base.filterGraph.edges, createEdge({node: inNode, key: "src"}, {node: outNode, key: "src"})]
+  base.filterGraph.nodes = [inNode, outNode];
+
+  base.outputNode = outNode;
 
   if (resolved.type === "video" || resolved.type === "image") {
     base = {
@@ -100,9 +114,14 @@ export const createClip = <T = App.MediaType>(resolved: App.Media<T>, opts?: Par
         createAutomation("scale", (<App.ImageMedia | App.VideoMedia>resolved).dimensions[1]),
         createAutomation("position", resolved.duration, {initial: 0}),
         createAutomation("position", resolved.duration, {initial: 0})
-      ]};
+      ],
+    };
   } else if (resolved.type === "audio") {
-    base = {...base, volume: createAutomation("volume", resolved.duration), pan:0, };
+    base = {
+      ...base,
+      volume: createAutomation("volume", resolved.duration),
+      pan: 0,
+    };
   }
 
   return base;
@@ -179,4 +198,61 @@ export const lerpAutomation = <T = App.AutomationType>(a: App.Automation<T>, off
   const endNode = a.curves[startIdx + 1];
 
   return (startNode[1] * (endNode[0] - startNode[0])) + (endNode[1] * (t - startNode[0])) / (endNode[0] - startNode[0]);
+};
+
+export const createNode = <T extends (args: any) => Record<string, any>>(
+    title: string,
+    transform: T,
+    inputs: Parameters<T>[0],
+    outputs: ReturnType<T>,
+    pos?: [number, number]
+  ): App.EditorNode<T> => {
+    let node: App.EditorNode<T> = {
+      title,
+      uuid: uuidv4(),
+      transform,
+      inputs: writable(inputs),
+      initialInputs: inputs,
+      outputs: writable(outputs),
+      pos: pos ?? [0, 0],
+      ref: null,
+    };
+
+    node.inputs.subscribe((s: any) => {
+      const transformed = transform(s) as ReturnType<T>;
+      node.outputs.set(transformed);
+    });
+
+    return node;
+  };
+
+export const getClipByUUID = (uuid: string, type: App.MediaType): App.VideoClip | App.AudioClip | App.ImageClip => {
+  if (type === "audio") {
+    return get(audioClips).find(clip => clip.uuid === uuid) as App.AudioClip;
+  } else {
+    return get(videoClips).find(clip => clip.uuid === uuid) as App.VideoClip | App.ImageClip;
+  }
+};
+
+export const createEdge = <
+  T extends (args: any) => Record<string, any>,
+  U extends (args: any) => Record<string, any>
+>(
+  outVertex: App.EdgeVertex<T, "out">,
+  inVertex: App.EdgeVertex<U, "in">
+) => {
+  const unsubscribe = outVertex.node.outputs.subscribe((e: any) => {
+    let out = e[outVertex.key];
+    inVertex.node.inputs.update((e: any) => ({ ...e, [inVertex.key]: out }));
+  });
+
+  // wrapper method to reset input to initial value after we unsubscribe
+  const _unsubscribe = () => {
+    console.log("unsub");
+    unsubscribe();
+    const initialInputVal = inVertex.node.initialInputs[inVertex.key];
+    inVertex.node.inputs.update((e:any) => ({ ...e, [inVertex.key]: initialInputVal }));
+  };
+
+  return { outVertex, inVertex, unsubscribe: _unsubscribe };
 };
